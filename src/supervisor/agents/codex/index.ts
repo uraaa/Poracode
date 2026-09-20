@@ -1,16 +1,22 @@
-import type { AgentCapability, ProjectLocation } from "@/shared/contracts";
+import { join } from "node:path";
+import type { AgentCapability, AgentInstanceConfig, ProjectLocation } from "@/shared/contracts";
+import { codexProfileKind, parseCodexProfileInstanceConfig } from "@/shared/contracts";
 import type { OscNotification } from "@/shared/osc";
 import {
   batchWslCommandsAsync,
   brailleSpinnerOscTitleHint,
-  buildAgentLogoutCommand,
+  buildAgentCommand,
+  configFileAuthProbe,
   createKnownSessionRef,
   detectAgentInstall,
   detectProbeLocation,
   getOscNotificationText,
+  resolveTildePath,
   watchSessionPaths,
   type AgentAdapter,
+  type AgentEnvContext,
   type CreateStructuredSessionInput,
+  type DetectionSpec,
   type TerminalStatusHint,
 } from "../base";
 import { resolveAgentBinaryPath } from "../binaryResolver";
@@ -23,6 +29,7 @@ import { resolveInstallNodePath, warnIfPluginManifestMissing } from "../plugin/i
 import {
   codexHooksFeatureFlagForSemver,
   getCodexPluginPaths,
+  type CodexHomeOverlay,
   installCodexPlugin,
   isCodexPluginInstalled,
   isCodexSemverSupportedForHooks,
@@ -103,20 +110,99 @@ async function resolveCodexHooksFeatureFlag(ctx: {
   return codexHooksFeatureFlagForSemver(probeCodexCliSemver());
 }
 
-export function createCodexAdapter(): AgentAdapter {
+export interface CodexAdapterOptions {
+  /** Instance-scoped agent kind (`codex:<id>`) for a profile. */
+  kind?: string;
+  /** Display label shown wherever the base "Codex" label would be. */
+  label?: string;
+  /** Profile instance id — names the hook plugin's per-profile overlay. */
+  profileId?: string;
+  /**
+   * Directory passed to Codex as CODEX_HOME. A leading "~/" is resolved
+   * against the target runtime (native home or WSL home).
+   */
+  homeDir?: string;
+}
+
+/**
+ * A profile is a second Codex account: its own `CODEX_HOME` (auth, config,
+ * sessions), its own hook overlay, and its own pooled app-server. Everything
+ * else — argv shape, plugin assets, status mapping — is the base adapter.
+ */
+export function createCodexProfileAdapter(instance: AgentInstanceConfig): AgentAdapter {
+  const cfg = parseCodexProfileInstanceConfig(instance.config);
+  const profileLabel = instance.displayName ?? instance.id;
+  return createCodexAdapter({
+    kind: codexProfileKind(instance.id),
+    label: `Codex ${profileLabel}`,
+    profileId: instance.id,
+    homeDir: cfg.homeDir,
+  });
+}
+
+export function createCodexAdapter(options: CodexAdapterOptions = {}): AgentAdapter {
   let capabilities: AgentCapability = codexDefaultCapabilities;
   let preSpawnRolloutIds = new Set<string>();
   let preSpawnStartedAt = 0;
+  const kind = options.kind ?? codexDetectionSpec.kind;
+  const label = options.label ?? codexDetectionSpec.label;
+  const profileId = options.profileId;
+  const isProfile = options.homeDir !== undefined && profileId !== undefined;
+
+  /** The profile's resolved CODEX_HOME for `location`, or undefined for the base adapter. */
+  const profileHome = (location: ProjectLocation): string | undefined =>
+    options.homeDir === undefined ? undefined : resolveTildePath(options.homeDir, location);
+  const profileEnv = (location: ProjectLocation): Record<string, string> | undefined => {
+    const home = profileHome(location);
+    return home ? { CODEX_HOME: home } : undefined;
+  };
+  const withProfileEnv = <T extends { env?: Record<string, string> }>(
+    spec: T,
+    location: ProjectLocation,
+  ): T => {
+    const env = profileEnv(location);
+    return env ? { ...spec, env: { ...(spec.env ?? {}), ...env } } : spec;
+  };
+  /** Hook overlay for native contexts; WSL profiles run without the hook plugin. */
+  const overlayFor = (ctx?: AgentEnvContext): CodexHomeOverlay | undefined => {
+    if (!isProfile || !profileId || ctx?.envKind === "wsl") return undefined;
+    const home = profileHome(detectProbeLocation(ctx));
+    return home ? { profileId, sourceHomeDir: home } : undefined;
+  };
+  /** Native homes whose `sessions/` the profile owns: its CODEX_HOME and its overlay. */
+  const sessionHomes = (location: ProjectLocation): string[] | undefined => {
+    const home = profileHome(location);
+    if (!home || !profileId || location.kind === "wsl") return undefined;
+    const ctx: AgentEnvContext = {
+      envKind: location.kind,
+      ...(process.env.PORACODE_DATA_DIR ? { baseDir: process.env.PORACODE_DATA_DIR } : {}),
+    };
+    const overlay = getCodexPluginPaths(ctx, { profileId, sourceHomeDir: home }).codexHomeDir;
+    return [home, overlay];
+  };
+  const detectionSpec: DetectionSpec = isProfile
+    ? {
+        ...codexDetectionSpec,
+        kind,
+        label,
+        authProbes: [
+          configFileAuthProbe((loc) => {
+            const home = loc.kind === "wsl" ? undefined : profileHome(loc);
+            return home ? join(home, "auth.json") : undefined;
+          }),
+        ],
+      }
+    : codexDetectionSpec;
 
   return {
-    kind: codexDetectionSpec.kind,
-    label: codexDetectionSpec.label,
+    kind,
+    label,
     binary: codexDetectionSpec.binary,
     skillSupport: {
       roots: [
         {
           id: "codex",
-          label: codexDetectionSpec.label,
+          label,
           globalPath: ".codex/skills",
           builtInPath: ".system",
           globalOverride: { env: "CODEX_HOME", path: "skills" },
@@ -146,6 +232,9 @@ export function createCodexAdapter(): AgentAdapter {
     pluginVersion: CODEX_PLUGIN_VERSION,
     minProtocolVersion: 1,
     async isPluginSupported(ctx) {
+      // Profiles stage their hook overlay natively only: the WSL overlay is
+      // seeded from the distro's `~/.codex` and cannot follow a profile home.
+      if (isProfile && ctx.envKind === "wsl") return false;
       // Node availability is now handled by the runtime resolver during
       // installPlugin (probe-first with auto-install fallback). We only
       // gate hook support on the codex CLI version itself.
@@ -171,12 +260,15 @@ export function createCodexAdapter(): AgentAdapter {
       return isCodexVersionSupportedForHooks();
     },
     isPluginInstalled(ctx) {
-      return isCodexPluginInstalled(ctx);
+      return isCodexPluginInstalled(ctx, overlayFor(ctx));
     },
     async installPlugin(ctx) {
       const node = await resolveInstallNodePath(ctx);
       if (!node.ok) return node;
-      const result = await installCodexPlugin(ctx, { resolvedNodePath: node.nodePath });
+      const result = await installCodexPlugin(ctx, {
+        resolvedNodePath: node.nodePath,
+        overlay: overlayFor(ctx),
+      });
       if (!result.ok) return result;
       return { ok: true, version: result.version };
     },
@@ -184,7 +276,7 @@ export function createCodexAdapter(): AgentAdapter {
       uninstallCodexPlugin(ctx);
     },
     async pluginLaunchExtras(ctx) {
-      const paths = getCodexPluginPaths(ctx);
+      const paths = getCodexPluginPaths(ctx, overlayFor(ctx));
       const hooksFeatureFlag = await resolveCodexHooksFeatureFlag(ctx);
       return {
         args: ["--enable", hooksFeatureFlag],
@@ -195,18 +287,24 @@ export function createCodexAdapter(): AgentAdapter {
     handleOscTitle: brailleSpinnerOscTitleHint,
     oscHintsDeferToHookPlugin: true,
     async detectInstall(ctx) {
-      const status = await detectAgentInstall(ctx, codexDetectionSpec);
-      primeCodexGoalsSupport(detectProbeLocation(ctx), status.version, status.executablePath);
+      const location = detectProbeLocation(ctx);
+      const env = profileEnv(location);
+      const status = await detectAgentInstall(
+        ctx,
+        env ? { ...detectionSpec, probeEnv: env } : detectionSpec,
+      );
+      primeCodexGoalsSupport(location, status.version, status.executablePath);
       capabilities = status.capabilities;
-      return status;
+      return { ...status, kind, label };
     },
     buildLaunchArgv(location: ProjectLocation, config, prompt, sessionRef, launchOptions) {
       preSpawnStartedAt = Date.now();
       if (location.kind === "wsl") {
         preSpawnRolloutIds = new Set();
       } else {
-        const sessions = readCodexSessionIndexForLocation(location);
-        const rollouts = readCodexRolloutsForLocation(location);
+        const homes = sessionHomes(location);
+        const sessions = readCodexSessionIndexForLocation(location, homes);
+        const rollouts = readCodexRolloutsForLocation(location, homes);
         preSpawnRolloutIds = new Set(rollouts.map((rollout) => rollout.id));
         console.log(
           [
@@ -217,10 +315,16 @@ export function createCodexAdapter(): AgentAdapter {
           ].join("\n"),
         );
       }
-      return buildCodexArgvFor(location, config, prompt, sessionRef, launchOptions);
+      return withProfileEnv(
+        buildCodexArgvFor(location, config, prompt, sessionRef, launchOptions),
+        location,
+      );
     },
     buildResumeArgv(location, config, prompt, sessionRef, launchOptions) {
-      return buildCodexArgvFor(location, config, prompt, sessionRef, launchOptions);
+      return withProfileEnv(
+        buildCodexArgvFor(location, config, prompt, sessionRef, launchOptions),
+        location,
+      );
     },
     extraArgsPosition: codexExtraArgsPosition,
     createInitialSessionRef() {
@@ -236,10 +340,22 @@ export function createCodexAdapter(): AgentAdapter {
         return undefined;
       }
       const wslExecPath = resolveAgentBinaryPath(input.projectLocation, "codex");
-      return CodexStructuredSession.create(input, wslExecPath);
+      return CodexStructuredSession.create(
+        withProfileEnv(input, input.projectLocation),
+        wslExecPath,
+      );
     },
     shutdown: shutdownSpawnedCodexAppServers,
-    buildAcpLogoutCommand: buildAgentLogoutCommand("codex", ["logout"]),
+    async buildAcpLogoutCommand(ctx) {
+      const location = detectProbeLocation(ctx);
+      return buildAgentCommand(
+        location,
+        "codex",
+        ["logout"],
+        resolveAgentBinaryPath(location, "codex"),
+        profileEnv(location),
+      );
+    },
     buildDirectInput(prompt) {
       return [prompt, "@wait:160", "\r"];
     },
@@ -252,7 +368,7 @@ export function createCodexAdapter(): AgentAdapter {
     },
     initialSessionRefDiscoveryDelayMs: 1000,
     watchSessionRef(location, onChanged) {
-      const paths = resolveCodexSessionWatchPaths(location);
+      const paths = resolveCodexSessionWatchPaths(location, sessionHomes(location));
       if (paths.length === 0) return undefined;
       return watchSessionPaths(
         location,
@@ -263,9 +379,10 @@ export function createCodexAdapter(): AgentAdapter {
     },
     async discoverSessionRef(location) {
       try {
+        const homes = sessionHomes(location);
         const [sessions, rollouts] = await Promise.all([
-          readCodexSessionIndexForLocationAsync(location),
-          readCodexRolloutsForLocationAsync(location),
+          readCodexSessionIndexForLocationAsync(location, homes),
+          readCodexRolloutsForLocationAsync(location, homes),
         ]);
         const newRollouts = rollouts
           .filter((rollout) => !preSpawnRolloutIds.has(rollout.id))
@@ -312,7 +429,7 @@ export function createCodexAdapter(): AgentAdapter {
       }
     },
     defaultOneShotModel: "gpt-5.5",
-    buildOneShotCommand(model, effort) {
+    buildOneShotCommand(model, effort, _prompt, location) {
       // `--skip-git-repo-check` lets `codex exec` run from worktrees or other
       // directories not on codex's trust list. Title generation only reads
       // the user's prompt from stdin and emits a short string — it never
@@ -322,7 +439,8 @@ export function createCodexAdapter(): AgentAdapter {
         args.push("-c", `model_reasoning_effort="${effort}"`);
       }
       args.push("-");
-      return { command: "codex", args };
+      const env = location ? profileEnv(location) : undefined;
+      return { command: "codex", args, ...(env ? { env } : {}) };
     },
     buildContextExtractionCommand(_sessionRef, _location, _model) {
       return undefined;

@@ -311,6 +311,7 @@ async function probeCodexStatus(ctx: Parameters<NonNullable<DetectionSpec["statu
         ? `account:wsl:${ctx.location.distro}`
         : `account:${ctx.location.kind}`,
     ...(ctx.signal ? { signal: ctx.signal } : {}),
+    ...(ctx.probeEnv ? { env: ctx.probeEnv } : {}),
   });
 
   if (account) {
@@ -340,6 +341,7 @@ async function probeCodexStatus(ctx: Parameters<NonNullable<DetectionSpec["statu
     {
       posixCwd: getAgentProbeCwd(ctx.location),
       ...(ctx.signal ? { signal: ctx.signal } : {}),
+      ...(ctx.probeEnv ? { env: ctx.probeEnv } : {}),
     },
   );
   const parsed = parseCodexLoginStatusOutput(`${result.stdout}\n${result.stderr}`);
@@ -376,6 +378,7 @@ export const codexDetectionSpec: DetectionSpec = {
         : {}),
       timeoutMs: 12_000,
       ...(ctx.signal ? { signal: ctx.signal } : {}),
+      ...(ctx.probeEnv ? { env: ctx.probeEnv } : {}),
       label:
         ctx.location.kind === "wsl"
           ? `codex:wsl:${ctx.location.distro}`
