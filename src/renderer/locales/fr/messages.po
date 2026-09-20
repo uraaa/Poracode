@@ -1996,6 +1996,10 @@ msgstr "Branches"
 msgid "Bring back to panel"
 msgstr "Ramener dans le panneau"
 
+#: src/renderer/views/SettingsOverlay/parts/ImportSettings.tsx
+msgid "Bring conversations you started in Codex CLI or Claude Code into Poracode. Transcript files are read, never modified."
+msgstr "Importez dans Poracode les conversations commencées dans Codex CLI ou Claude Code. Les fichiers de transcription sont seulement lus, jamais modifiés."
+
 #. placeholder {0}: props.agentLabel
 #: src/renderer/views/SettingsOverlay/parts/SingleAgentSettings/parts/AgentEnvironmentRow.tsx
 msgid "Bring every {0} runtime up to date"
@@ -2715,6 +2719,7 @@ msgstr "Clonage…"
 #: src/renderer/components/thread/ThreadBackgroundTasksDock.tsx
 #: src/renderer/views/ExperimentView/parts/ExperimentJudgeRunDialog.tsx
 #: src/renderer/views/MainView/parts/RightPanel/parts/BrowserPanel/BrowserPanel.tsx
+#: src/renderer/views/MainView/parts/Sidebar/Sidebar.tsx
 #: src/renderer/views/QuickComposerOverlay/QuickComposerOverlay.tsx
 msgid "Close"
 msgstr "Fermer"
@@ -3615,6 +3620,11 @@ msgstr "Impossible d'extraire le contexte."
 msgid "Could not generate commit message: {detail}"
 msgstr "Impossible de générer le message de validation : {detail}"
 
+#. placeholder {0}: session.preview
+#: src/renderer/components/sessionImport/importSessionsActions.ts
+msgid "Could not import {0}."
+msgstr "Impossible d'importer {0}."
+
 #. placeholder {0}: failure.project.name
 #: src/renderer/views/PullRequestsView/PullRequestsView.tsx
 msgid "Could not load pull requests for {0}."
@@ -3623,6 +3633,10 @@ msgstr "Impossible de charger les pull requests pour {0}."
 #: src/renderer/components/pdf/PdfViewer.tsx
 #~ msgid "Could not open this PDF."
 #~ msgstr "Impossible d’ouvrir ce PDF."
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Could not read existing CLI sessions."
+msgstr "Impossible de lire les sessions CLI existantes."
 
 #: src/renderer/components/thread/ChatPane/parts/items/useReadAbsoluteFile.tsx
 msgid "Could not read file."
@@ -5659,6 +5673,10 @@ msgstr "Dossier"
 msgid "Folder name"
 msgstr "Nom du dossier"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Folder no longer exists — imports into the project chosen above."
+msgstr "Le dossier n'existe plus — import dans le projet choisi ci-dessus."
+
 #: src/mobile/views/ManageProjectsView.tsx
 msgid "Folder on the server"
 msgstr "Dossier sur le serveur"
@@ -6263,6 +6281,10 @@ msgstr "Chemin du fichier d’identité"
 msgid "Idle"
 msgstr "Inactif"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "If the folder is missing, import into"
+msgstr "Si le dossier manque, importer dans"
+
 #: src/renderer/components/plugins/pluginCopy.ts
 msgid "Ignored an unrecognized field in plugin.json."
 msgstr "Un champ inconnu de plugin.json a été ignoré."
@@ -6282,6 +6304,25 @@ msgstr "Aperçu de l'image"
 #: src/renderer/views/ProjectSettingsOverlay/parts/ProjectIconPicker.tsx
 msgid "Images"
 msgstr "Images"
+
+#. Settings section: import existing CLI sessions as threads
+#: src/renderer/views/SettingsOverlay/parts/SettingsSidebar.tsx
+msgid "Import"
+msgstr "Import"
+
+#. placeholder {0}: selected.size
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Import {0} session(s)"
+msgstr "Importer {0} session(s)"
+
+#. placeholder {0}: selected.size
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Import {0} sessions"
+msgstr "Importer {0} sessions"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Import a conversation from Codex CLI or Claude Code. The thread keeps its provider session, so your next message continues where you left off."
+msgstr "Importez une conversation depuis Codex CLI ou Claude Code. Le thread conserve sa session fournisseur : votre prochain message reprend là où vous vous êtes arrêté."
 
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
 msgid "Import again"
@@ -6332,6 +6373,14 @@ msgstr "Méthode d’importation"
 msgid "Import selected"
 msgstr "Importer la sélection"
 
+#: src/renderer/views/MainView/parts/Sidebar/Sidebar.tsx
+msgid "Import session"
+msgstr "Importer une session"
+
+#: src/renderer/views/SettingsOverlay/parts/ImportSettings.tsx
+msgid "Import sessions"
+msgstr "Importer des sessions"
+
 #: src/renderer/components/mcp/McpExternalImportModal.tsx
 msgid "Import to {destinationProjectName}"
 msgstr "Importer dans {destinationProjectName}"
@@ -6344,6 +6393,10 @@ msgstr "Importer globalement"
 #~ msgid "Import to Project"
 #~ msgstr "Importer dans le projet"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Imported"
+msgstr "Importée"
+
 #. placeholder {0}: selectedSkills.length
 #. placeholder {1}: selectedSkills.length === 1 ? "skill" : "skills"
 #: src/renderer/components/skills/SkillImportModal.tsx
@@ -6355,9 +6408,25 @@ msgstr "Importer globalement"
 msgid "Imported {0} skills."
 msgstr "{0} compétences importées."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Imported {imported} session(s)."
+msgstr "{imported} session(s) importée(s)."
+
 #: src/renderer/components/skills/SkillImportModal.tsx
 msgid "Imported 1 skill."
 msgstr "1 compétence importée."
+
+#: src/renderer/components/thread/ChatPane/parts/ImportedThreadNotice.tsx
+msgid "Imported from Claude Code — text only, tool calls are not shown."
+msgstr "Importé depuis Claude Code — texte uniquement, les appels d'outils ne sont pas affichés."
+
+#: src/renderer/components/thread/ChatPane/parts/ImportedThreadNotice.tsx
+msgid "Imported from Codex CLI — text only, tool calls are not shown."
+msgstr "Importé depuis Codex CLI — texte uniquement, les appels d'outils ne sont pas affichés."
+
+#: src/renderer/components/sessionImport/importSessionsActions.ts
+msgid "Imported session"
+msgstr "Session importée"
 
 #: src/renderer/components/changelog/ChangelogView.tsx
 msgid "Improved"
@@ -8235,6 +8304,10 @@ msgstr "Aucune réponse de chat n’est disponible pour le candidat d’expérie
 msgid "No checks reported for this PR."
 msgstr "Aucun contrôle signalé pour cette PR."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "No Codex or Claude Code sessions found on this computer."
+msgstr "Aucune session Codex ou Claude Code trouvée sur cet ordinateur."
+
 #: src/renderer/commands/CommandPalette.tsx
 msgid "No commands found"
 msgstr "Aucune commande trouvée"
@@ -8445,6 +8518,11 @@ msgstr "Aucun plugin n'est activé pour cette exécution"
 msgid "No plugins match your search."
 msgstr "Aucun plugin ne correspond à votre recherche."
 
+#. placeholder {0}: session.preview
+#: src/renderer/components/sessionImport/importSessionsActions.ts
+msgid "No project to import into — pick one for {0}."
+msgstr "Aucun projet où importer — choisissez-en un pour {0}."
+
 #: src/mobile/views/ManageProjectsView.tsx
 msgid "No projects"
 msgstr "Aucun projet"
@@ -8513,6 +8591,10 @@ msgstr "Aucun élément d'exécution pour ce fil pour l'instant."
 #: src/renderer/views/SettingsOverlay/parts/RemoteServersSettings.tsx
 #~ msgid "No servers connected yet."
 #~ msgstr "Aucun serveur connecté pour l'instant."
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "No sessions could be imported."
+msgstr "Aucune session n'a pu être importée."
 
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "No shortcuts found"
@@ -11663,6 +11745,7 @@ msgid "Select account"
 msgstr "Sélectionnez un compte"
 
 #: src/renderer/components/mcp/McpExternalImportModal.tsx
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/skills/SkillImportModal.tsx
 msgid "Select all"
 msgstr "Tout sélectionner"
@@ -12904,6 +12987,10 @@ msgstr "Appuyez sur + pour ajouter un dossier ou cloner un dépôt sur votre bur
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/PrSection.tsx
 msgid "Target branch"
 msgstr "Branche cible"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Target project"
+msgstr "Projet cible"
 
 #: src/renderer/views/MainView/parts/AppContent/parts/Thread/parts/ContinueInProviderDialog.tsx
 #~ msgid "Target provider"
@@ -14204,6 +14291,10 @@ msgstr "Désinstaller {name}"
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "Unknown"
 msgstr "Inconnu"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "unknown folder"
+msgstr "dossier inconnu"
 
 #: src/renderer/notifications.ts
 msgid "Unknown project"

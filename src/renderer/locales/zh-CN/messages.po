@@ -1996,6 +1996,10 @@ msgstr "分支"
 msgid "Bring back to panel"
 msgstr "移回面板"
 
+#: src/renderer/views/SettingsOverlay/parts/ImportSettings.tsx
+msgid "Bring conversations you started in Codex CLI or Claude Code into Poracode. Transcript files are read, never modified."
+msgstr "将你在 Codex CLI 或 Claude Code 中开始的对话导入 Poracode。转录文件只会被读取，绝不会被修改。"
+
 #. placeholder {0}: props.agentLabel
 #: src/renderer/views/SettingsOverlay/parts/SingleAgentSettings/parts/AgentEnvironmentRow.tsx
 msgid "Bring every {0} runtime up to date"
@@ -2715,6 +2719,7 @@ msgstr "克隆…"
 #: src/renderer/components/thread/ThreadBackgroundTasksDock.tsx
 #: src/renderer/views/ExperimentView/parts/ExperimentJudgeRunDialog.tsx
 #: src/renderer/views/MainView/parts/RightPanel/parts/BrowserPanel/BrowserPanel.tsx
+#: src/renderer/views/MainView/parts/Sidebar/Sidebar.tsx
 #: src/renderer/views/QuickComposerOverlay/QuickComposerOverlay.tsx
 msgid "Close"
 msgstr "关闭"
@@ -3615,6 +3620,11 @@ msgstr "无法提取上下文。"
 msgid "Could not generate commit message: {detail}"
 msgstr "无法生成提交消息：{detail}"
 
+#. placeholder {0}: session.preview
+#: src/renderer/components/sessionImport/importSessionsActions.ts
+msgid "Could not import {0}."
+msgstr "无法导入 {0}。"
+
 #. placeholder {0}: failure.project.name
 #: src/renderer/views/PullRequestsView/PullRequestsView.tsx
 msgid "Could not load pull requests for {0}."
@@ -3623,6 +3633,10 @@ msgstr "无法加载 {0} 的拉取请求。"
 #: src/renderer/components/pdf/PdfViewer.tsx
 #~ msgid "Could not open this PDF."
 #~ msgstr "无法打开此 PDF。"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Could not read existing CLI sessions."
+msgstr "无法读取现有的 CLI 会话。"
 
 #: src/renderer/components/thread/ChatPane/parts/items/useReadAbsoluteFile.tsx
 msgid "Could not read file."
@@ -5659,6 +5673,10 @@ msgstr "文件夹"
 msgid "Folder name"
 msgstr "文件夹名称"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Folder no longer exists — imports into the project chosen above."
+msgstr "文件夹已不存在 — 将导入到上面选择的项目。"
+
 #: src/mobile/views/ManageProjectsView.tsx
 msgid "Folder on the server"
 msgstr "服务器上的文件夹"
@@ -6263,6 +6281,10 @@ msgstr "身份文件路径"
 msgid "Idle"
 msgstr "空闲"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "If the folder is missing, import into"
+msgstr "若文件夹缺失，导入到"
+
 #: src/renderer/components/plugins/pluginCopy.ts
 msgid "Ignored an unrecognized field in plugin.json."
 msgstr "已忽略 plugin.json 中一个无法识别的字段。"
@@ -6282,6 +6304,25 @@ msgstr "图片预览"
 #: src/renderer/views/ProjectSettingsOverlay/parts/ProjectIconPicker.tsx
 msgid "Images"
 msgstr "图片"
+
+#. Settings section: import existing CLI sessions as threads
+#: src/renderer/views/SettingsOverlay/parts/SettingsSidebar.tsx
+msgid "Import"
+msgstr "导入"
+
+#. placeholder {0}: selected.size
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Import {0} session(s)"
+msgstr "导入 {0} 个会话"
+
+#. placeholder {0}: selected.size
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Import {0} sessions"
+msgstr "导入 {0} 个会话"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Import a conversation from Codex CLI or Claude Code. The thread keeps its provider session, so your next message continues where you left off."
+msgstr "从 Codex CLI 或 Claude Code 导入一段对话。线程保留其提供方会话，因此你的下一条消息会从中断处继续。"
 
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
 msgid "Import again"
@@ -6332,6 +6373,14 @@ msgstr "导入方式"
 msgid "Import selected"
 msgstr "导入所选项"
 
+#: src/renderer/views/MainView/parts/Sidebar/Sidebar.tsx
+msgid "Import session"
+msgstr "导入会话"
+
+#: src/renderer/views/SettingsOverlay/parts/ImportSettings.tsx
+msgid "Import sessions"
+msgstr "导入会话"
+
 #: src/renderer/components/mcp/McpExternalImportModal.tsx
 msgid "Import to {destinationProjectName}"
 msgstr "导入到 {destinationProjectName}"
@@ -6344,6 +6393,10 @@ msgstr "导入到全局"
 #~ msgid "Import to Project"
 #~ msgstr "导入到项目"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Imported"
+msgstr "已导入"
+
 #. placeholder {0}: selectedSkills.length
 #. placeholder {1}: selectedSkills.length === 1 ? "skill" : "skills"
 #: src/renderer/components/skills/SkillImportModal.tsx
@@ -6355,9 +6408,25 @@ msgstr "导入到全局"
 msgid "Imported {0} skills."
 msgstr "已导入 {0} 个技能。"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Imported {imported} session(s)."
+msgstr "已导入 {imported} 个会话。"
+
 #: src/renderer/components/skills/SkillImportModal.tsx
 msgid "Imported 1 skill."
 msgstr "已导入 1 个技能。"
+
+#: src/renderer/components/thread/ChatPane/parts/ImportedThreadNotice.tsx
+msgid "Imported from Claude Code — text only, tool calls are not shown."
+msgstr "从 Claude Code 导入 — 仅文本，不显示工具调用。"
+
+#: src/renderer/components/thread/ChatPane/parts/ImportedThreadNotice.tsx
+msgid "Imported from Codex CLI — text only, tool calls are not shown."
+msgstr "从 Codex CLI 导入 — 仅文本，不显示工具调用。"
+
+#: src/renderer/components/sessionImport/importSessionsActions.ts
+msgid "Imported session"
+msgstr "导入的会话"
 
 #: src/renderer/components/changelog/ChangelogView.tsx
 msgid "Improved"
@@ -8235,6 +8304,10 @@ msgstr "实验候选项 {threadId} 没有可用的聊天回复。"
 msgid "No checks reported for this PR."
 msgstr "没有为此 PR 报告检查。"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "No Codex or Claude Code sessions found on this computer."
+msgstr "在这台电脑上未找到 Codex 或 Claude Code 会话。"
+
 #: src/renderer/commands/CommandPalette.tsx
 msgid "No commands found"
 msgstr "没有找到命令"
@@ -8445,6 +8518,11 @@ msgstr "本次运行未启用任何插件"
 msgid "No plugins match your search."
 msgstr "没有与搜索匹配的插件。"
 
+#. placeholder {0}: session.preview
+#: src/renderer/components/sessionImport/importSessionsActions.ts
+msgid "No project to import into — pick one for {0}."
+msgstr "没有可导入的项目 — 请为 {0} 选择一个。"
+
 #: src/mobile/views/ManageProjectsView.tsx
 msgid "No projects"
 msgstr "没有项目"
@@ -8513,6 +8591,10 @@ msgstr "该线程还没有运行时项目。"
 #: src/renderer/views/SettingsOverlay/parts/RemoteServersSettings.tsx
 #~ msgid "No servers connected yet."
 #~ msgstr "尚未连接任何服务器。"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "No sessions could be imported."
+msgstr "没有会话被导入。"
 
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "No shortcuts found"
@@ -11663,6 +11745,7 @@ msgid "Select account"
 msgstr "选择账户"
 
 #: src/renderer/components/mcp/McpExternalImportModal.tsx
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/skills/SkillImportModal.tsx
 msgid "Select all"
 msgstr "全选"
@@ -12904,6 +12987,10 @@ msgstr "点击 + 在桌面端添加文件夹或克隆存储库。"
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/PrSection.tsx
 msgid "Target branch"
 msgstr "目标分支"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Target project"
+msgstr "目标项目"
 
 #: src/renderer/views/MainView/parts/AppContent/parts/Thread/parts/ContinueInProviderDialog.tsx
 #~ msgid "Target provider"
@@ -14204,6 +14291,10 @@ msgstr "卸载 {name}"
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "Unknown"
 msgstr "未知"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "unknown folder"
+msgstr "未知文件夹"
 
 #: src/renderer/notifications.ts
 msgid "Unknown project"
