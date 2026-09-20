@@ -1,3 +1,4 @@
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import type { AgentCapability, AgentInstanceConfig, ProjectLocation } from "@/shared/contracts";
 import { codexProfileKind, parseCodexProfileInstanceConfig } from "@/shared/contracts";
@@ -150,9 +151,25 @@ export function createCodexAdapter(options: CodexAdapterOptions = {}): AgentAdap
   const profileId = options.profileId;
   const isProfile = options.homeDir !== undefined && profileId !== undefined;
 
-  /** The profile's resolved CODEX_HOME for `location`, or undefined for the base adapter. */
-  const profileHome = (location: ProjectLocation): string | undefined =>
-    options.homeDir === undefined ? undefined : resolveTildePath(options.homeDir, location);
+  /**
+   * The profile's resolved CODEX_HOME for `location`, or undefined for the
+   * base adapter. Codex refuses to start ("CODEX_HOME points to … but that
+   * path does not exist") when the directory is missing, and a fresh profile
+   * has nothing on disk until its first login — so create it here, on the
+   * host only (WSL homes are created by the CLI inside the distro).
+   */
+  const profileHome = (location: ProjectLocation): string | undefined => {
+    if (options.homeDir === undefined) return undefined;
+    const home = resolveTildePath(options.homeDir, location);
+    if (location.kind !== "wsl") {
+      try {
+        mkdirSync(home, { recursive: true });
+      } catch {
+        // Best-effort; Codex reports the missing directory itself.
+      }
+    }
+    return home;
+  };
   const profileEnv = (location: ProjectLocation): Record<string, string> | undefined => {
     const home = profileHome(location);
     return home ? { CODEX_HOME: home } : undefined;

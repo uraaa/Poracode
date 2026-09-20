@@ -104,6 +104,24 @@ describe("createCodexProfileAdapter", () => {
     );
   });
 
+  it("creates a missing profile home so Codex can start before the first login", () => {
+    const parent = mkdtempSync(path.join(tmpdir(), "poracode-codex-profile-new-"));
+    const homeDir = path.join(parent, "fresh-home");
+    const adapter = createCodexProfileAdapter({
+      id: "fresh",
+      driver: "codex",
+      displayName: "Fresh",
+      config: { homeDir },
+    });
+    expect(existsSync(homeDir)).toBe(false);
+    const env = adapter.buildResumeArgv?.(projectLocation, { model: "gpt-5.5" }, "hello", {
+      providerSessionId: "thread-1",
+      discoveredAt: "test",
+    })?.env;
+    expect(env?.CODEX_HOME).toBe(homeDir);
+    expect(existsSync(homeDir)).toBe(true);
+  });
+
   it("links the profile home into its overlay on every launch, not only at install", async () => {
     // A fresh profile has no auth.json until the user signs in later, so the
     // overlay must pick up state files that appear after the plugin install.
