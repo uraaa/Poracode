@@ -1,8 +1,27 @@
 import { homedir } from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ProjectLocation } from "@/shared/contracts";
+
+// These tests only exercise env plumbing. Skip the real `~/.codex/sessions`
+// walk and the `codex --version` probe, both of which flake under parallel
+// load (a large session store, an 8s exec timeout) and prove nothing here.
+vi.mock("./plugin/install", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./plugin/install")>();
+  return {
+    ...actual,
+    isCodexSemverSupportedForGoals: () => true,
+    probeCodexCliSemver: () => [999, 0, 0] as [number, number, number],
+    codexHooksFeatureFlagForSemver: () => "hooks",
+  };
+});
+vi.mock("./sessionFiles", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./sessionFiles")>();
+  return { ...actual, readCodexSessionIndex: () => [] };
+});
+
 import { createCodexAdapter, createCodexProfileAdapter } from "./index";
+import { codexTerminalAuthMethod } from "./detection";
 import { codexAppServerPoolKey } from "./serverPool";
 import { buildCodexAppServerCommand } from "./argv";
 import {
@@ -62,8 +81,13 @@ describe("createCodexProfileAdapter", () => {
   it("leaves the base Codex adapter without a CODEX_HOME override", () => {
     const adapter = createCodexAdapter();
     expect(adapter.kind).toBe("codex");
+    // `buildResumeArgv` shapes the same argv as launch without the pre-spawn
+    // snapshot of the real `~/.codex/sessions` tree.
     expect(
-      adapter.buildLaunchArgv(projectLocation, { model: "gpt-5.5" }, "hello").env?.CODEX_HOME,
+      adapter.buildResumeArgv?.(projectLocation, { model: "gpt-5.5" }, "hello", {
+        providerSessionId: "thread-1",
+        discoveredAt: "test",
+      })?.env?.CODEX_HOME,
     ).toBeUndefined();
     expect(
       adapter.buildOneShotCommand?.("gpt-5.5", undefined, "Summarize", projectLocation)?.env
@@ -84,6 +108,17 @@ describe("createCodexProfileAdapter", () => {
     await expect(
       adapter.isPluginSupported?.({ envKind: "wsl", wslDistro: "Ubuntu" }),
     ).resolves.toBe(false);
+  });
+});
+
+describe("codexTerminalAuthMethod", () => {
+  it("carries the profile env so the login overlay targets the profile home", () => {
+    expect(codexTerminalAuthMethod({ CODEX_HOME: "/home/demo/.codex-work" })).toMatchObject({
+      type: "terminal",
+      args: ["login"],
+      env: { CODEX_HOME: "/home/demo/.codex-work" },
+    });
+    expect(codexTerminalAuthMethod(undefined)).not.toHaveProperty("env");
   });
 });
 

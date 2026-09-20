@@ -1,7 +1,7 @@
 import {
   compactAgentProviderMetadata,
-  type AgentAuthMethod,
   type AgentCapability,
+  type AgentTerminalAuthMethod,
 } from "@/shared/contracts";
 import {
   configFileAuthProbe,
@@ -349,12 +349,21 @@ async function probeCodexStatus(ctx: Parameters<NonNullable<DetectionSpec["statu
   return result.ok ? { authState: "authenticated" as const } : { authState: "unknown" as const };
 }
 
-const CODEX_TERMINAL_AUTH_METHOD: AgentAuthMethod = {
+const CODEX_TERMINAL_AUTH_METHOD: AgentTerminalAuthMethod = {
   type: "terminal",
   id: "codex-login",
   name: "Codex login",
   args: ["login"],
 };
+
+/**
+ * The Settings login overlay runs `codex login` in a plain shell, so a
+ * profile's `CODEX_HOME` must ride along on the auth method or the login
+ * would land in the global `~/.codex`.
+ */
+export function codexTerminalAuthMethod(env?: Record<string, string>): AgentTerminalAuthMethod {
+  return env ? { ...CODEX_TERMINAL_AUTH_METHOD, env } : CODEX_TERMINAL_AUTH_METHOD;
+}
 
 export const codexDetectionSpec: DetectionSpec = {
   kind: "codex",
@@ -394,7 +403,7 @@ export const codexDetectionSpec: DetectionSpec = {
         probe?.models?.map((model) => model.id) ?? [],
         resolveCodexContextWindows(ctx.agentSettings),
       ),
-      authMethods: [CODEX_TERMINAL_AUTH_METHOD],
+      authMethods: [codexTerminalAuthMethod(ctx.probeEnv)],
       authLogoutSupported: true,
     };
   },
