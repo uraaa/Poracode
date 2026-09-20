@@ -2086,9 +2086,10 @@ Create `src/renderer/components/sessionImport/importSessionsActions.ts`:
 import { toast } from "@heroui/react";
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
-import type { ImportableSession } from "@/shared/contracts";
+import type { ImportableSession, ProjectLocation } from "@/shared/contracts";
 import { readBridge } from "@/renderer/bridge";
 import { useAppStore } from "@/renderer/state/appStore";
+import { getActiveWorkspaceId } from "@/renderer/state/workspaceStore";
 
 /** Title lines stay short enough to read in the sidebar. */
 const TITLE_MAX_CHARS = 60;
@@ -2099,6 +2100,39 @@ function titleFor(session: ImportableSession): string {
   return preview.length > TITLE_MAX_CHARS ? `${preview.slice(0, TITLE_MAX_CHARS)}…` : preview;
 }
 
+function hostLocation(path: string): ProjectLocation {
+  return process.platform === "win32" ? { kind: "windows", path } : { kind: "posix", path };
+}
+
+/**
+ * The project an imported thread belongs in. A session records the folder it
+ * ran in, so the natural home is the project for that folder: reuse it when
+ * Poracode already has it, create it when the folder still exists on disk.
+ * `addProjectWithResult` dedupes by project identity, so a repeat import is a
+ * lookup, not a second row. A new project joins the workspace the user is
+ * currently looking at — an unfiled project would otherwise appear in all of
+ * them.
+ *
+ * A session whose folder is gone (repo deleted or moved) creates nothing and
+ * falls back to the project the user picked in the panel.
+ */
+export function resolveImportProjectId(
+  session: ImportableSession,
+  fallbackProjectId?: string,
+): string | undefined {
+  if (session.cwd && session.cwdExists) {
+    const { project } = useAppStore
+      .getState()
+      .addProjectWithResult(
+        hostLocation(session.cwd),
+        undefined,
+        getActiveWorkspaceId() ?? undefined,
+      );
+    return project.id;
+  }
+  return fallbackProjectId;
+}
+
 /**
  * Create one thread per selected session and replay its transcript. The thread
  * is created through the store's normal path, so persistence and the sidebar
@@ -2106,7 +2140,7 @@ function titleFor(session: ImportableSession): string {
  */
 export async function importSessions(input: {
   sessions: readonly ImportableSession[];
-  projectId: string;
+  fallbackProjectId?: string;
 }): Promise<{ imported: number; failed: number }> {
   const store = useAppStore.getState();
   let imported = 0;
@@ -2114,8 +2148,14 @@ export async function importSessions(input: {
 
   for (const session of input.sessions) {
     try {
+      const projectId = resolveImportProjectId(session, input.fallbackProjectId);
+      if (!projectId) {
+        failed += 1;
+        toast.danger(i18n._(msg`No project to import into — pick one for ${session.preview}.`));
+        continue;
+      }
       const thread = store.createThread({
-        projectId: input.projectId,
+        projectId,
         agentKind: session.agentKind,
         config: {
           model: "",
@@ -2232,11 +2272,14 @@ export function ImportSessionsPanel(props: { cwd?: string; projectId?: string })
   }, [importable]);
 
   const runImport = useCallback(async () => {
-    if (selected.size === 0 || !projectId) return;
+    if (selected.size === 0) return;
     setBusy(true);
     try {
       const chosen = sessions.filter((session) => selected.has(session.id));
-      const { imported, failed } = await importSessions({ sessions: chosen, projectId });
+      const { imported, failed } = await importSessions({
+        sessions: chosen,
+        ...(projectId ? { fallbackProjectId: projectId } : {}),
+      });
       if (imported > 0) {
         toast.success(t`Imported ${imported} session(s).`);
         setSelected(new Set());
@@ -2288,7 +2331,7 @@ export function ImportSessionsPanel(props: { cwd?: string; projectId?: string })
 
       {props.projectId === undefined ? (
         <label className="flex items-center gap-2 text-xs text-muted">
-          <Trans>Import into</Trans>
+          <Trans>If the folder is missing, import into</Trans>
           <select
             aria-label={t`Target project`}
             className="rounded border border-border/20 bg-transparent px-2 py-1 text-xs"
@@ -2328,6 +2371,11 @@ export function ImportSessionsPanel(props: { cwd?: string; projectId?: string })
                   {session.agentKind} · {session.cwd ?? t`unknown folder`} ·{" "}
                   <Trans>{session.messageCount} messages</Trans>
                 </p>
+                {session.cwd && !session.cwdExists ? (
+                  <p className="text-[10px] text-warning">
+                    <Trans>Folder no longer exists — imports into the project chosen above.</Trans>
+                  </p>
+                ) : null}
               </div>
               {alreadyImported ? (
                 <span className="text-[10px] text-muted">
@@ -2344,7 +2392,7 @@ export function ImportSessionsPanel(props: { cwd?: string; projectId?: string })
           size="sm"
           variant="tertiary"
           aria-label={t`Import ${selected.size} sessions`}
-          isDisabled={selected.size === 0 || !projectId || busy}
+          isDisabled={selected.size === 0 || busy}
           onPress={() => void runImport()}
         >
           <Trans>Import {selected.size} session(s)</Trans>
