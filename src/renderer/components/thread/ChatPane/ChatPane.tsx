@@ -44,6 +44,7 @@ import {
 } from "./chatPaneSelectors";
 import { shouldMarkUserScrollIntentFromPointerTarget } from "./chatScrollGeometry";
 import { normalizeChatProjectPath } from "./chatPathUtils";
+import { ImportedThreadNotice } from "./parts/ImportedThreadNotice";
 import { MessageList, type CheckpointRevertActions } from "./parts/MessageList";
 import { SubAgentOpenController } from "./parts/items/SubAgentOverlay";
 import { resolveThreadMarkdownImageRoots } from "../threadMarkdownImageRoots";
@@ -388,6 +389,9 @@ export function ChatPane(props: ChatPaneProps) {
   return (
     <ChatPaneActionsContext.Provider value={paneActionsOverride ?? paneActions}>
       <div className="flex h-full min-h-0 flex-col">
+        {thread.config.importedFrom ? (
+          <ImportedThreadNotice importedFrom={thread.config.importedFrom} />
+        ) : null}
         <div className="relative min-h-0 flex-1">
           <MessageList
             key={threadId}
