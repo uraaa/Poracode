@@ -39,6 +39,18 @@ const agentInstances: AgentInstanceConfigMap = {
     displayName: "Work",
     environment: { CURSOR_API_KEY: { value: "lc-safe:encrypted", sensitive: true } },
   },
+  "codex-work": {
+    id: "codex-work",
+    driver: "codex",
+    displayName: "Work",
+    config: { homeDir: "~/.poracode/codex-profiles/work" },
+  },
+  "codex-broken": {
+    id: "codex-broken",
+    driver: "codex",
+    displayName: "Broken",
+    config: {},
+  },
 };
 
 describe("usageProviders", () => {
@@ -89,6 +101,21 @@ describe("usageProviders", () => {
     expect(providers.find((provider) => provider.id === "cursor:yieldmo")?.sharedWindowReset).toBe(
       true,
     );
+  });
+
+  it("adds Codex profile providers after the base Codex provider", () => {
+    const providers = usageProvidersForAgentInstances(agentInstances);
+    const codexIndex = providers.findIndex((provider) => provider.id === "codex");
+
+    // A profile with a malformed config is skipped, like the supervisor does.
+    expect(providers.slice(codexIndex, codexIndex + 2).map((provider) => provider.id)).toEqual([
+      "codex",
+      "codex:codex-work",
+    ]);
+    expect(providers.find((provider) => provider.id === "codex:codex-work")?.label).toBe(
+      "Codex Work",
+    );
+    expect(providers.find((provider) => provider.id === "codex:codex-broken")).toBeUndefined();
   });
 
   it("orders, disables, and rings Claude profiles like Claude", () => {

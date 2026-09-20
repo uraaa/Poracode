@@ -18,6 +18,11 @@ import {
   type ClaudeUsageProfile,
 } from "../agents/claude/claudeUsageProfiles";
 import {
+  collectCodexProfile,
+  readCodexUsageProfiles,
+  type CodexUsageProfile,
+} from "../agents/codex/codexUsageProfiles";
+import {
   collectCursorProfile,
   readCursorSdkUsageProfile,
   readCursorUsageProfiles,
@@ -112,7 +117,12 @@ export class UsageService {
   private defaultProviderIds(): string[] {
     const baseIds = [...(this.options.providerIds ?? DEFAULT_PROVIDER_IDS)];
     if (this.options.providerIds) return baseIds;
-    return [...baseIds, ...this.claudeUsageProfiles().keys(), ...this.cursorUsageProfiles().keys()];
+    return [
+      ...baseIds,
+      ...this.claudeUsageProfiles().keys(),
+      ...this.codexUsageProfiles().keys(),
+      ...this.cursorUsageProfiles().keys(),
+    ];
   }
 
   /** Read shared settings from disk (defaults if absent). Decrypts profile keys. */
@@ -130,6 +140,10 @@ export class UsageService {
     return readClaudeUsageProfiles(this.readSharedSettings());
   }
 
+  private codexUsageProfiles(): Map<string, CodexUsageProfile> {
+    return readCodexUsageProfiles(this.readSharedSettings());
+  }
+
   private cursorUsageProfiles(): Map<string, CursorUsageProfile> {
     return readCursorUsageProfiles(this.readSharedSettings());
   }
@@ -140,6 +154,7 @@ export class UsageService {
       this.registry.has(id) ||
       this.localCollectors.has(id) ||
       this.claudeUsageProfiles().has(id) ||
+      this.codexUsageProfiles().has(id) ||
       this.cursorUsageProfiles().has(id)
     );
   }
@@ -237,6 +252,7 @@ export class UsageService {
 
   private async runRefresh(ids: string[]): Promise<ProviderUsageResponse> {
     const claudeProfiles = this.claudeUsageProfiles();
+    const codexProfiles = this.codexUsageProfiles();
     const cursorSdkProfile = readCursorSdkUsageProfile(this.readSharedSettings());
     const cursorProfiles = this.cursorUsageProfiles();
     const showEstimatedCost = this.readUsageSettings().showEstimatedCost;
@@ -245,33 +261,47 @@ export class UsageService {
     );
     const localIds = ids.filter((id) => this.localCollectors.has(id));
     const claudeProfileIds = ids.filter((id) => claudeProfiles.has(id));
+    const codexProfileIds = ids.filter((id) => codexProfiles.has(id));
     const cursorProfileIds = ids.filter((id) => cursorProfiles.has(id));
     const collectCursorSdk = cursorSdkProfile && ids.includes("cursor");
     // The registry HTTP batch and the supervisor-local collectors are independent
     // of each other, so run both groups concurrently rather than waiting out the
     // (rate-limited, slow) HTTP batch before starting the local scans.
-    const [registrySnaps, localSnaps, claudeProfileSnaps, cursorProfileSnaps, cursorSdkSnapshot] =
-      await Promise.all([
-        this.registry.collectAll(registryIds, this.host),
-        Promise.all(localIds.map((id) => this.collectLocal(id))),
-        Promise.all(
-          claudeProfileIds.flatMap((id) => {
-            const profile = claudeProfiles.get(id);
-            return profile ? [collectClaudeProfile(profile, this.host)] : [];
-          }),
-        ),
-        Promise.all(
-          cursorProfileIds.flatMap((id) => {
-            const profile = cursorProfiles.get(id);
-            return profile ? [collectCursorProfile(profile, this.host)] : [];
-          }),
-        ),
-        collectCursorSdk ? collectCursorProfile(cursorSdkProfile, this.host) : undefined,
-      ]);
+    const [
+      registrySnaps,
+      localSnaps,
+      claudeProfileSnaps,
+      codexProfileSnaps,
+      cursorProfileSnaps,
+      cursorSdkSnapshot,
+    ] = await Promise.all([
+      this.registry.collectAll(registryIds, this.host),
+      Promise.all(localIds.map((id) => this.collectLocal(id))),
+      Promise.all(
+        claudeProfileIds.flatMap((id) => {
+          const profile = claudeProfiles.get(id);
+          return profile ? [collectClaudeProfile(profile, this.host)] : [];
+        }),
+      ),
+      Promise.all(
+        codexProfileIds.flatMap((id) => {
+          const profile = codexProfiles.get(id);
+          return profile ? [collectCodexProfile(profile, this.host)] : [];
+        }),
+      ),
+      Promise.all(
+        cursorProfileIds.flatMap((id) => {
+          const profile = cursorProfiles.get(id);
+          return profile ? [collectCursorProfile(profile, this.host)] : [];
+        }),
+      ),
+      collectCursorSdk ? collectCursorProfile(cursorSdkProfile, this.host) : undefined,
+    ]);
     let snapshots = [
       ...registrySnaps,
       ...localSnaps,
       ...claudeProfileSnaps,
+      ...codexProfileSnaps,
       ...cursorProfileSnaps,
       ...(cursorSdkSnapshot ? [cursorSdkSnapshot] : []),
     ].map((snap) => this.preserveOnTransientFailure(snap));
