@@ -1304,8 +1304,8 @@ msgid "All files"
 msgstr "すべてのファイル"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
-msgid "All folders"
-msgstr "すべてのフォルダー"
+#~ msgid "All folders"
+#~ msgstr "すべてのフォルダー"
 
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeHeading.tsx
 msgid "All machines"
@@ -1316,6 +1316,7 @@ msgid "All plugins are up to date."
 msgstr "すべてのプラグインは最新です。"
 
 #: src/mobile/views/ThreadsView.tsx
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectFilter.tsx
 msgid "All projects"
 msgstr "すべてのプロジェクト"
@@ -5673,7 +5674,6 @@ msgstr "組み込みブラウザのアドレスバーをフォーカス"
 msgid "Focus window"
 msgstr "ウィンドウに切り替え"
 
-#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/ChatPane/parts/items/InlineFolderPathChip.tsx
 msgid "Folder"
 msgstr "フォルダ"
@@ -9977,6 +9977,7 @@ msgstr "プロファイル"
 #: src/renderer/components/mcp/McpExternalImportModal.tsx
 #: src/renderer/components/plugins/PluginDetail.tsx
 #: src/renderer/components/plugins/PluginMarketplace.tsx
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/ThreadCommandPanel.tsx
 #: src/renderer/views/GitHubActionsView/GitHubActionsSidebar.tsx
 #: src/renderer/views/ProjectSettingsOverlay/ProjectSettingsOverlay.tsx
@@ -11614,8 +11615,8 @@ msgid "Search files"
 msgstr "ファイルの検索"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
-msgid "Search folders…"
-msgstr "フォルダーを検索…"
+#~ msgid "Search folders…"
+#~ msgstr "フォルダーを検索…"
 
 #: src/renderer/views/ProjectSettingsOverlay/parts/ProjectIconPicker.tsx
 msgid "Search icons"

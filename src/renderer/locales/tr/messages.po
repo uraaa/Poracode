@@ -1305,8 +1305,8 @@ msgid "All files"
 msgstr "Tüm dosyalar"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
-msgid "All folders"
-msgstr "Tüm klasörler"
+#~ msgid "All folders"
+#~ msgstr "Tüm klasörler"
 
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeHeading.tsx
 msgid "All machines"
@@ -1317,6 +1317,7 @@ msgid "All plugins are up to date."
 msgstr "Tüm eklentiler güncel."
 
 #: src/mobile/views/ThreadsView.tsx
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectFilter.tsx
 msgid "All projects"
 msgstr "Tüm projeler"
@@ -5674,7 +5675,6 @@ msgstr "Uygulama içi tarayıcı adres çubuğuna odakla"
 msgid "Focus window"
 msgstr "Pencereyi öne getir"
 
-#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/ChatPane/parts/items/InlineFolderPathChip.tsx
 msgid "Folder"
 msgstr "Klasör"
@@ -9979,6 +9979,7 @@ msgstr "Profiller"
 #: src/renderer/components/mcp/McpExternalImportModal.tsx
 #: src/renderer/components/plugins/PluginDetail.tsx
 #: src/renderer/components/plugins/PluginMarketplace.tsx
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/ThreadCommandPanel.tsx
 #: src/renderer/views/GitHubActionsView/GitHubActionsSidebar.tsx
 #: src/renderer/views/ProjectSettingsOverlay/ProjectSettingsOverlay.tsx
@@ -11616,8 +11617,8 @@ msgid "Search files"
 msgstr "Dosyaları arayın"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
-msgid "Search folders…"
-msgstr "Klasörleri ara…"
+#~ msgid "Search folders…"
+#~ msgstr "Klasörleri ara…"
 
 #: src/renderer/views/ProjectSettingsOverlay/parts/ProjectIconPicker.tsx
 msgid "Search icons"

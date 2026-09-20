@@ -154,7 +154,7 @@ describe("ImportSessionsPanel", () => {
 
     expect(await screen.findByText("fix the race condition")).toBeInTheDocument();
     expect(listImportableSessionsMock).toHaveBeenCalledWith({});
-    expect(screen.getByLabelText("Folder")).toHaveValue("F:\\repo");
+    expect(screen.getByLabelText("Project")).toHaveValue("F:\\repo");
     expect(screen.queryByText("elsewhere")).not.toBeInTheDocument();
     // The project picker is always offered, seeded with the given project.
     expect(screen.getByLabelText("Target project")).toHaveValue("p1");
@@ -266,10 +266,10 @@ describe("ImportSessionsPanel", () => {
     render(<ImportSessionsPanel />);
     await screen.findByText("fix the race condition");
 
-    fireEvent.change(screen.getByLabelText("Folder"), { target: { value: "F:\\other" } });
+    fireEvent.change(screen.getByLabelText("Project"), { target: { value: "F:\\other" } });
     expect(screen.getByText("write a test")).toBeInTheDocument();
     expect(screen.queryByText("fix the race condition")).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Folder"), { target: { value: "all" } });
+    fireEvent.change(screen.getByLabelText("Project"), { target: { value: "all" } });
 
     fireEvent.change(screen.getByLabelText("Provider"), { target: { value: "claude" } });
     expect(screen.queryByText("fix the race condition")).not.toBeInTheDocument();

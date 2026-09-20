@@ -176,19 +176,19 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
           onChange={(value) => select({ account: value })}
         />
         <SearchableSelect
-          label={t`Folder`}
+          label={t`Project`}
           mono
           className="max-w-80"
           value={filters.folder}
           options={[
-            { value: ALL, label: t`All folders` },
+            { value: ALL, label: t`All projects` },
             ...facets.folders.map((folder) => ({
               value: folder,
               label: folder.split(/[\\/]/u).filter(Boolean).at(-1) ?? folder,
               hint: folder,
             })),
           ]}
-          searchPlaceholder={t`Search folders…`}
+          searchPlaceholder={t`Search projects…`}
           onChange={(value) => select({ folder: value })}
         />
         <Input

@@ -1305,8 +1305,8 @@ msgid "All files"
 msgstr "Tous les fichiers"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
-msgid "All folders"
-msgstr "Tous les dossiers"
+#~ msgid "All folders"
+#~ msgstr "Tous les dossiers"
 
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeHeading.tsx
 msgid "All machines"
@@ -1317,6 +1317,7 @@ msgid "All plugins are up to date."
 msgstr "Tous les plugins sont à jour."
 
 #: src/mobile/views/ThreadsView.tsx
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectFilter.tsx
 msgid "All projects"
 msgstr "Tous les projets"
@@ -5674,7 +5675,6 @@ msgstr "Accéder à la barre d'adresse du navigateur dans l'application"
 msgid "Focus window"
 msgstr "Activer la fenêtre"
 
-#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/ChatPane/parts/items/InlineFolderPathChip.tsx
 msgid "Folder"
 msgstr "Dossier"
@@ -9978,6 +9978,7 @@ msgstr "Profils"
 #: src/renderer/components/mcp/McpExternalImportModal.tsx
 #: src/renderer/components/plugins/PluginDetail.tsx
 #: src/renderer/components/plugins/PluginMarketplace.tsx
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/ThreadCommandPanel.tsx
 #: src/renderer/views/GitHubActionsView/GitHubActionsSidebar.tsx
 #: src/renderer/views/ProjectSettingsOverlay/ProjectSettingsOverlay.tsx
@@ -11615,8 +11616,8 @@ msgid "Search files"
 msgstr "Rechercher des fichiers"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
-msgid "Search folders…"
-msgstr "Rechercher des dossiers…"
+#~ msgid "Search folders…"
+#~ msgstr "Rechercher des dossiers…"
 
 #: src/renderer/views/ProjectSettingsOverlay/parts/ProjectIconPicker.tsx
 msgid "Search icons"

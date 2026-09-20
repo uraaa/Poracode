@@ -1305,8 +1305,8 @@ msgid "All files"
 msgstr "Усі файли"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
-msgid "All folders"
-msgstr "Усі теки"
+#~ msgid "All folders"
+#~ msgstr "Усі теки"
 
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeHeading.tsx
 msgid "All machines"
@@ -1317,6 +1317,7 @@ msgid "All plugins are up to date."
 msgstr "Усі плагіни актуальні."
 
 #: src/mobile/views/ThreadsView.tsx
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectFilter.tsx
 msgid "All projects"
 msgstr "Усі проєкти"
@@ -5674,7 +5675,6 @@ msgstr "Встановити фокус на адресний рядок бра�
 msgid "Focus window"
 msgstr "Перейти до вікна"
 
-#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/ChatPane/parts/items/InlineFolderPathChip.tsx
 msgid "Folder"
 msgstr "Папка"
@@ -9979,6 +9979,7 @@ msgstr "Профілі"
 #: src/renderer/components/mcp/McpExternalImportModal.tsx
 #: src/renderer/components/plugins/PluginDetail.tsx
 #: src/renderer/components/plugins/PluginMarketplace.tsx
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/ThreadCommandPanel.tsx
 #: src/renderer/views/GitHubActionsView/GitHubActionsSidebar.tsx
 #: src/renderer/views/ProjectSettingsOverlay/ProjectSettingsOverlay.tsx
@@ -11616,8 +11617,8 @@ msgid "Search files"
 msgstr "Пошук файлів"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
-msgid "Search folders…"
-msgstr "Пошук тек…"
+#~ msgid "Search folders…"
+#~ msgstr "Пошук тек…"
 
 #: src/renderer/views/ProjectSettingsOverlay/parts/ProjectIconPicker.tsx
 msgid "Search icons"
