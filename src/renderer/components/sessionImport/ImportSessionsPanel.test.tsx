@@ -45,6 +45,29 @@ vi.mock("@/renderer/components/common", () => ({
   ),
 }));
 
+// The panel's tests cover filter logic, not the popover; a native select keeps
+// `fireEvent.change` meaningful and the SearchableSelect has its own test.
+vi.mock("./SearchableSelect", () => ({
+  SearchableSelect: (props: {
+    label: string;
+    value: string;
+    options: readonly { value: string; label: string }[];
+    onChange: (value: string) => void;
+  }) => (
+    <select
+      aria-label={props.label}
+      value={props.value}
+      onChange={(event) => props.onChange(event.target.value)}
+    >
+      {props.options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  ),
+}));
+
 const listImportableSessionsMock = vi.hoisted(() =>
   vi.fn<(payload: unknown) => Promise<ImportableSession[]>>(),
 );

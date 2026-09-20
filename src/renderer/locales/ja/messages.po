@@ -8438,6 +8438,10 @@ msgstr "Lightcode データが見つかりませんでした。"
 msgid "No marketplace skills match these filters."
 msgstr "これらのフィルターに一致するマーケットプレイススキルはありません。"
 
+#: src/renderer/components/sessionImport/SearchableSelect.tsx
+msgid "No matches"
+msgstr "一致なし"
+
 #: src/renderer/components/thread/ChatPane/ChatRuntimeDebugPanel.tsx
 msgid "No matches for “{query}”."
 msgstr "「{query}」に一致するものはありません。"
@@ -11583,6 +11587,11 @@ msgstr "SDK 未インストール"
 msgid "Search"
 msgstr "検索"
 
+#. placeholder {0}: props.label
+#: src/renderer/components/sessionImport/SearchableSelect.tsx
+msgid "Search {0}"
+msgstr "{0} を検索"
+
 #: src/renderer/views/SettingsOverlay/parts/AcpRegistrySettings.tsx
 msgid "Search agents"
 msgstr "エージェントを検索"
@@ -11603,6 +11612,10 @@ msgstr "テキストまたはフォルダーで検索"
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
 msgid "Search files"
 msgstr "ファイルの検索"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search folders…"
+msgstr "フォルダーを検索…"
 
 #: src/renderer/views/ProjectSettingsOverlay/parts/ProjectIconPicker.tsx
 msgid "Search icons"
@@ -11647,6 +11660,10 @@ msgstr "プラグインを検索"
 #: src/renderer/components/plugins/PluginMarketplace.tsx
 msgid "Search plugins, skills, and servers..."
 msgstr "プラグイン・スキル・サーバーを検索..."
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search projects…"
+msgstr "プロジェクトを検索…"
 
 #: src/renderer/views/PullRequestsView/PullRequestsView.tsx
 msgid "Search pull requests"
@@ -11706,6 +11723,7 @@ msgstr "スレッドを検索する"
 msgid "Search Threads"
 msgstr "スレッドの検索"
 
+#: src/renderer/components/sessionImport/SearchableSelect.tsx
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "Search…"
 msgstr "検索…"

@@ -8440,6 +8440,10 @@ msgstr "Данные Lightcode не найдены."
 msgid "No marketplace skills match these filters."
 msgstr "Нет навыков маркетплейса, соответствующих этим фильтрам."
 
+#: src/renderer/components/sessionImport/SearchableSelect.tsx
+msgid "No matches"
+msgstr "Ничего не найдено"
+
 #: src/renderer/components/thread/ChatPane/ChatRuntimeDebugPanel.tsx
 msgid "No matches for “{query}”."
 msgstr "Нет совпадений для “{query}”."
@@ -11585,6 +11589,11 @@ msgstr "SDK не установлен"
 msgid "Search"
 msgstr "Поиск"
 
+#. placeholder {0}: props.label
+#: src/renderer/components/sessionImport/SearchableSelect.tsx
+msgid "Search {0}"
+msgstr "Поиск: {0}"
+
 #: src/renderer/views/SettingsOverlay/parts/AcpRegistrySettings.tsx
 msgid "Search agents"
 msgstr "Поиск агентов"
@@ -11605,6 +11614,10 @@ msgstr "Поиск по тексту или папке"
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
 msgid "Search files"
 msgstr "Поиск файлов"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search folders…"
+msgstr "Поиск папок…"
 
 #: src/renderer/views/ProjectSettingsOverlay/parts/ProjectIconPicker.tsx
 msgid "Search icons"
@@ -11649,6 +11662,10 @@ msgstr "Поиск плагинов"
 #: src/renderer/components/plugins/PluginMarketplace.tsx
 msgid "Search plugins, skills, and servers..."
 msgstr "Поиск плагинов, навыков и серверов..."
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search projects…"
+msgstr "Поиск проектов…"
 
 #: src/renderer/views/PullRequestsView/PullRequestsView.tsx
 msgid "Search pull requests"
@@ -11708,6 +11725,7 @@ msgstr "Поиск тредов"
 msgid "Search Threads"
 msgstr "Поиск тредов"
 
+#: src/renderer/components/sessionImport/SearchableSelect.tsx
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "Search…"
 msgstr "Поиск…"

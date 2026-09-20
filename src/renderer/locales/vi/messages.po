@@ -8440,6 +8440,10 @@ msgstr "Không tìm thấy dữ liệu Lightcode."
 msgid "No marketplace skills match these filters."
 msgstr "Không có skill nào trên marketplace khớp với các bộ lọc này."
 
+#: src/renderer/components/sessionImport/SearchableSelect.tsx
+msgid "No matches"
+msgstr "Không có kết quả"
+
 #: src/renderer/components/thread/ChatPane/ChatRuntimeDebugPanel.tsx
 msgid "No matches for “{query}”."
 msgstr "Không có kết quả phù hợp cho “{query}”."
@@ -11585,6 +11589,11 @@ msgstr "Chưa cài SDK"
 msgid "Search"
 msgstr "Tìm kiếm"
 
+#. placeholder {0}: props.label
+#: src/renderer/components/sessionImport/SearchableSelect.tsx
+msgid "Search {0}"
+msgstr "Tìm {0}"
+
 #: src/renderer/views/SettingsOverlay/parts/AcpRegistrySettings.tsx
 msgid "Search agents"
 msgstr "Tìm kiếm tác nhân"
@@ -11605,6 +11614,10 @@ msgstr "Tìm theo văn bản hoặc thư mục"
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
 msgid "Search files"
 msgstr "Tìm kiếm tập tin"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search folders…"
+msgstr "Tìm thư mục…"
 
 #: src/renderer/views/ProjectSettingsOverlay/parts/ProjectIconPicker.tsx
 msgid "Search icons"
@@ -11649,6 +11662,10 @@ msgstr "Tìm plugin"
 #: src/renderer/components/plugins/PluginMarketplace.tsx
 msgid "Search plugins, skills, and servers..."
 msgstr "Tìm plugin, skill và máy chủ..."
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search projects…"
+msgstr "Tìm dự án…"
 
 #: src/renderer/views/PullRequestsView/PullRequestsView.tsx
 msgid "Search pull requests"
@@ -11708,6 +11725,7 @@ msgstr "Tìm kiếm luồng"
 msgid "Search Threads"
 msgstr "Tìm kiếm luồng"
 
+#: src/renderer/components/sessionImport/SearchableSelect.tsx
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "Search…"
 msgstr "Tìm kiếm…"

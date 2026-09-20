@@ -8440,6 +8440,10 @@ msgstr "Lightcode verisi bulunamadı."
 msgid "No marketplace skills match these filters."
 msgstr "Bu filtrelerle eşleşen marketplace becerisi yok."
 
+#: src/renderer/components/sessionImport/SearchableSelect.tsx
+msgid "No matches"
+msgstr "Eşleşme yok"
+
 #: src/renderer/components/thread/ChatPane/ChatRuntimeDebugPanel.tsx
 msgid "No matches for “{query}”."
 msgstr "“{query}” için eşleşme yok."
@@ -11585,6 +11589,11 @@ msgstr "SDK yüklü değil"
 msgid "Search"
 msgstr "Ara"
 
+#. placeholder {0}: props.label
+#: src/renderer/components/sessionImport/SearchableSelect.tsx
+msgid "Search {0}"
+msgstr "{0} ara"
+
 #: src/renderer/views/SettingsOverlay/parts/AcpRegistrySettings.tsx
 msgid "Search agents"
 msgstr "Aracıları ara"
@@ -11605,6 +11614,10 @@ msgstr "Metne veya klasöre göre ara"
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
 msgid "Search files"
 msgstr "Dosyaları arayın"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search folders…"
+msgstr "Klasörleri ara…"
 
 #: src/renderer/views/ProjectSettingsOverlay/parts/ProjectIconPicker.tsx
 msgid "Search icons"
@@ -11649,6 +11662,10 @@ msgstr "Eklenti ara"
 #: src/renderer/components/plugins/PluginMarketplace.tsx
 msgid "Search plugins, skills, and servers..."
 msgstr "Eklenti, beceri ve sunucu ara..."
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search projects…"
+msgstr "Projeleri ara…"
 
 #: src/renderer/views/PullRequestsView/PullRequestsView.tsx
 msgid "Search pull requests"
@@ -11708,6 +11725,7 @@ msgstr "Konuları ara"
 msgid "Search Threads"
 msgstr "Konuları Ara"
 
+#: src/renderer/components/sessionImport/SearchableSelect.tsx
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "Search…"
 msgstr "Ara…"

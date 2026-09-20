@@ -16,6 +16,7 @@ import {
   type ImportFilters,
 } from "./importFilters";
 import { importSessions } from "./importSessionsActions";
+import { SearchableSelect } from "./SearchableSelect";
 
 /**
  * Lists Codex and Claude Code conversations found on disk and turns the chosen
@@ -153,47 +154,43 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
       </div>
 
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-        <select
-          aria-label={t`Provider`}
-          className="rounded border border-border/20 bg-transparent px-2 py-1 text-xs"
+        <SearchableSelect
+          label={t`Provider`}
           value={filters.provider}
-          onChange={(event) =>
-            select({ provider: event.target.value as ImportFilters["provider"] })
-          }
-        >
-          <option value={ALL}>{t`All providers`}</option>
-          {facets.providers.map((provider) => (
-            <option key={provider} value={provider}>
-              {provider === "codex" ? "Codex" : "Claude Code"}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label={t`Account`}
-          className="rounded border border-border/20 bg-transparent px-2 py-1 text-xs"
+          options={[
+            { value: ALL, label: t`All providers` },
+            ...facets.providers.map((provider) => ({
+              value: provider,
+              label: provider === "codex" ? "Codex" : "Claude Code",
+            })),
+          ]}
+          onChange={(value) => select({ provider: value as ImportFilters["provider"] })}
+        />
+        <SearchableSelect
+          label={t`Account`}
           value={filters.account}
-          onChange={(event) => select({ account: event.target.value })}
-        >
-          <option value={ALL}>{t`All accounts`}</option>
-          {facets.accounts.map((account) => (
-            <option key={account} value={account}>
-              {account}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label={t`Folder`}
-          className="max-w-72 rounded border border-border/20 bg-transparent px-2 py-1 font-mono text-xs"
+          options={[
+            { value: ALL, label: t`All accounts` },
+            ...facets.accounts.map((account) => ({ value: account, label: account })),
+          ]}
+          onChange={(value) => select({ account: value })}
+        />
+        <SearchableSelect
+          label={t`Folder`}
+          mono
+          className="max-w-80"
           value={filters.folder}
-          onChange={(event) => select({ folder: event.target.value })}
-        >
-          <option value={ALL}>{t`All folders`}</option>
-          {facets.folders.map((folder) => (
-            <option key={folder} value={folder}>
-              {folder}
-            </option>
-          ))}
-        </select>
+          options={[
+            { value: ALL, label: t`All folders` },
+            ...facets.folders.map((folder) => ({
+              value: folder,
+              label: folder.split(/[\\/]/u).filter(Boolean).at(-1) ?? folder,
+              hint: folder,
+            })),
+          ]}
+          searchPlaceholder={t`Search folders…`}
+          onChange={(value) => select({ folder: value })}
+        />
         <Input
           aria-label={t`Search sessions`}
           placeholder={t`Search by text or folder`}
@@ -203,21 +200,24 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
         />
       </div>
 
-      <label className="flex items-center gap-2 text-xs text-muted">
-        <Trans>If the folder is missing, import into</Trans>
-        <select
-          aria-label={t`Target project`}
-          className="rounded border border-border/20 bg-transparent px-2 py-1 text-xs"
+      <div className="flex items-center gap-2 text-xs text-muted">
+        <span>
+          <Trans>If the folder is missing, import into</Trans>
+        </span>
+        <SearchableSelect
+          label={t`Target project`}
           value={projectId}
-          onChange={(event) => setProjectId(event.target.value)}
-        >
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </select>
-      </label>
+          options={projects.map((project) => ({
+            value: project.id,
+            label: project.name,
+            ...(project.location.kind === "wsl"
+              ? { hint: project.location.linuxPath }
+              : { hint: project.location.path }),
+          }))}
+          searchPlaceholder={t`Search projects…`}
+          onChange={setProjectId}
+        />
+      </div>
 
       <ul className="flex max-h-96 flex-col gap-1 overflow-y-auto">
         {visible.length === 0 ? (
