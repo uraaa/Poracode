@@ -1,0 +1,147 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import { scanImportableSessions } from "./scan";
+import type { ImportHome } from "./homes";
+
+function codexHome(sessions: Array<{ id: string; cwd: string; prompt: string }>): string {
+  const dir = mkdtempSync(join(tmpdir(), "poracode-scan-codex-"));
+  const sessionsDir = join(dir, "sessions", "2026", "09", "20");
+  mkdirSync(sessionsDir, { recursive: true });
+  for (const session of sessions) {
+    writeFileSync(
+      join(sessionsDir, `rollout-2026-09-20T04-43-18-${session.id}.jsonl`),
+      [
+        JSON.stringify({
+          type: "session_meta",
+          payload: {
+            session_id: session.id,
+            cwd: session.cwd,
+            timestamp: "2026-09-20T04:43:18.000Z",
+          },
+        }),
+        JSON.stringify({
+          type: "response_item",
+          payload: {
+            type: "message",
+            role: "user",
+            content: [{ type: "input_text", text: session.prompt }],
+          },
+        }),
+      ].join("\n"),
+      "utf8",
+    );
+  }
+  return dir;
+}
+
+function claudeHome(sessions: Array<{ id: string; cwd: string; prompt: string }>): string {
+  const dir = mkdtempSync(join(tmpdir(), "poracode-scan-claude-"));
+  for (const session of sessions) {
+    const projectDir = join(dir, "projects", session.cwd.replace(/[:\\/]/gu, "-"));
+    mkdirSync(projectDir, { recursive: true });
+    writeFileSync(
+      join(projectDir, `${session.id}.jsonl`),
+      JSON.stringify({
+        type: "user",
+        sessionId: session.id,
+        cwd: session.cwd,
+        timestamp: "2026-09-20T05:00:00.000Z",
+        message: { role: "user", content: session.prompt },
+      }),
+      "utf8",
+    );
+  }
+  return dir;
+}
+
+describe("scanImportableSessions", () => {
+  it("lists sessions from both providers with preview and attribution", () => {
+    const homes: ImportHome[] = [
+      {
+        provider: "codex",
+        agentKind: "codex:work",
+        dir: codexHome([{ id: "cx-1", cwd: "F:\\repo", prompt: "fix the bug" }]),
+      },
+      {
+        provider: "claude",
+        agentKind: "claude",
+        dir: claudeHome([{ id: "cl-1", cwd: "F:\\repo", prompt: "write a test" }]),
+      },
+    ];
+    const sessions = scanImportableSessions({ homes });
+    expect(sessions).toHaveLength(2);
+    expect(sessions.find((s) => s.provider === "codex")).toMatchObject({
+      id: "codex:cx-1",
+      agentKind: "codex:work",
+      providerSessionId: "cx-1",
+      cwd: "F:\\repo",
+      preview: "fix the bug",
+      messageCount: 1,
+      // The fixture records a cwd that does not exist on this machine.
+      cwdExists: false,
+    });
+    expect(sessions.find((s) => s.provider === "claude")).toMatchObject({
+      id: "claude:cl-1",
+      agentKind: "claude",
+      preview: "write a test",
+    });
+  });
+
+  it("filters by cwd case-insensitively and by provider", () => {
+    const homes: ImportHome[] = [
+      {
+        provider: "codex",
+        agentKind: "codex",
+        dir: codexHome([
+          { id: "cx-here", cwd: "F:\\repo", prompt: "here" },
+          { id: "cx-elsewhere", cwd: "F:\\other", prompt: "elsewhere" },
+        ]),
+      },
+      {
+        provider: "claude",
+        agentKind: "claude",
+        dir: claudeHome([{ id: "cl-here", cwd: "F:\\repo", prompt: "claude here" }]),
+      },
+    ];
+    const matching = scanImportableSessions({ homes, cwd: "f:\\REPO" });
+    expect(matching).toHaveLength(2);
+    expect(matching.map((s) => s.providerSessionId).sort()).toEqual(["cl-here", "cx-here"]);
+    expect(
+      scanImportableSessions({ homes, provider: "codex" }).every((s) => s.provider === "codex"),
+    ).toBe(true);
+  });
+
+  it("dedupes a session visible in two homes and skips missing directories", () => {
+    const shared = codexHome([{ id: "cx-dup", cwd: "F:\\repo", prompt: "dup" }]);
+    const homes: ImportHome[] = [
+      { provider: "codex", agentKind: "codex", dir: shared },
+      { provider: "codex", agentKind: "codex:work", dir: shared },
+      { provider: "codex", agentKind: "codex:gone", dir: join(tmpdir(), "poracode-not-there") },
+    ];
+    expect(scanImportableSessions({ homes })).toHaveLength(1);
+  });
+
+  it("returns an empty list rather than throwing on an unreadable transcript", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-scan-bad-"));
+    const sessionsDir = join(dir, "sessions");
+    mkdirSync(sessionsDir, { recursive: true });
+    writeFileSync(join(sessionsDir, "rollout-broken.jsonl"), "{ not json", "utf8");
+    expect(
+      scanImportableSessions({ homes: [{ provider: "codex", agentKind: "codex", dir }] }),
+    ).toEqual([]);
+  });
+
+  it("marks a session whose folder still exists", () => {
+    const realFolder = mkdtempSync(join(tmpdir(), "poracode-scan-cwd-"));
+    const homes: ImportHome[] = [
+      {
+        provider: "codex",
+        agentKind: "codex",
+        dir: codexHome([{ id: "cx-real", cwd: realFolder, prompt: "real folder" }]),
+      },
+    ];
+    expect(scanImportableSessions({ homes })[0]?.cwdExists).toBe(true);
+  });
+});
