@@ -113,6 +113,9 @@ export async function importSessions(input: {
         },
         prompt: "",
         title: titleFor(session),
+        // The replayed transcript lives in runtime items, which only the chat
+        // pane renders; a terminal thread would open on an empty PTY.
+        presentationMode: "gui",
         focus: false,
       });
       threadId = thread.id;

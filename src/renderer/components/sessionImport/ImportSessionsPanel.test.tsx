@@ -191,6 +191,8 @@ describe("ImportSessionsPanel", () => {
         expect.objectContaining({
           agentKind: "codex",
           title: "fix the race condition",
+          // Runtime items render only in the chat pane.
+          presentationMode: "gui",
           config: expect.objectContaining({
             // Detected from the agent's capabilities; an empty model would
             // fail persistence for the whole store.
