@@ -659,6 +659,18 @@ describe("parseClaudeTranscript", () => {
     ]);
   });
 
+  it("drops Claude Code's own interruption markers", () => {
+    const path = writeLog([
+      { type: "user", message: { role: "user", content: "[Request interrupted by user]" } },
+      {
+        type: "user",
+        message: { role: "user", content: "[Request interrupted by user for tool use]" },
+      },
+      USER_TEXT,
+    ]);
+    expect(parseClaudeTranscript(path).messages.map((m) => m.text)).toEqual(["fix the bug"]);
+  });
+
   it("drops a user line that only carries tool results", () => {
     const path = writeLog([
       {
@@ -766,6 +778,13 @@ function textFromContent(content: unknown): string {
     .join("");
 }
 
+/**
+ * Claude Code writes its own bracketed notes into the `user` role when a turn
+ * is cut short. They are transcript bookkeeping, not something the user typed,
+ * so a message consisting only of one is dropped.
+ */
+const INTERRUPTION_MARKER_RE = /^\s*\[Request interrupted by user(?: for tool use)?\]\s*$/u;
+
 function messageFrom(entry: Record<string, unknown>): ImportedMessage | undefined {
   const role = entry["type"];
   if (role !== "user" && role !== "assistant") return undefined;
@@ -774,6 +793,7 @@ function messageFrom(entry: Record<string, unknown>): ImportedMessage | undefine
   if (!message || typeof message !== "object") return undefined;
   const text = textFromContent((message as Record<string, unknown>)["content"]);
   if (text.trim().length === 0) return undefined;
+  if (role === "user" && INTERRUPTION_MARKER_RE.test(text)) return undefined;
   const at = entry["timestamp"];
   return {
     role,
