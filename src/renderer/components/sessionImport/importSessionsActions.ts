@@ -2,7 +2,9 @@ import { toast } from "@heroui/react";
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 import type { ImportableSession, ProjectLocation } from "@/shared/contracts";
-import { readBridge } from "@/renderer/bridge";
+import { resolveModelSelection } from "@/shared/agentSelection";
+import { isWindows, readBridge } from "@/renderer/bridge";
+import { useAgentStatusesStore } from "@/renderer/state/agentStatusesStore";
 import { useAppStore } from "@/renderer/state/appStore";
 import { getActiveWorkspaceId } from "@/renderer/state/workspaceStore";
 
@@ -15,8 +17,35 @@ function titleFor(session: ImportableSession): string {
   return preview.length > TITLE_MAX_CHARS ? `${preview.slice(0, TITLE_MAX_CHARS)}…` : preview;
 }
 
+/**
+ * Last resort when neither the project nor detection knows a model. The
+ * composer lets the user change it, but a thread cannot be persisted without
+ * one: `persistedThreadSchema` requires a non-empty model, and a single
+ * invalid thread in the store would fail the whole `dbSyncAll` batch.
+ */
+const FALLBACK_MODEL: Record<ImportableSession["provider"], string> = {
+  codex: "gpt-5.5",
+  claude: "claude-opus-5",
+};
+
+/**
+ * Model for the imported thread: the project's last draft when it was for
+ * this same agent, else the agent's first advertised model, else a fallback.
+ */
+export function resolveImportModel(session: ImportableSession, projectId: string): string {
+  const project = useAppStore.getState().projects.find((entry) => entry.id === projectId);
+  const draft = project?.lastDraftConfig;
+  if (draft && draft.agentKind === session.agentKind && draft.model) return draft.model;
+  const status = useAgentStatusesStore
+    .getState()
+    .agentStatuses.find((entry) => entry.kind === session.agentKind);
+  const detected = status ? resolveModelSelection(status.capabilities) : "";
+  return detected || FALLBACK_MODEL[session.provider];
+}
+
 function hostLocation(path: string): ProjectLocation {
-  return process.platform === "win32" ? { kind: "windows", path } : { kind: "posix", path };
+  // The renderer has no `process`; the bridge reports the host platform.
+  return isWindows() ? { kind: "windows", path } : { kind: "posix", path };
 }
 
 /**
@@ -63,6 +92,7 @@ export async function importSessions(input: {
   let failed = 0;
 
   for (const session of input.sessions) {
+    let threadId: string | undefined;
     try {
       const projectId = resolveImportProjectId(session, input.fallbackProjectId);
       if (!projectId) {
@@ -74,10 +104,7 @@ export async function importSessions(input: {
         projectId,
         agentKind: session.agentKind,
         config: {
-          // The provider's own default replaces this on the first launch; the
-          // schema requires the field, so it is present and blank rather than
-          // absent.
-          model: "",
+          model: resolveImportModel(session, projectId),
           importedFrom: {
             provider: session.provider,
             path: session.path,
@@ -88,6 +115,7 @@ export async function importSessions(input: {
         title: titleFor(session),
         focus: false,
       });
+      threadId = thread.id;
       store.updateThreadRuntime(thread.id, {
         status: "idle",
         attention: "none",
@@ -106,6 +134,9 @@ export async function importSessions(input: {
       });
       imported += 1;
     } catch (error) {
+      // A thread without its transcript is worse than no thread: drop the
+      // half-built row so a retry does not leave duplicates behind.
+      if (threadId) store.deleteThread(threadId);
       failed += 1;
       toast.danger(
         error instanceof Error ? error.message : i18n._(msg`Could not import ${session.preview}.`),

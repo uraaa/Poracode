@@ -76,6 +76,7 @@ const importSessionTranscriptMock = vi.hoisted(() =>
 );
 
 vi.mock("@/renderer/bridge", () => ({
+  isWindows: () => true,
   readBridge: () => ({
     listImportableSessions: listImportableSessionsMock,
     importSessionTranscript: importSessionTranscriptMock,
@@ -84,6 +85,7 @@ vi.mock("@/renderer/bridge", () => ({
 
 const createThreadMock = vi.hoisted(() => vi.fn<(input: unknown) => Thread>());
 const updateThreadRuntimeMock = vi.hoisted(() => vi.fn<(id: string, input: unknown) => void>());
+const deleteThreadMock = vi.hoisted(() => vi.fn<(id: string) => void>());
 const addProjectWithResultMock = vi.hoisted(() =>
   vi.fn<
     (
@@ -98,7 +100,17 @@ const storeState = {
   createThread: createThreadMock,
   updateThreadRuntime: updateThreadRuntimeMock,
   addProjectWithResult: addProjectWithResultMock,
+  deleteThread: deleteThreadMock,
 };
+const statusState = {
+  agentStatuses: [
+    { kind: "codex", capabilities: { models: [{ id: "gpt-5.6-luna", label: "GPT" }] } },
+  ],
+};
+
+vi.mock("@/renderer/state/agentStatusesStore", () => ({
+  useAgentStatusesStore: { getState: () => statusState },
+}));
 
 vi.mock("@/renderer/state/workspaceStore", () => ({
   getActiveWorkspaceId: () => "ws-active",
@@ -137,6 +149,7 @@ beforeEach(() => {
   importSessionTranscriptMock.mockReset().mockResolvedValue({ messageCount: 4 });
   createThreadMock.mockReset().mockReturnValue({ id: "new-thread" } as Thread);
   updateThreadRuntimeMock.mockReset();
+  deleteThreadMock.mockReset();
   addProjectWithResultMock
     .mockReset()
     .mockImplementation(() => ({ project: { id: "p-new" }, created: true }));
@@ -179,6 +192,9 @@ describe("ImportSessionsPanel", () => {
           agentKind: "codex",
           title: "fix the race condition",
           config: expect.objectContaining({
+            // Detected from the agent's capabilities; an empty model would
+            // fail persistence for the whole store.
+            model: "gpt-5.6-luna",
             importedFrom: expect.objectContaining({
               provider: "codex",
               path: "F:\\home\\.codex\\sessions\\rollout-cx-1.jsonl",
@@ -306,5 +322,7 @@ describe("ImportSessionsPanel", () => {
 
     await vi.waitFor(() => expect(toastMock.danger).toHaveBeenCalled());
     expect(importSessionTranscriptMock).toHaveBeenCalledTimes(2);
+    // The failed session's half-built thread is rolled back; the other stays.
+    await vi.waitFor(() => expect(deleteThreadMock).toHaveBeenCalledTimes(1));
   });
 });
