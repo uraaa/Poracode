@@ -1,4 +1,13 @@
-import { ChevronRight, Globe, House, PanelLeft, Plus, Search, Settings2 } from "lucide-react";
+import {
+  ChevronRight,
+  Download,
+  Globe,
+  House,
+  PanelLeft,
+  Plus,
+  Search,
+  Settings2,
+} from "lucide-react";
 import { startTransition, useEffect, useLayoutEffect, useState } from "react";
 import { useShallow } from "zustand/shallow";
 import { Trans, useLingui } from "@lingui/react/macro";
@@ -6,6 +15,8 @@ import { AnimatedTerminalIcon } from "@/renderer/components/common/AnimatedTermi
 import { getAppName } from "@/shared/appName";
 import type { Thread } from "@/shared/contracts";
 import { isHomeProject, isHomeProjectId } from "@/shared/homeScope";
+import { ConfirmDialog } from "@/renderer/components/common";
+import { ImportSessionsPanel } from "@/renderer/components/sessionImport/ImportSessionsPanel";
 import { SidebarButton } from "@/renderer/components/common/SidebarButton";
 import { ThreadProviderIcon } from "@/renderer/components/providers/ThreadProviderIcon";
 import {
@@ -185,6 +196,15 @@ export function Sidebar() {
   const remoteAccessEnabled = useSharedSettings((s) => s.remoteAccessEnabled);
   const currentProjectId = useCurrentProjectId();
   const currentWorktreePath = useCurrentWorktreePath();
+  // The dialog lists only this project's sessions when one is open; with no
+  // project in view it falls back to the unscoped list, same as Settings.
+  const currentProject = useAppStore((state) =>
+    state.projects.find((project) => project.id === currentProjectId),
+  );
+  const importPanelScope =
+    currentProject && currentProject.location.kind !== "wsl"
+      ? { cwd: currentProject.location.path, projectId: currentProject.id }
+      : {};
   const sortMode = usePanelStore((s) => s.threadSortMode);
   const listLayout = usePanelStore((s) => s.threadListLayout);
   const settingsOpen = usePanelStore((s) => s.settingsOpen);
@@ -208,6 +228,7 @@ export function Sidebar() {
   const openHome = useAppStore((s) => s.openHome);
   const appView = useAppStore((s) => s.view);
   const appNameForHome = getAppName(readBridge().channel, import.meta.env.DEV);
+  const [importOpen, setImportOpen] = useState(false);
   const [remoteAccessStatus, setRemoteAccessStatus] = useState<RemoteAccessSidebarStatus>(
     remoteAccessEnabled ? "starting" : "off",
   );
@@ -316,6 +337,13 @@ export function Sidebar() {
               label={t`New thread`}
               isActive={appView.kind === "draft"}
               onPress={() => openNewThread()}
+            />
+            <SidebarButton
+              iconOnly
+              icon={<Download className="size-3.5" />}
+              label={t`Import session`}
+              isActive={importOpen}
+              onPress={() => setImportOpen(true)}
             />
           </div>
           <CollapsedThreadRail />
@@ -441,6 +469,14 @@ export function Sidebar() {
         <ProviderUsageRail orientation="row" />
         <SidebarFooterNav remoteAccessStatus={remoteAccessStatus} />
       </div>
+      <ConfirmDialog
+        isOpen={importOpen}
+        title={t`Import session`}
+        body={<ImportSessionsPanel {...importPanelScope} />}
+        confirmLabel={t`Close`}
+        onConfirm={() => setImportOpen(false)}
+        onClose={() => setImportOpen(false)}
+      />
     </div>
   );
 }
