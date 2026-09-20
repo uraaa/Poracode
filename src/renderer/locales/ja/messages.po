@@ -2728,7 +2728,6 @@ msgstr "クローン作成中…"
 #: src/renderer/components/thread/ThreadBackgroundTasksDock.tsx
 #: src/renderer/views/ExperimentView/parts/ExperimentJudgeRunDialog.tsx
 #: src/renderer/views/MainView/parts/RightPanel/parts/BrowserPanel/BrowserPanel.tsx
-#: src/renderer/views/MainView/parts/Sidebar/Sidebar.tsx
 #: src/renderer/views/QuickComposerOverlay/QuickComposerOverlay.tsx
 msgid "Close"
 msgstr "閉じる"
@@ -6383,6 +6382,7 @@ msgstr "インポート方法"
 msgid "Import selected"
 msgstr "選択項目をインポート"
 
+#: src/renderer/components/sessionImport/ImportSessionsDialog.tsx
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectThreadList.tsx
 #: src/renderer/views/MainView/parts/Sidebar/Sidebar.tsx
 msgid "Import session"

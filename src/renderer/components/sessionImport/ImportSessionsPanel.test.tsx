@@ -122,23 +122,31 @@ beforeEach(() => {
 });
 
 describe("ImportSessionsPanel", () => {
-  it("lists discovered sessions for the given cwd", async () => {
-    render(<ImportSessionsPanel cwd={"F:\\repo"} projectId="p1" />);
+  it("lists every session and preselects the given folder in the filter", async () => {
+    listImportableSessionsMock.mockResolvedValue([
+      session(),
+      session({ id: "codex:cx-2", providerSessionId: "cx-2", preview: "elsewhere", cwd: "F:\\x" }),
+    ]);
+    render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
 
     expect(await screen.findByText("fix the race condition")).toBeInTheDocument();
-    expect(listImportableSessionsMock).toHaveBeenCalledWith({ cwd: "F:\\repo" });
+    expect(listImportableSessionsMock).toHaveBeenCalledWith({});
+    expect(screen.getByLabelText("Folder")).toHaveValue("F:\\repo");
+    expect(screen.queryByText("elsewhere")).not.toBeInTheDocument();
+    // The project picker is always offered, seeded with the given project.
+    expect(screen.getByLabelText("Target project")).toHaveValue("p1");
   });
 
   it("disables a session that was already imported", async () => {
     listImportableSessionsMock.mockResolvedValue([session({ importedThreadId: "old" })]);
-    render(<ImportSessionsPanel cwd={"F:\\repo"} projectId="p1" />);
+    render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
 
     const checkbox = await screen.findByRole("checkbox", { name: /fix the race condition/iu });
     expect(checkbox).toBeDisabled();
   });
 
   it("creates a thread with the session ref and replays the transcript", async () => {
-    render(<ImportSessionsPanel cwd={"F:\\repo"} projectId="p1" />);
+    render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
     fireEvent.click(await screen.findByRole("checkbox", { name: /fix the race condition/iu }));
     fireEvent.click(screen.getByRole("button", { name: /import 1 session/iu }));
 
@@ -204,7 +212,7 @@ describe("ImportSessionsPanel", () => {
     listImportableSessionsMock.mockResolvedValue([
       session({ cwd: "F:\\deleted", cwdExists: false }),
     ]);
-    render(<ImportSessionsPanel projectId="p1" />);
+    render(<ImportSessionsPanel initialProjectId="p1" />);
     fireEvent.click(await screen.findByRole("checkbox", { name: /fix the race condition/iu }));
     fireEvent.click(screen.getByRole("button", { name: /import 1 session/iu }));
 
@@ -269,7 +277,7 @@ describe("ImportSessionsPanel", () => {
       .mockRejectedValueOnce(new Error("unreadable"))
       .mockResolvedValueOnce({ messageCount: 2 });
 
-    render(<ImportSessionsPanel cwd={"F:\\repo"} projectId="p1" />);
+    render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
     fireEvent.click(await screen.findByRole("button", { name: /select all/iu }));
     fireEvent.click(screen.getByRole("button", { name: /import 2 sessions/iu }));
 

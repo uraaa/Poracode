@@ -15,8 +15,7 @@ import { AnimatedTerminalIcon } from "@/renderer/components/common/AnimatedTermi
 import { getAppName } from "@/shared/appName";
 import type { Thread } from "@/shared/contracts";
 import { isHomeProject, isHomeProjectId } from "@/shared/homeScope";
-import { ConfirmDialog } from "@/renderer/components/common";
-import { ImportSessionsPanel } from "@/renderer/components/sessionImport/ImportSessionsPanel";
+import { ImportSessionsDialog } from "@/renderer/components/sessionImport/ImportSessionsDialog";
 import { SidebarButton } from "@/renderer/components/common/SidebarButton";
 import { ThreadProviderIcon } from "@/renderer/components/providers/ThreadProviderIcon";
 import {
@@ -466,19 +465,7 @@ export function Sidebar() {
         <ProviderUsageRail orientation="row" />
         <SidebarFooterNav remoteAccessStatus={remoteAccessStatus} />
       </div>
-      <ConfirmDialog
-        isOpen={importDialog.open}
-        title={t`Import session`}
-        body={
-          <ImportSessionsPanel
-            {...(importDialog.cwd ? { cwd: importDialog.cwd } : {})}
-            {...(importDialog.projectId ? { projectId: importDialog.projectId } : {})}
-          />
-        }
-        confirmLabel={t`Close`}
-        onConfirm={importDialog.close}
-        onClose={importDialog.close}
-      />
+      <ImportSessionsDialog />
     </div>
   );
 }

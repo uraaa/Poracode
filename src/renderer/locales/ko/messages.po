@@ -2729,7 +2729,6 @@ msgstr "복제 중…"
 #: src/renderer/components/thread/ThreadBackgroundTasksDock.tsx
 #: src/renderer/views/ExperimentView/parts/ExperimentJudgeRunDialog.tsx
 #: src/renderer/views/MainView/parts/RightPanel/parts/BrowserPanel/BrowserPanel.tsx
-#: src/renderer/views/MainView/parts/Sidebar/Sidebar.tsx
 #: src/renderer/views/QuickComposerOverlay/QuickComposerOverlay.tsx
 msgid "Close"
 msgstr "닫기"
@@ -6384,6 +6383,7 @@ msgstr "가져오기 방법"
 msgid "Import selected"
 msgstr "선택 항목 가져오기"
 
+#: src/renderer/components/sessionImport/ImportSessionsDialog.tsx
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectThreadList.tsx
 #: src/renderer/views/MainView/parts/Sidebar/Sidebar.tsx
 msgid "Import session"
