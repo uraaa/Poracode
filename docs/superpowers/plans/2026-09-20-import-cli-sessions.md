@@ -18,6 +18,7 @@
 - Host filesystem only. WSL and remote-machine homes are out of scope; the scanner skips project locations of kind `wsl`.
 - A single replayed message is capped at 100 000 characters, truncated with the marker `\n\n[… truncated on import]`.
 - Runtime events are applied in batches of 200.
+- A session whose recorded folder is not yet a Poracode project creates one, and a newly created project joins the **active workspace** (`getActiveWorkspaceId()`), exactly like `createProjectActions` does. A session whose folder no longer exists on disk creates nothing and is imported into a user-chosen project instead.
 - Every new user-visible string goes through lingui (`t\`\``/`<Trans>`), and `pnpm run i18n:extract`must leave the catalogs with 0 untranslated entries for`ru`, `de`, `es`, `fr`, `ja`, `ko`, `pl`, `pt-BR`, `tr`, `uk`, `vi`, `zh-CN`.
 - Run `pnpm exec tsc --noEmit -p tsconfig.json` before every commit; it is also enforced by the pre-commit hook.
 - Test command shape: `pnpm exec vitest run <path>`.
@@ -39,7 +40,7 @@
 - Consumes: nothing.
 - Produces:
   - `importedSessionProviderSchema: z.ZodEnum<["codex", "claude"]>`, type `ImportedSessionProvider`
-  - `importableSessionSchema`, type `ImportableSession` with fields `id`, `provider`, `agentKind`, `providerSessionId`, `path`, `cwd?`, `startedAt?`, `updatedAt?`, `messageCount`, `preview`, `importedThreadId?`
+  - `importableSessionSchema`, type `ImportableSession` with fields `id`, `provider`, `agentKind`, `providerSessionId`, `path`, `cwd?`, `startedAt?`, `updatedAt?`, `messageCount`, `preview`, `cwdExists`, `importedThreadId?`
   - `listImportableSessionsPayloadSchema`, type `ListImportableSessionsPayload` = `{ cwd?: string; provider?: ImportedSessionProvider }`
   - `importSessionTranscriptPayloadSchema`, type `ImportSessionTranscriptPayload` = `{ threadId: string; provider: ImportedSessionProvider; path: string }`
   - `importSessionTranscriptResultSchema`, type `ImportSessionTranscriptResult` = `{ messageCount: number }`
@@ -71,6 +72,7 @@ describe("importableSessionSchema", () => {
       startedAt: "2026-09-20T04:43:18.000Z",
       messageCount: 12,
       preview: "fix the race condition",
+      cwdExists: true,
     });
     expect(parsed.provider).toBe("codex");
     expect(parsed.importedThreadId).toBeUndefined();
@@ -86,6 +88,7 @@ describe("importableSessionSchema", () => {
         path: "/tmp/x.jsonl",
         messageCount: 0,
         preview: "",
+        cwdExists: false,
       }),
     ).toThrow(Error);
   });
@@ -176,6 +179,11 @@ export const importableSessionSchema = z.object({
   messageCount: z.number().int().nonnegative(),
   /** First user message, trimmed — the list's title line. */
   preview: z.string(),
+  /**
+   * Whether `cwd` still exists on disk. A session whose folder is gone cannot
+   * auto-create a project, so the UI makes the user pick a target instead.
+   */
+  cwdExists: z.boolean(),
   /** Thread already imported from this session, when one exists. */
   importedThreadId: z.string().optional(),
 });
@@ -1078,6 +1086,8 @@ describe("scanImportableSessions", () => {
       cwd: "F:\\repo",
       preview: "fix the bug",
       messageCount: 1,
+      // The fixture records a cwd that does not exist on this machine.
+      cwdExists: false,
     });
     expect(sessions.find((s) => s.provider === "claude")).toMatchObject({
       id: "claude:cl-1",
@@ -1230,6 +1240,7 @@ function describeSession(home: ImportHome, path: string): ImportableSession | un
     ...(updatedAt ? { updatedAt } : {}),
     messageCount: transcript.messages.length,
     preview: previewOf(transcript),
+    cwdExists: cwd !== undefined && existsSync(cwd),
   };
 }
 
@@ -1883,11 +1894,25 @@ vi.mock("@/renderer/bridge", () => ({
 
 const createThreadMock = vi.hoisted(() => vi.fn<(input: unknown) => Thread>());
 const updateThreadRuntimeMock = vi.hoisted(() => vi.fn<(id: string, input: unknown) => void>());
+const addProjectWithResultMock = vi.hoisted(() =>
+  vi.fn<
+    (
+      location: unknown,
+      name?: string,
+      workspaceId?: string,
+    ) => { project: { id: string }; created: boolean }
+  >(),
+);
 const storeState = {
   projects: [{ id: "p1", name: "repo", location: { kind: "windows", path: "F:\\repo" } }],
   createThread: createThreadMock,
   updateThreadRuntime: updateThreadRuntimeMock,
+  addProjectWithResult: addProjectWithResultMock,
 };
+
+vi.mock("@/renderer/state/workspaceStore", () => ({
+  getActiveWorkspaceId: () => "ws-active",
+}));
 
 vi.mock("@/renderer/state/appStore", () => {
   const useAppStore = ((selector: (state: typeof storeState) => unknown) =>
@@ -1913,6 +1938,7 @@ function session(overrides: Partial<ImportableSession> = {}): ImportableSession 
     updatedAt: "2026-09-20T05:00:00.000Z",
     messageCount: 4,
     preview: "fix the race condition",
+    cwdExists: true,
     ...overrides,
   };
 }
@@ -1922,6 +1948,9 @@ beforeEach(() => {
   importSessionTranscriptMock.mockReset().mockResolvedValue({ messageCount: 4 });
   createThreadMock.mockReset().mockReturnValue({ id: "new-thread" } as Thread);
   updateThreadRuntimeMock.mockReset();
+  addProjectWithResultMock
+    .mockReset()
+    .mockImplementation(() => ({ project: { id: "p-new" }, created: true }));
   toastMock.success.mockReset();
   toastMock.danger.mockReset();
 });
@@ -1974,6 +2003,50 @@ describe("ImportSessionsPanel", () => {
       path: "F:\\home\\.codex\\sessions\\rollout-cx-1.jsonl",
     });
     expect(toastMock.success).toHaveBeenCalled();
+  });
+
+  it("creates a project for an unknown folder and files it into the active workspace", async () => {
+    listImportableSessionsMock.mockResolvedValue([
+      session({ cwd: "F:\\brand-new", cwdExists: true }),
+    ]);
+    render(<ImportSessionsPanel />);
+    fireEvent.click(await screen.findByRole("checkbox", { name: /fix the race condition/iu }));
+    fireEvent.click(screen.getByRole("button", { name: /import 1 session/iu }));
+
+    await vi.waitFor(() =>
+      expect(addProjectWithResultMock).toHaveBeenCalledWith(
+        { kind: "windows", path: "F:\\brand-new" },
+        undefined,
+        "ws-active",
+      ),
+    );
+    expect(createThreadMock).toHaveBeenCalledWith(expect.objectContaining({ projectId: "p-new" }));
+  });
+
+  it("reuses the existing project when the folder is already one", async () => {
+    addProjectWithResultMock.mockReturnValue({ project: { id: "p1" }, created: false });
+    listImportableSessionsMock.mockResolvedValue([session({ cwdExists: true })]);
+    render(<ImportSessionsPanel />);
+    fireEvent.click(await screen.findByRole("checkbox", { name: /fix the race condition/iu }));
+    fireEvent.click(screen.getByRole("button", { name: /import 1 session/iu }));
+
+    await vi.waitFor(() =>
+      expect(createThreadMock).toHaveBeenCalledWith(expect.objectContaining({ projectId: "p1" })),
+    );
+  });
+
+  it("falls back to the chosen project when the folder is gone", async () => {
+    listImportableSessionsMock.mockResolvedValue([
+      session({ cwd: "F:\\deleted", cwdExists: false }),
+    ]);
+    render(<ImportSessionsPanel projectId="p1" />);
+    fireEvent.click(await screen.findByRole("checkbox", { name: /fix the race condition/iu }));
+    fireEvent.click(screen.getByRole("button", { name: /import 1 session/iu }));
+
+    await vi.waitFor(() =>
+      expect(createThreadMock).toHaveBeenCalledWith(expect.objectContaining({ projectId: "p1" })),
+    );
+    expect(addProjectWithResultMock).not.toHaveBeenCalled();
   });
 
   it("reports a failed import without blocking the rest", async () => {
@@ -2736,6 +2809,7 @@ Check, in order:
 | Replay through canonical events, batching                               | 5    |
 | Discovery + import IPC, duplicate detection                             | 6    |
 | Import panel, multi-select, disabled imported rows, per-session failure | 7    |
+| Project resolution: reuse or create per folder, active workspace        | 7    |
 | Sidebar dialog + Settings → Import                                      | 8    |
 | "Imported from …" marker                                                | 9    |
 | i18n, full verification, manual pass                                    | 10   |
@@ -2747,6 +2821,12 @@ silently dropped:
   already owns SQLite (where the replay lands) and shared settings (where the
   profile homes live), so a supervisor hop would add a process boundary for no
   gain. Update the spec's "Discovery (supervisor)" heading when this lands.
+- The spec left the target project to a picker. The plan resolves it from the
+  session's own folder — reusing the matching project or creating it, filed
+  into the active workspace like `createProjectActions` does — and keeps the
+  picker only as the fallback for sessions whose folder no longer exists.
+  Importing a backlog otherwise dumps unrelated conversations into one
+  arbitrary project. Update the spec's UI section when this lands.
 - The spec had main create the thread; the plan has the renderer create it
   through the existing store action and main only replay into it. Main-created
   threads need extra mirroring (`noteMainCreatedThread`) to appear in the
