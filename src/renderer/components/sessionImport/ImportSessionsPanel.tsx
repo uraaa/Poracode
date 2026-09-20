@@ -100,14 +100,22 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
     setBusy(true);
     try {
       const chosen = sessions.filter((session) => selected.has(session.id));
-      const { imported, failed } = await importSessions({
+      const { imported, failed, threadIds } = await importSessions({
         sessions: chosen,
         ...(projectId ? { fallbackProjectId: projectId } : {}),
       });
       if (imported > 0) {
         toast.success(i18n._(msg`Imported ${imported} session(s).`));
         setSelected(new Set());
-        setSessions(await load());
+        // Mark locally rather than re-scanning: the renderer persists the new
+        // threads to SQLite asynchronously, so a fresh scan can race ahead of
+        // them and miss the marks it would otherwise derive from the database.
+        setSessions((current) =>
+          current.map((session) => {
+            const threadId = threadIds.get(session.id);
+            return threadId ? { ...session, importedThreadId: threadId } : session;
+          }),
+        );
       }
       if (failed > 0 && imported === 0) {
         toast.danger(i18n._(msg`No sessions could be imported.`));

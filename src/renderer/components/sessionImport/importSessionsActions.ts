@@ -86,10 +86,12 @@ export function resolveImportProjectId(
 export async function importSessions(input: {
   sessions: readonly ImportableSession[];
   fallbackProjectId?: string;
-}): Promise<{ imported: number; failed: number }> {
+}): Promise<{ imported: number; failed: number; threadIds: Map<string, string> }> {
   const store = useAppStore.getState();
   let imported = 0;
   let failed = 0;
+  /** Session id → thread id, for every session that made it through. */
+  const threadIds = new Map<string, string>();
 
   for (const session of input.sessions) {
     let threadId: string | undefined;
@@ -135,6 +137,7 @@ export async function importSessions(input: {
         provider: session.provider,
         path: session.path,
       });
+      threadIds.set(session.id, thread.id);
       imported += 1;
     } catch (error) {
       // A thread without its transcript is worse than no thread: drop the
@@ -146,5 +149,5 @@ export async function importSessions(input: {
       );
     }
   }
-  return { imported, failed };
+  return { imported, failed, threadIds };
 }
