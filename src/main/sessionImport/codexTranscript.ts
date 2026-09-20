@@ -1,5 +1,10 @@
 import { readFileSync } from "node:fs";
-import { capMessageText, type ImportedMessage, type ImportedTranscript } from "./transcript";
+import {
+  capMessageText,
+  stripInjectedContext,
+  type ImportedMessage,
+  type ImportedTranscript,
+} from "./transcript";
 
 /**
  * Codex rollout files are JSONL. The first line is `session_meta`; conversation
@@ -13,14 +18,6 @@ interface CodexHead {
   cwd?: string;
   startedAt?: string;
 }
-
-/**
- * Text Codex injects into the conversation as a `user` message. Importing it
- * would show the user words they never typed, so a message made only of these
- * wrappers is dropped.
- */
-const INJECTED_WRAPPER_RE =
-  /^\s*<(app-context|recommended_plugins|environment_context|user_instructions)>[\s\S]*<\/\1>\s*$/u;
 
 function parseLine(line: string): Record<string, unknown> | undefined {
   const trimmed = line.trim();
@@ -68,7 +65,7 @@ function messageFrom(entry: Record<string, unknown>): ImportedMessage | undefine
 
   const content = item["content"];
   if (!Array.isArray(content)) return undefined;
-  const text = content
+  const raw = content
     .map((part) => {
       if (!part || typeof part !== "object") return "";
       const block = part as Record<string, unknown>;
@@ -77,8 +74,11 @@ function messageFrom(entry: Record<string, unknown>): ImportedMessage | undefine
       return typeof block["text"] === "string" ? block["text"] : "";
     })
     .join("");
+  // Codex prefixes a turn with plugin catalogues, environment dumps, and
+  // AGENTS.md — words the user never typed. What survives stripping is the
+  // real message, and a turn that was pure context leaves nothing.
+  const text = role === "user" ? stripInjectedContext(raw) : raw;
   if (text.trim().length === 0) return undefined;
-  if (role === "user" && INJECTED_WRAPPER_RE.test(text)) return undefined;
 
   const at = entry["timestamp"];
   return {

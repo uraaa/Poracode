@@ -56,6 +56,33 @@ function claudeHome(sessions: Array<{ id: string; cwd: string; prompt: string }>
   return dir;
 }
 
+/** A rollout whose `session_meta` carries exactly the fields a test needs. */
+function writeRollout(
+  sessionsDir: string,
+  id: string,
+  meta: Record<string, unknown>,
+  userText: string,
+): void {
+  writeFileSync(
+    join(sessionsDir, `rollout-${id}.jsonl`),
+    [
+      JSON.stringify({
+        type: "session_meta",
+        payload: { session_id: id, cwd: "F:\\repo", ...meta },
+      }),
+      JSON.stringify({
+        type: "response_item",
+        payload: {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: userText }],
+        },
+      }),
+    ].join("\n"),
+    "utf8",
+  );
+}
+
 describe("scanImportableSessions", () => {
   it("lists sessions from both providers with preview and attribution", () => {
     const homes: ImportHome[] = [
@@ -78,7 +105,6 @@ describe("scanImportableSessions", () => {
       providerSessionId: "cx-1",
       cwd: "F:\\repo",
       preview: "fix the bug",
-      messageCount: 1,
       // The fixture records a cwd that does not exist on this machine.
       cwdExists: false,
     });
@@ -131,6 +157,42 @@ describe("scanImportableSessions", () => {
     expect(
       scanImportableSessions({ homes: [{ provider: "codex", agentKind: "codex", dir }] }),
     ).toEqual([]);
+  });
+
+  it("hides sub-agent fan-outs and one-shot exec runs", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-scan-machine-"));
+    const sessionsDir = join(dir, "sessions");
+    mkdirSync(sessionsDir, { recursive: true });
+    writeRollout(sessionsDir, "sub", { thread_source: "subagent" }, "spawned work");
+    writeRollout(sessionsDir, "exec", { originator: "codex_exec", source: "exec" }, "title this");
+    writeRollout(
+      sessionsDir,
+      "real",
+      { originator: "Codex Desktop", source: "vscode", thread_source: "user" },
+      "real words",
+    );
+
+    const sessions = scanImportableSessions({
+      homes: [{ provider: "codex", agentKind: "codex", dir }],
+    });
+    expect(sessions.map((session) => session.providerSessionId)).toEqual(["real"]);
+  });
+
+  it("strips injected context out of the preview", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-scan-injected-"));
+    const sessionsDir = join(dir, "sessions");
+    mkdirSync(sessionsDir, { recursive: true });
+    writeRollout(
+      sessionsDir,
+      "inj",
+      {},
+      "# AGENTS.md instructions\n\n<INSTRUCTIONS>rules</INSTRUCTIONS>\n\nship it",
+    );
+
+    const [session] = scanImportableSessions({
+      homes: [{ provider: "codex", agentKind: "codex", dir }],
+    });
+    expect(session?.preview).toBe("ship it");
   });
 
   it("marks a session whose folder still exists", () => {

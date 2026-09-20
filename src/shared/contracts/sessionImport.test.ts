@@ -17,7 +17,6 @@ describe("importableSessionSchema", () => {
       path: "C:\\Users\\demo\\.codex\\sessions\\2026\\09\\20\\rollout-x.jsonl",
       cwd: "F:\\repo",
       startedAt: "2026-09-20T04:43:18.000Z",
-      messageCount: 12,
       preview: "fix the race condition",
       cwdExists: true,
     });
@@ -33,7 +32,6 @@ describe("importableSessionSchema", () => {
         agentKind: "gemini",
         providerSessionId: "1",
         path: "/tmp/x.jsonl",
-        messageCount: 0,
         preview: "",
         cwdExists: false,
       }),

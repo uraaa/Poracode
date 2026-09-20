@@ -32,7 +32,6 @@ export const importableSessionSchema = z.object({
   cwd: z.string().optional(),
   startedAt: z.string().optional(),
   updatedAt: z.string().optional(),
-  messageCount: z.number().int().nonnegative(),
   /** First user message, trimmed — the list's title line. */
   preview: z.string(),
   /**
