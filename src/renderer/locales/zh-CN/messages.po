@@ -814,6 +814,7 @@ msgstr "接受当前更改"
 msgid "Accept Incoming Change"
 msgstr "接受传入的更改"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/MainView/parts/CreateProject/CloneProjectModal.tsx
 msgid "Account"
 msgstr "帐户"
@@ -1275,6 +1276,7 @@ msgstr "线程需要你时提醒"
 msgid "All"
 msgstr "全部"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/ProfileOverlay/parts/AccountFilter.tsx
 msgid "All accounts"
 msgstr "全部账户"
@@ -1302,6 +1304,10 @@ msgstr "全部级别"
 msgid "All files"
 msgstr "所有文件"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "All folders"
+msgstr "所有文件夹"
+
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeHeading.tsx
 msgid "All machines"
 msgstr "所有设备"
@@ -1314,6 +1320,10 @@ msgstr "所有插件均为最新版本。"
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectFilter.tsx
 msgid "All projects"
 msgstr "所有项目"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "All providers"
+msgstr "所有提供方"
 
 #: src/renderer/components/skills/SkillMarketplaceModal.tsx
 msgid "All sources"
@@ -5665,6 +5675,7 @@ msgstr "聚焦应用内浏览器地址栏"
 msgid "Focus window"
 msgstr "切换到窗口"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/ChatPane/parts/items/InlineFolderPathChip.tsx
 msgid "Folder"
 msgstr "文件夹"
@@ -6373,6 +6384,7 @@ msgstr "导入方式"
 msgid "Import selected"
 msgstr "导入所选项"
 
+#: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectThreadList.tsx
 #: src/renderer/views/MainView/parts/Sidebar/Sidebar.tsx
 msgid "Import session"
 msgstr "导入会话"
@@ -8596,6 +8608,10 @@ msgstr "该线程还没有运行时项目。"
 msgid "No sessions could be imported."
 msgstr "没有会话被导入。"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "No sessions match the current filters."
+msgstr "没有会话符合当前筛选条件。"
+
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "No shortcuts found"
 msgstr "未找到快捷键"
@@ -10070,6 +10086,7 @@ msgstr "由 Poracode 为受支持的代理提供和管理。"
 msgid "provider"
 msgstr "提供商"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/AgentDiscoveryScreen.tsx
 msgid "Provider"
 msgstr "提供商"
@@ -11579,6 +11596,10 @@ msgstr "搜索代理..."
 msgid "Search branches..."
 msgstr "搜索分支..."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search by text or folder"
+msgstr "按文本或文件夹搜索"
+
 #: src/mobile/views/FilesView.tsx
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
 msgid "Search files"
@@ -11647,6 +11668,10 @@ msgstr "搜索运行时项目..."
 #: src/renderer/views/SchedulesView/SchedulesView.tsx
 msgid "Search scheduled tasks"
 msgstr "搜索计划任务"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search sessions"
+msgstr "搜索会话"
 
 #: src/renderer/views/SettingsOverlay/parts/SettingsSidebar.tsx
 msgid "Search settings"

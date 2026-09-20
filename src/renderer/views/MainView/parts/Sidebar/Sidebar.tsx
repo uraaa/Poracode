@@ -50,6 +50,7 @@ import { useScrollFade } from "@/renderer/hooks/useScrollFade";
 import { useAppStore } from "@/renderer/state/appStore";
 import { useIsPanelTabVisible } from "@/renderer/state/panelDockSelectors";
 import { usePanelStore } from "@/renderer/state/panelStore";
+import { importScopeForProject, useImportDialogStore } from "@/renderer/state/importDialogStore";
 import { useSidebarUiStore } from "@/renderer/state/sidebarUiStore";
 import { useSharedSettings } from "@/renderer/state/sharedSettingsStore";
 import {
@@ -196,15 +197,12 @@ export function Sidebar() {
   const remoteAccessEnabled = useSharedSettings((s) => s.remoteAccessEnabled);
   const currentProjectId = useCurrentProjectId();
   const currentWorktreePath = useCurrentWorktreePath();
-  // The dialog lists only this project's sessions when one is open; with no
-  // project in view it falls back to the unscoped list, same as Settings.
+  // The collapsed rail's import button scopes to the project in view; with
+  // none it falls back to the unscoped list, same as Settings.
   const currentProject = useAppStore((state) =>
     state.projects.find((project) => project.id === currentProjectId),
   );
-  const importPanelScope =
-    currentProject && currentProject.location.kind !== "wsl"
-      ? { cwd: currentProject.location.path, projectId: currentProject.id }
-      : {};
+  const importDialog = useImportDialogStore();
   const sortMode = usePanelStore((s) => s.threadSortMode);
   const listLayout = usePanelStore((s) => s.threadListLayout);
   const settingsOpen = usePanelStore((s) => s.settingsOpen);
@@ -228,7 +226,6 @@ export function Sidebar() {
   const openHome = useAppStore((s) => s.openHome);
   const appView = useAppStore((s) => s.view);
   const appNameForHome = getAppName(readBridge().channel, import.meta.env.DEV);
-  const [importOpen, setImportOpen] = useState(false);
   const [remoteAccessStatus, setRemoteAccessStatus] = useState<RemoteAccessSidebarStatus>(
     remoteAccessEnabled ? "starting" : "off",
   );
@@ -342,8 +339,8 @@ export function Sidebar() {
               iconOnly
               icon={<Download className="size-3.5" />}
               label={t`Import session`}
-              isActive={importOpen}
-              onPress={() => setImportOpen(true)}
+              isActive={importDialog.open}
+              onPress={() => importDialog.openFor(importScopeForProject(currentProject))}
             />
           </div>
           <CollapsedThreadRail />
@@ -470,12 +467,17 @@ export function Sidebar() {
         <SidebarFooterNav remoteAccessStatus={remoteAccessStatus} />
       </div>
       <ConfirmDialog
-        isOpen={importOpen}
+        isOpen={importDialog.open}
         title={t`Import session`}
-        body={<ImportSessionsPanel {...importPanelScope} />}
+        body={
+          <ImportSessionsPanel
+            {...(importDialog.cwd ? { cwd: importDialog.cwd } : {})}
+            {...(importDialog.projectId ? { projectId: importDialog.projectId } : {})}
+          />
+        }
         confirmLabel={t`Close`}
-        onConfirm={() => setImportOpen(false)}
-        onClose={() => setImportOpen(false)}
+        onConfirm={importDialog.close}
+        onClose={importDialog.close}
       />
     </div>
   );

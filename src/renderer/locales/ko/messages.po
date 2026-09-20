@@ -814,6 +814,7 @@ msgstr "현재 변경 사항 수락"
 msgid "Accept Incoming Change"
 msgstr "수신 변경 사항 수락"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/MainView/parts/CreateProject/CloneProjectModal.tsx
 msgid "Account"
 msgstr "계정"
@@ -1275,6 +1276,7 @@ msgstr "스레드에 응답이 필요할 때 알림"
 msgid "All"
 msgstr "전체"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/ProfileOverlay/parts/AccountFilter.tsx
 msgid "All accounts"
 msgstr "모든 계정"
@@ -1302,6 +1304,10 @@ msgstr "모든 추론 강도"
 msgid "All files"
 msgstr "모든 파일"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "All folders"
+msgstr "모든 폴더"
+
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeHeading.tsx
 msgid "All machines"
 msgstr "모든 기기"
@@ -1314,6 +1320,10 @@ msgstr "모든 플러그인이 최신 상태입니다."
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectFilter.tsx
 msgid "All projects"
 msgstr "모든 프로젝트"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "All providers"
+msgstr "모든 제공자"
 
 #: src/renderer/components/skills/SkillMarketplaceModal.tsx
 msgid "All sources"
@@ -5665,6 +5675,7 @@ msgstr "인앱 브라우저 주소 표시줄에 포커스"
 msgid "Focus window"
 msgstr "창 활성화"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/ChatPane/parts/items/InlineFolderPathChip.tsx
 msgid "Folder"
 msgstr "폴더"
@@ -6373,6 +6384,7 @@ msgstr "가져오기 방법"
 msgid "Import selected"
 msgstr "선택 항목 가져오기"
 
+#: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectThreadList.tsx
 #: src/renderer/views/MainView/parts/Sidebar/Sidebar.tsx
 msgid "Import session"
 msgstr "세션 가져오기"
@@ -8597,6 +8609,10 @@ msgstr "이 스레드에는 아직 런타임 항목이 없습니다."
 msgid "No sessions could be imported."
 msgstr "세션을 하나도 가져오지 못했습니다."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "No sessions match the current filters."
+msgstr "현재 필터와 일치하는 세션이 없습니다."
+
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "No shortcuts found"
 msgstr "단축키를 찾을 수 없습니다."
@@ -10071,6 +10087,7 @@ msgstr "지원되는 에이전트를 위해 Poracode에서 제공하고 관리�
 msgid "provider"
 msgstr "공급자"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/AgentDiscoveryScreen.tsx
 msgid "Provider"
 msgstr "공급자"
@@ -11580,6 +11597,10 @@ msgstr "에이전트 검색..."
 msgid "Search branches..."
 msgstr "브랜치 검색..."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search by text or folder"
+msgstr "텍스트 또는 폴더로 검색"
+
 #: src/mobile/views/FilesView.tsx
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
 msgid "Search files"
@@ -11648,6 +11669,10 @@ msgstr "런타임 항목 검색…"
 #: src/renderer/views/SchedulesView/SchedulesView.tsx
 msgid "Search scheduled tasks"
 msgstr "예약 작업 검색"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search sessions"
+msgstr "세션 검색"
 
 #: src/renderer/views/SettingsOverlay/parts/SettingsSidebar.tsx
 msgid "Search settings"

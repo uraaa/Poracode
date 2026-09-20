@@ -3,9 +3,9 @@ import { Button, toast } from "@heroui/react";
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
-import type { ImportableSession } from "@/shared/contracts";
+import type { ImportableSession, ImportedSessionProvider } from "@/shared/contracts";
 import { readBridge } from "@/renderer/bridge";
-import { PixelLoader } from "@/renderer/components/common";
+import { Input, PixelLoader } from "@/renderer/components/common";
 import { useAppStore } from "@/renderer/state/appStore";
 import { importSessions } from "./importSessionsActions";
 
@@ -22,6 +22,10 @@ export function ImportSessionsPanel(props: { cwd?: string; projectId?: string })
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [projectId, setProjectId] = useState(props.projectId ?? projects[0]?.id ?? "");
+  const [providerFilter, setProviderFilter] = useState<ImportedSessionProvider | "all">("all");
+  const [accountFilter, setAccountFilter] = useState<string>("all");
+  const [folderFilter, setFolderFilter] = useState<string>("all");
+  const [query, setQuery] = useState("");
 
   const load = useCallback(
     () => readBridge().listImportableSessions(props.cwd ? { cwd: props.cwd } : {}),
@@ -51,9 +55,39 @@ export function ImportSessionsPanel(props: { cwd?: string; projectId?: string })
     };
   }, [load]);
 
-  const importable = useMemo(
-    () => sessions.filter((session) => session.importedThreadId === undefined),
+  // Accounts are the agent kinds discovery attributed sessions to: the base
+  // provider plus every profile that had a home with sessions in it.
+  const accounts = useMemo(
+    () => [...new Set(sessions.map((session) => session.agentKind))].toSorted(),
     [sessions],
+  );
+
+  // Folders are whatever the transcripts recorded, so a project's sessions
+  // group under its path even before the project exists in Poracode.
+  const folders = useMemo(
+    () =>
+      [
+        ...new Set(sessions.map((session) => session.cwd).filter((cwd): cwd is string => !!cwd)),
+      ].toSorted((left, right) => left.localeCompare(right, undefined, { sensitivity: "base" })),
+    [sessions],
+  );
+
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return sessions.filter(
+      (session) =>
+        (providerFilter === "all" || session.provider === providerFilter) &&
+        (accountFilter === "all" || session.agentKind === accountFilter) &&
+        (folderFilter === "all" || session.cwd === folderFilter) &&
+        (needle.length === 0 ||
+          session.preview.toLowerCase().includes(needle) ||
+          (session.cwd ?? "").toLowerCase().includes(needle)),
+    );
+  }, [accountFilter, folderFilter, providerFilter, query, sessions]);
+
+  const importable = useMemo(
+    () => visible.filter((session) => session.importedThreadId === undefined),
+    [visible],
   );
 
   const toggle = useCallback((id: string) => {
@@ -134,6 +168,54 @@ export function ImportSessionsPanel(props: { cwd?: string; projectId?: string })
         </Button>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+        <select
+          aria-label={t`Provider`}
+          className="rounded border border-border/20 bg-transparent px-2 py-1 text-xs"
+          value={providerFilter}
+          onChange={(event) => setProviderFilter(event.target.value as typeof providerFilter)}
+        >
+          <option value="all">{t`All providers`}</option>
+          <option value="codex">Codex</option>
+          <option value="claude">Claude Code</option>
+        </select>
+        <select
+          aria-label={t`Account`}
+          className="rounded border border-border/20 bg-transparent px-2 py-1 text-xs"
+          value={accountFilter}
+          onChange={(event) => setAccountFilter(event.target.value)}
+        >
+          <option value="all">{t`All accounts`}</option>
+          {accounts.map((account) => (
+            <option key={account} value={account}>
+              {account}
+            </option>
+          ))}
+        </select>
+        {props.cwd === undefined ? (
+          <select
+            aria-label={t`Folder`}
+            className="max-w-72 rounded border border-border/20 bg-transparent px-2 py-1 font-mono text-xs"
+            value={folderFilter}
+            onChange={(event) => setFolderFilter(event.target.value)}
+          >
+            <option value="all">{t`All folders`}</option>
+            {folders.map((folder) => (
+              <option key={folder} value={folder}>
+                {folder}
+              </option>
+            ))}
+          </select>
+        ) : null}
+        <Input
+          aria-label={t`Search sessions`}
+          placeholder={t`Search by text or folder`}
+          className="min-w-40 flex-1 text-xs"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </div>
+
       {props.projectId === undefined ? (
         <label className="flex items-center gap-2 text-xs text-muted">
           <Trans>If the folder is missing, import into</Trans>
@@ -153,7 +235,12 @@ export function ImportSessionsPanel(props: { cwd?: string; projectId?: string })
       ) : null}
 
       <ul className="flex max-h-96 flex-col gap-1 overflow-y-auto">
-        {sessions.map((session) => {
+        {visible.length === 0 ? (
+          <li className="py-4 text-center text-xs text-muted">
+            <Trans>No sessions match the current filters.</Trans>
+          </li>
+        ) : null}
+        {visible.map((session) => {
           const alreadyImported = session.importedThreadId !== undefined;
           return (
             <li

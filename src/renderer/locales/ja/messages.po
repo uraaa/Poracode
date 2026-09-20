@@ -813,6 +813,7 @@ msgstr "現在の変更を受け入れる"
 msgid "Accept Incoming Change"
 msgstr "受信した変更を受け入れる"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/MainView/parts/CreateProject/CloneProjectModal.tsx
 msgid "Account"
 msgstr "アカウント"
@@ -1274,6 +1275,7 @@ msgstr "スレッドが対応を必要としたら通知"
 msgid "All"
 msgstr "全期間"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/ProfileOverlay/parts/AccountFilter.tsx
 msgid "All accounts"
 msgstr "すべてのアカウント"
@@ -1301,6 +1303,10 @@ msgstr "すべての推論レベル"
 msgid "All files"
 msgstr "すべてのファイル"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "All folders"
+msgstr "すべてのフォルダー"
+
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeHeading.tsx
 msgid "All machines"
 msgstr "すべてのマシン"
@@ -1313,6 +1319,10 @@ msgstr "すべてのプラグインは最新です。"
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectFilter.tsx
 msgid "All projects"
 msgstr "すべてのプロジェクト"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "All providers"
+msgstr "すべてのプロバイダー"
 
 #: src/renderer/components/skills/SkillMarketplaceModal.tsx
 msgid "All sources"
@@ -5664,6 +5674,7 @@ msgstr "組み込みブラウザのアドレスバーをフォーカス"
 msgid "Focus window"
 msgstr "ウィンドウに切り替え"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/ChatPane/parts/items/InlineFolderPathChip.tsx
 msgid "Folder"
 msgstr "フォルダ"
@@ -6372,6 +6383,7 @@ msgstr "インポート方法"
 msgid "Import selected"
 msgstr "選択項目をインポート"
 
+#: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectThreadList.tsx
 #: src/renderer/views/MainView/parts/Sidebar/Sidebar.tsx
 msgid "Import session"
 msgstr "セッションをインポート"
@@ -8595,6 +8607,10 @@ msgstr "このスレッドにはランタイム アイテムがまだありま�
 msgid "No sessions could be imported."
 msgstr "セッションを 1 件もインポートできませんでした。"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "No sessions match the current filters."
+msgstr "現在のフィルターに一致するセッションはありません。"
+
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "No shortcuts found"
 msgstr "ショートカットが見つかりません"
@@ -10069,6 +10085,7 @@ msgstr "対応エージェント向けにPoracodeによって提供および管�
 msgid "provider"
 msgstr "プロバイダー"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/AgentDiscoveryScreen.tsx
 msgid "Provider"
 msgstr "プロバイダー"
@@ -11578,6 +11595,10 @@ msgstr "エージェントを検索..."
 msgid "Search branches..."
 msgstr "ブランチを検索..."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search by text or folder"
+msgstr "テキストまたはフォルダーで検索"
+
 #: src/mobile/views/FilesView.tsx
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
 msgid "Search files"
@@ -11646,6 +11667,10 @@ msgstr "ランタイム項目を検索…"
 #: src/renderer/views/SchedulesView/SchedulesView.tsx
 msgid "Search scheduled tasks"
 msgstr "スケジュールタスクを検索"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search sessions"
+msgstr "セッションを検索"
 
 #: src/renderer/views/SettingsOverlay/parts/SettingsSidebar.tsx
 msgid "Search settings"

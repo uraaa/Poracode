@@ -30,6 +30,19 @@ vi.mock("@heroui/react", () => ({
 
 vi.mock("@/renderer/components/common", () => ({
   PixelLoader: () => <span data-testid="pixel-loader" />,
+  Input: (props: {
+    "aria-label"?: string;
+    placeholder?: string;
+    value?: string;
+    onChange?: (event: { target: { value: string } }) => void;
+  }) => (
+    <input
+      aria-label={props["aria-label"]}
+      placeholder={props.placeholder}
+      value={props.value}
+      onChange={props.onChange}
+    />
+  ),
 }));
 
 const listImportableSessionsMock = vi.hoisted(() =>
@@ -199,6 +212,47 @@ describe("ImportSessionsPanel", () => {
       expect(createThreadMock).toHaveBeenCalledWith(expect.objectContaining({ projectId: "p1" })),
     );
     expect(addProjectWithResultMock).not.toHaveBeenCalled();
+  });
+
+  it("filters by provider, account, folder, and search text", async () => {
+    listImportableSessionsMock.mockResolvedValue([
+      session(),
+      session({
+        id: "codex:cx-work",
+        providerSessionId: "cx-work",
+        agentKind: "codex:work",
+        preview: "work account task",
+      }),
+      session({
+        id: "claude:cl-1",
+        provider: "claude",
+        agentKind: "claude",
+        providerSessionId: "cl-1",
+        preview: "write a test",
+        cwd: "F:\\other",
+      }),
+    ]);
+    render(<ImportSessionsPanel />);
+    await screen.findByText("fix the race condition");
+
+    fireEvent.change(screen.getByLabelText("Folder"), { target: { value: "F:\\other" } });
+    expect(screen.getByText("write a test")).toBeInTheDocument();
+    expect(screen.queryByText("fix the race condition")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Folder"), { target: { value: "all" } });
+
+    fireEvent.change(screen.getByLabelText("Provider"), { target: { value: "claude" } });
+    expect(screen.queryByText("fix the race condition")).not.toBeInTheDocument();
+    expect(screen.getByText("write a test")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Provider"), { target: { value: "all" } });
+    fireEvent.change(screen.getByLabelText("Account"), { target: { value: "codex:work" } });
+    expect(screen.getByText("work account task")).toBeInTheDocument();
+    expect(screen.queryByText("write a test")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Account"), { target: { value: "all" } });
+    fireEvent.change(screen.getByLabelText("Search sessions"), { target: { value: "other" } });
+    expect(screen.getByText("write a test")).toBeInTheDocument();
+    expect(screen.queryByText("fix the race condition")).not.toBeInTheDocument();
   });
 
   it("reports a failed import without blocking the rest", async () => {

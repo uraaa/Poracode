@@ -814,6 +814,7 @@ msgstr "Accepter le changement actuel"
 msgid "Accept Incoming Change"
 msgstr "Accepter les modifications entrantes"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/MainView/parts/CreateProject/CloneProjectModal.tsx
 msgid "Account"
 msgstr "Compte"
@@ -1275,6 +1276,7 @@ msgstr "Alertes lorsque les fils ont besoin de vous"
 msgid "All"
 msgstr "Tout"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/ProfileOverlay/parts/AccountFilter.tsx
 msgid "All accounts"
 msgstr "Tous les comptes"
@@ -1302,6 +1304,10 @@ msgstr "Tous les niveaux d'effort"
 msgid "All files"
 msgstr "Tous les fichiers"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "All folders"
+msgstr "Tous les dossiers"
+
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeHeading.tsx
 msgid "All machines"
 msgstr "Toutes les machines"
@@ -1314,6 +1320,10 @@ msgstr "Tous les plugins sont à jour."
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectFilter.tsx
 msgid "All projects"
 msgstr "Tous les projets"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "All providers"
+msgstr "Tous les fournisseurs"
 
 #: src/renderer/components/skills/SkillMarketplaceModal.tsx
 msgid "All sources"
@@ -5665,6 +5675,7 @@ msgstr "Accéder à la barre d'adresse du navigateur dans l'application"
 msgid "Focus window"
 msgstr "Activer la fenêtre"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/ChatPane/parts/items/InlineFolderPathChip.tsx
 msgid "Folder"
 msgstr "Dossier"
@@ -6373,6 +6384,7 @@ msgstr "Méthode d’importation"
 msgid "Import selected"
 msgstr "Importer la sélection"
 
+#: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectThreadList.tsx
 #: src/renderer/views/MainView/parts/Sidebar/Sidebar.tsx
 msgid "Import session"
 msgstr "Importer une session"
@@ -8596,6 +8608,10 @@ msgstr "Aucun élément d'exécution pour ce fil pour l'instant."
 msgid "No sessions could be imported."
 msgstr "Aucune session n'a pu être importée."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "No sessions match the current filters."
+msgstr "Aucune session ne correspond aux filtres actuels."
+
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "No shortcuts found"
 msgstr "Aucun raccourci trouvé"
@@ -10070,6 +10086,7 @@ msgstr "Fourni et géré par Poracode pour les agents compatibles."
 msgid "provider"
 msgstr "fournisseur"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/AgentDiscoveryScreen.tsx
 msgid "Provider"
 msgstr "Fournisseur"
@@ -11579,6 +11596,10 @@ msgstr "Rechercher des agents..."
 msgid "Search branches..."
 msgstr "Rechercher des branches..."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search by text or folder"
+msgstr "Rechercher par texte ou dossier"
+
 #: src/mobile/views/FilesView.tsx
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
 msgid "Search files"
@@ -11647,6 +11668,10 @@ msgstr "Rechercher des éléments d'exécution…"
 #: src/renderer/views/SchedulesView/SchedulesView.tsx
 msgid "Search scheduled tasks"
 msgstr "Rechercher des tâches planifiées"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search sessions"
+msgstr "Rechercher des sessions"
 
 #: src/renderer/views/SettingsOverlay/parts/SettingsSidebar.tsx
 msgid "Search settings"

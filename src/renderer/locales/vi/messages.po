@@ -814,6 +814,7 @@ msgstr "Chấp nhận thay đổi hiện tại"
 msgid "Accept Incoming Change"
 msgstr "Chấp nhận thay đổi đến"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/MainView/parts/CreateProject/CloneProjectModal.tsx
 msgid "Account"
 msgstr "Tài khoản"
@@ -1275,6 +1276,7 @@ msgstr "Cảnh báo khi luồng cần bạn"
 msgid "All"
 msgstr "Tất cả"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/ProfileOverlay/parts/AccountFilter.tsx
 msgid "All accounts"
 msgstr "Tất cả tài khoản"
@@ -1302,6 +1304,10 @@ msgstr "Tất cả mức nỗ lực"
 msgid "All files"
 msgstr "Tất cả các tập tin"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "All folders"
+msgstr "Tất cả thư mục"
+
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeHeading.tsx
 msgid "All machines"
 msgstr "Tất cả các máy"
@@ -1314,6 +1320,10 @@ msgstr "Tất cả plugin đều là bản mới nhất."
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectFilter.tsx
 msgid "All projects"
 msgstr "Tất cả dự án"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "All providers"
+msgstr "Tất cả nhà cung cấp"
 
 #: src/renderer/components/skills/SkillMarketplaceModal.tsx
 msgid "All sources"
@@ -5665,6 +5675,7 @@ msgstr "Tập trung vào thanh địa chỉ của trình duyệt tích hợp"
 msgid "Focus window"
 msgstr "Chuyển đến cửa sổ"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/ChatPane/parts/items/InlineFolderPathChip.tsx
 msgid "Folder"
 msgstr "Thư mục"
@@ -6373,6 +6384,7 @@ msgstr "Phương thức nhập"
 msgid "Import selected"
 msgstr "Nhập mục đã chọn"
 
+#: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectThreadList.tsx
 #: src/renderer/views/MainView/parts/Sidebar/Sidebar.tsx
 msgid "Import session"
 msgstr "Nhập phiên"
@@ -8597,6 +8609,10 @@ msgstr "Chưa có mục thời gian chạy nào cho luồng này."
 msgid "No sessions could be imported."
 msgstr "Không thể nhập phiên nào."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "No sessions match the current filters."
+msgstr "Không có phiên nào khớp với bộ lọc hiện tại."
+
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "No shortcuts found"
 msgstr "Không tìm thấy phím tắt nào"
@@ -10071,6 +10087,7 @@ msgstr "Do Poracode cung cấp và quản lý cho các tác nhân được hỗ 
 msgid "provider"
 msgstr "nhà cung cấp"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/AgentDiscoveryScreen.tsx
 msgid "Provider"
 msgstr "nhà cung cấp"
@@ -11580,6 +11597,10 @@ msgstr "Tìm kiếm tác nhân..."
 msgid "Search branches..."
 msgstr "Tìm kiếm nhánh..."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search by text or folder"
+msgstr "Tìm theo văn bản hoặc thư mục"
+
 #: src/mobile/views/FilesView.tsx
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
 msgid "Search files"
@@ -11648,6 +11669,10 @@ msgstr "Tìm kiếm các mục thời gian chạy…"
 #: src/renderer/views/SchedulesView/SchedulesView.tsx
 msgid "Search scheduled tasks"
 msgstr "Tìm kiếm tác vụ đã lên lịch"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search sessions"
+msgstr "Tìm phiên"
 
 #: src/renderer/views/SettingsOverlay/parts/SettingsSidebar.tsx
 msgid "Search settings"

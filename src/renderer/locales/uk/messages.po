@@ -814,6 +814,7 @@ msgstr "Прийняти поточну зміну"
 msgid "Accept Incoming Change"
 msgstr "Прийняти вхідну зміну"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/MainView/parts/CreateProject/CloneProjectModal.tsx
 msgid "Account"
 msgstr "Обліковий запис"
@@ -1275,6 +1276,7 @@ msgstr "Сповіщення, коли потокам потрібна ваша 
 msgid "All"
 msgstr "Усі"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/ProfileOverlay/parts/AccountFilter.tsx
 msgid "All accounts"
 msgstr "Усі облікові записи"
@@ -1302,6 +1304,10 @@ msgstr "Усі рівні зусиль"
 msgid "All files"
 msgstr "Усі файли"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "All folders"
+msgstr "Усі теки"
+
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeHeading.tsx
 msgid "All machines"
 msgstr "Усі комп’ютери"
@@ -1314,6 +1320,10 @@ msgstr "Усі плагіни актуальні."
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectFilter.tsx
 msgid "All projects"
 msgstr "Усі проєкти"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "All providers"
+msgstr "Усі провайдери"
 
 #: src/renderer/components/skills/SkillMarketplaceModal.tsx
 msgid "All sources"
@@ -5665,6 +5675,7 @@ msgstr "Встановити фокус на адресний рядок бра�
 msgid "Focus window"
 msgstr "Перейти до вікна"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/ChatPane/parts/items/InlineFolderPathChip.tsx
 msgid "Folder"
 msgstr "Папка"
@@ -6373,6 +6384,7 @@ msgstr "Спосіб імпорту"
 msgid "Import selected"
 msgstr "Імпортувати вибрані"
 
+#: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectThreadList.tsx
 #: src/renderer/views/MainView/parts/Sidebar/Sidebar.tsx
 msgid "Import session"
 msgstr "Імпорт сесії"
@@ -8597,6 +8609,10 @@ msgstr "Для цього треду ще немає runtime-елементів.
 msgid "No sessions could be imported."
 msgstr "Не вдалося імпортувати жодної сесії."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "No sessions match the current filters."
+msgstr "Жодна сесія не відповідає фільтрам."
+
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "No shortcuts found"
 msgstr "Комбінації клавіш не знайдено"
@@ -10071,6 +10087,7 @@ msgstr "Надається та керується Poracode для підтри�
 msgid "provider"
 msgstr "провайдер"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/AgentDiscoveryScreen.tsx
 msgid "Provider"
 msgstr "Провайдер"
@@ -11580,6 +11597,10 @@ msgstr "Пошук агентів..."
 msgid "Search branches..."
 msgstr "Пошук гілок..."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search by text or folder"
+msgstr "Пошук за текстом або текою"
+
 #: src/mobile/views/FilesView.tsx
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
 msgid "Search files"
@@ -11648,6 +11669,10 @@ msgstr "Пошук runtime-елементів…"
 #: src/renderer/views/SchedulesView/SchedulesView.tsx
 msgid "Search scheduled tasks"
 msgstr "Пошук запланованих завдань"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search sessions"
+msgstr "Пошук сесій"
 
 #: src/renderer/views/SettingsOverlay/parts/SettingsSidebar.tsx
 msgid "Search settings"

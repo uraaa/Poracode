@@ -814,6 +814,7 @@ msgstr "Mevcut Değişikliği Kabul Et"
 msgid "Accept Incoming Change"
 msgstr "Gelen Değişikliği Kabul Et"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/MainView/parts/CreateProject/CloneProjectModal.tsx
 msgid "Account"
 msgstr "Hesap"
@@ -1275,6 +1276,7 @@ msgstr "İş parçacıkları size ihtiyaç duyduğunda uyarılar"
 msgid "All"
 msgstr "Tümü"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/ProfileOverlay/parts/AccountFilter.tsx
 msgid "All accounts"
 msgstr "Tüm hesaplar"
@@ -1302,6 +1304,10 @@ msgstr "Tüm efor düzeyleri"
 msgid "All files"
 msgstr "Tüm dosyalar"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "All folders"
+msgstr "Tüm klasörler"
+
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeHeading.tsx
 msgid "All machines"
 msgstr "Tüm makineler"
@@ -1314,6 +1320,10 @@ msgstr "Tüm eklentiler güncel."
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectFilter.tsx
 msgid "All projects"
 msgstr "Tüm projeler"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "All providers"
+msgstr "Tüm sağlayıcılar"
 
 #: src/renderer/components/skills/SkillMarketplaceModal.tsx
 msgid "All sources"
@@ -5665,6 +5675,7 @@ msgstr "Uygulama içi tarayıcı adres çubuğuna odakla"
 msgid "Focus window"
 msgstr "Pencereyi öne getir"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/ChatPane/parts/items/InlineFolderPathChip.tsx
 msgid "Folder"
 msgstr "Klasör"
@@ -6373,6 +6384,7 @@ msgstr "İçe aktarma yöntemi"
 msgid "Import selected"
 msgstr "Seçilenleri içe aktar"
 
+#: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectThreadList.tsx
 #: src/renderer/views/MainView/parts/Sidebar/Sidebar.tsx
 msgid "Import session"
 msgstr "Oturumu içe aktar"
@@ -8597,6 +8609,10 @@ msgstr "Bu konu için henüz çalışma zamanı öğesi yok."
 msgid "No sessions could be imported."
 msgstr "Hiçbir oturum içe aktarılamadı."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "No sessions match the current filters."
+msgstr "Geçerli filtrelere uyan oturum yok."
+
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "No shortcuts found"
 msgstr "Hiçbir kısayol bulunamadı"
@@ -10071,6 +10087,7 @@ msgstr "Desteklenen aracılar için Poracode tarafından sağlanır ve yönetili
 msgid "provider"
 msgstr "sağlayıcı"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/AgentDiscoveryScreen.tsx
 msgid "Provider"
 msgstr "Sağlayıcı"
@@ -11580,6 +11597,10 @@ msgstr "Aracıları ara..."
 msgid "Search branches..."
 msgstr "Şube ara..."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search by text or folder"
+msgstr "Metne veya klasöre göre ara"
+
 #: src/mobile/views/FilesView.tsx
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
 msgid "Search files"
@@ -11648,6 +11669,10 @@ msgstr "Çalışma zamanı öğelerini ara…"
 #: src/renderer/views/SchedulesView/SchedulesView.tsx
 msgid "Search scheduled tasks"
 msgstr "Zamanlanmış görevlerde ara"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search sessions"
+msgstr "Oturumları ara"
 
 #: src/renderer/views/SettingsOverlay/parts/SettingsSidebar.tsx
 msgid "Search settings"
