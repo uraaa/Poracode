@@ -32,6 +32,7 @@ import {
   type CodexHomeOverlay,
   installCodexPlugin,
   isCodexPluginInstalled,
+  seedNativeCodexHome,
   isCodexSemverSupportedForHooks,
   isCodexVersionSupportedForHooks,
   parseCodexVersionLine,
@@ -276,7 +277,11 @@ export function createCodexAdapter(options: CodexAdapterOptions = {}): AgentAdap
       uninstallCodexPlugin(ctx);
     },
     async pluginLaunchExtras(ctx) {
-      const paths = getCodexPluginPaths(ctx, overlayFor(ctx));
+      const overlay = overlayFor(ctx);
+      const paths = getCodexPluginPaths(ctx, overlay);
+      // The install step links state files once; a profile that signs in
+      // afterwards needs its new auth.json linked before this launch.
+      if (overlay) seedNativeCodexHome(paths.codexHomeDir, overlay.sourceHomeDir);
       const hooksFeatureFlag = await resolveCodexHooksFeatureFlag(ctx);
       return {
         args: ["--enable", hooksFeatureFlag],

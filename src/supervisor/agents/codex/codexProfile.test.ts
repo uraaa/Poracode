@@ -1,4 +1,5 @@
-import { homedir } from "node:os";
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { ProjectLocation } from "@/shared/contracts";
@@ -101,6 +102,27 @@ describe("createCodexProfileAdapter", () => {
     expect(extras?.env?.CODEX_HOME).toBe(
       path.join("/tmp/pc", "agent-plugins", "codex", "profiles", "work", "home"),
     );
+  });
+
+  it("links the profile home into its overlay on every launch, not only at install", async () => {
+    // A fresh profile has no auth.json until the user signs in later, so the
+    // overlay must pick up state files that appear after the plugin install.
+    const baseDir = mkdtempSync(path.join(tmpdir(), "poracode-codex-profile-base-"));
+    const homeDir = mkdtempSync(path.join(tmpdir(), "poracode-codex-profile-home-"));
+    mkdirSync(path.join(homeDir, "sessions"), { recursive: true });
+    writeFileSync(path.join(homeDir, "auth.json"), "{}");
+    const adapter = createCodexProfileAdapter({
+      id: "late",
+      driver: "codex",
+      displayName: "Late",
+      config: { homeDir },
+    });
+
+    const extras = await adapter.pluginLaunchExtras?.({ envKind: "posix", baseDir });
+    const overlay = path.join(baseDir, "agent-plugins", "codex", "profiles", "late", "home");
+    expect(extras?.env?.CODEX_HOME).toBe(overlay);
+    expect(existsSync(path.join(overlay, "auth.json"))).toBe(true);
+    expect(existsSync(path.join(overlay, "sessions"))).toBe(true);
   });
 
   it("does not offer hook plugins for WSL profiles", async () => {

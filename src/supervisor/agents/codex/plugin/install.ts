@@ -211,7 +211,13 @@ const CODEX_LINK_TARGETS = [
   { name: "config.toml", kind: "file" as const },
 ];
 
-function seedNativeCodexHome(
+/**
+ * Create the private overlay home and link the account's state files into it.
+ * Idempotent: existing links are left alone, and state files that did not
+ * exist yet (a profile that signs in after its first launch) are linked the
+ * next time this runs, so profile adapters call it on every launch.
+ */
+export function seedNativeCodexHome(
   codexHomeDir: string,
   globalCodexHome: string = join(homedir(), ".codex"),
 ): void {
