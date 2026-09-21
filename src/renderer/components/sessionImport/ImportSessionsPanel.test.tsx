@@ -601,6 +601,31 @@ describe("ImportSessionsPanel", () => {
     expect(screen.getByLabelText("Provider")).toBeInTheDocument();
   });
 
+  it("keeps the search box mounted while a cleared query is still debouncing", async () => {
+    render(<ImportSessionsPanel initialProjectId="p1" />);
+    await screen.findByText("fix the race condition");
+
+    listImportableSessionsMock.mockResolvedValue([]);
+    fireEvent.change(screen.getByLabelText("Search sessions"), { target: { value: "zzz" } });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+    });
+    expect(screen.getByLabelText("Search sessions")).toHaveValue("zzz");
+
+    // Clearing the box must not take the box away. `sessions` is still the
+    // empty result of the query for the 400ms the next scan is debounced, so
+    // a panel that decides it is un-narrowed the moment the text goes
+    // disappears out from under the user mid-keystroke.
+    listImportableSessionsMock.mockResolvedValue([session()]);
+    fireEvent.change(screen.getByLabelText("Search sessions"), { target: { value: "" } });
+
+    expect(
+      screen.queryByText("No Codex or Claude Code sessions found on this computer."),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Search sessions")).toHaveValue("");
+    expect(screen.getByLabelText("Provider")).toBeInTheDocument();
+  });
+
   it("says a rescan is in flight instead of leaving a stale list live", async () => {
     render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
     fireEvent.click(await screen.findByRole("checkbox", { name: /fix the race condition/iu }));

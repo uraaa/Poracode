@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Database from "better-sqlite3";
@@ -630,6 +630,61 @@ describe("scanImportableSessions", () => {
     utimesSync(file, later, later);
 
     expect(scanImportableSessions({ homes }).sessions[0]?.preview).toBe("rewritten prompt");
+  });
+
+  it("re-reads a transcript rewritten within the same mtime tick", () => {
+    const dir = codexHome([{ id: "cx-tick", cwd: "F:\\repo", prompt: "first prompt" }]);
+    const homes: ImportHome[] = [{ provider: "codex", agentKind: "codex", dir }];
+    const file = join(
+      dir,
+      "sessions",
+      "2026",
+      "09",
+      "20",
+      "rollout-2026-09-20T04-43-18-cx-tick.jsonl",
+    );
+
+    // A whole-millisecond stamp, set before *and* after the rewrite, so both
+    // scans genuinely read the same `mtimeMs`. (Restoring a `statSync` result
+    // would not: `mtimeMs` can be fractional and a `Date` truncates it, which
+    // silently changes the key and hides what this test is for.)
+    const pinned = new Date("2026-09-20T04:43:18.000Z");
+    utimesSync(file, pinned, pinned);
+    expect(statSync(file).mtimeMs).toBe(pinned.getTime());
+
+    expect(scanImportableSessions({ homes }).sessions[0]?.preview).toBe("first prompt");
+
+    writeFileSync(
+      file,
+      [
+        JSON.stringify({
+          type: "session_meta",
+          payload: {
+            session_id: "cx-tick",
+            cwd: "F:\\repo",
+            timestamp: "2026-09-20T04:43:18.000Z",
+          },
+        }),
+        JSON.stringify({
+          type: "response_item",
+          payload: {
+            type: "message",
+            role: "user",
+            content: [{ type: "input_text", text: "a rather longer second prompt entirely" }],
+          },
+        }),
+      ].join("\n"),
+      "utf8",
+    );
+    // Back to the same tick: a filesystem with a coarse mtime can genuinely
+    // report one for two writes this close together, and a key of path and
+    // mtime alone would then go on serving the old bytes.
+    utimesSync(file, pinned, pinned);
+    expect(statSync(file).mtimeMs).toBe(pinned.getTime());
+
+    expect(scanImportableSessions({ homes }).sessions[0]?.preview).toBe(
+      "a rather longer second prompt entirely",
+    );
   });
 
   it("compares folders case-insensitively on win32 and case-sensitively elsewhere", () => {

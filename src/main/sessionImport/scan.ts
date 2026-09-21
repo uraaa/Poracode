@@ -84,12 +84,15 @@ function createScanMemo<T>(limit: number): ScanMemo<T> {
 }
 
 /**
- * Keyed by file path + `mtimeMs` so a rewritten transcript (new mtime) is a
- * new key and is read again, rather than serving whatever the old bytes said
- * for the life of the main process.
+ * Keyed by file path + `mtimeMs` + size, so a rewritten transcript is a new
+ * key and is read again rather than serving whatever the old bytes said for
+ * the life of the main process. Size as well as mtime because a filesystem
+ * with a coarse timestamp can report the same tick for two writes close
+ * together, and it costs nothing: the `stat` that reports the mtime reports
+ * the size in the same call.
  */
-function memoKey(path: string, mtimeMs: number): string {
-  return `${path}:${mtimeMs}`;
+function memoKey(file: DiscoveredFile): string {
+  return `${file.path}:${file.mtimeMs}:${file.size}`;
 }
 
 /** One head per transcript, the candidate pass's whole per-file disk cost. */
@@ -103,6 +106,7 @@ interface DiscoveredFile {
   readonly home: ImportHome;
   readonly path: string;
   readonly mtimeMs: number;
+  readonly size: number;
 }
 
 function walkFiles(root: string, accept: (name: string) => boolean): string[] {
@@ -300,7 +304,7 @@ function parseHead(file: DiscoveredFile): SessionHead | undefined {
  * keystroke before this memo existed.
  */
 function readHead(file: DiscoveredFile): SessionHead | undefined {
-  const key = memoKey(file.path, file.mtimeMs);
+  const key = memoKey(file);
   const cached = headCache.recall(key);
   if (cached.hit) return cached.value;
   const head = parseHead(file);
@@ -407,7 +411,7 @@ function firstUserText(prefix: string, provider: ImportedSessionProvider): strin
  * rescan does not repeat either read.
  */
 function readPreview(file: DiscoveredFile): string {
-  const key = memoKey(file.path, file.mtimeMs);
+  const key = memoKey(file);
   const cached = previewCache.recall(key);
   if (cached.hit) return cached.value ?? "";
   const head = readPrefix(file.path, HEAD_CHUNK_BYTES);
@@ -510,7 +514,7 @@ export function scanImportableSessions(input: {
     if (candidate.file.home.provider !== "claude") {
       return titleFor(candidate.file, candidate.head.providerSessionId);
     }
-    const key = memoKey(candidate.file.path, candidate.file.mtimeMs);
+    const key = memoKey(candidate.file);
     const cached = titleCache.recall(key);
     if (cached.hit) return cached.value;
     const title = titleFor(candidate.file, candidate.head.providerSessionId);
@@ -521,13 +525,13 @@ export function scanImportableSessions(input: {
   for (const home of input.homes) {
     if (input.provider && home.provider !== input.provider) continue;
     for (const path of sessionFilesFor(home)) {
-      let mtimeMs = 0;
+      let stats: import("node:fs").Stats;
       try {
-        mtimeMs = statSync(path).mtimeMs;
+        stats = statSync(path);
       } catch {
         continue;
       }
-      files.push({ home, path, mtimeMs });
+      files.push({ home, path, mtimeMs: stats.mtimeMs, size: stats.size });
     }
   }
   files.sort((left, right) => right.mtimeMs - left.mtimeMs);

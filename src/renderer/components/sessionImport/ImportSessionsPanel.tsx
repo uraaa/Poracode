@@ -237,13 +237,21 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
   // replacing the panel would take the filter bar — and the input still
   // holding the typed query — away with it, leaving no way back short of
   // reopening the dialog. The list body already says "no matches" on its own.
+  //
+  // Both query values count. `sessions` is whatever the *debounced* query
+  // last scanned for, so between clearing the box and that scan landing the
+  // immediate query is empty while the empty result of the old one is still
+  // on screen — and a panel that read only the immediate one would vanish
+  // out from under the user for the length of the debounce. Same reason a
+  // scan in flight keeps it mounted: the list has not caught up yet.
   const narrowed =
     filters.provider !== ALL ||
     filters.account !== ALL ||
     filters.folder !== ALL ||
-    filters.query.trim().length > 0;
+    filters.query.trim().length > 0 ||
+    debouncedQuery.trim().length > 0;
 
-  if (sessions.length === 0 && !narrowed) {
+  if (sessions.length === 0 && !narrowed && !rescanning) {
     return (
       <p className="py-6 text-center text-xs text-muted">
         <Trans>No Codex or Claude Code sessions found on this computer.</Trans>
