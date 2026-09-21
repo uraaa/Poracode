@@ -18,6 +18,22 @@ export interface ImportedTranscript {
   messages: ImportedMessage[];
 }
 
+/**
+ * Claude record types that legitimately carry the session's own metadata
+ * (`sessionId`, `cwd`, `timestamp`, `ownerAccountUuid`). Claude has no single
+ * meta line — those fields are spread across ordinary conversation records —
+ * and every other record on the stream (hook output, file-history snapshots,
+ * queue operations) carries a `cwd` and a `timestamp` of its own that are not
+ * the session's. The scan and the import-time parser gate on this same set,
+ * so they cannot disagree about which folder or session a transcript is.
+ */
+export const CLAUDE_METADATA_RECORD_TYPES = new Set([
+  "user",
+  "assistant",
+  "bridge-session",
+  "summary",
+]);
+
 /** One pasted file should not put megabytes into a single chat row. */
 export const MAX_IMPORTED_MESSAGE_CHARS = 100_000;
 export const TRUNCATION_MARKER = "\n\n[… truncated on import]";

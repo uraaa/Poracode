@@ -3,6 +3,7 @@ import { basename } from "node:path";
 import { StringDecoder } from "node:string_decoder";
 import {
   capMessageText,
+  CLAUDE_METADATA_RECORD_TYPES,
   stripInjectedContext,
   type ImportedMessage,
   type ImportedTranscript,
@@ -92,12 +93,16 @@ function messageFrom(entry: Record<string, unknown>): ImportedMessage | undefine
   if (!message || typeof message !== "object") return undefined;
   const raw = textFromContent((message as Record<string, unknown>)["content"]);
   if (raw.trim().length === 0) return undefined;
-  if (role === "user" && INTERRUPTION_MARKER_RE.test(raw)) return undefined;
   // Claude Code writes machine blocks (task notifications, slash-command
   // echoes, system reminders) into the user role as plain text. Strip them so
   // only what the user actually typed is replayed.
   const text = role === "user" ? stripInjectedContext(raw) : raw;
   if (text.trim().length === 0) return undefined;
+  // Tested after stripping, not before: the marker can share its turn with a
+  // system reminder, and the anchored pattern fails against the two together
+  // — the turn would then strip down to the bare marker and be replayed as
+  // if the user had typed it.
+  if (role === "user" && INTERRUPTION_MARKER_RE.test(text)) return undefined;
   const at = entry["timestamp"];
   return {
     role,
@@ -114,10 +119,18 @@ export function parseClaudeTranscript(path: string): ImportedTranscript {
   for (const line of readLinesSync(path)) {
     const entry = parseLine(line);
     if (!entry) continue;
-    if (typeof entry["sessionId"] === "string") transcript.providerSessionId = entry["sessionId"];
-    if (!transcript.cwd && typeof entry["cwd"] === "string") transcript.cwd = entry["cwd"];
-    if (!transcript.startedAt && typeof entry["timestamp"] === "string") {
-      transcript.startedAt = entry["timestamp"];
+    // Same gate the scan applies (`CLAUDE_METADATA_RECORD_TYPES`): every
+    // Claude record carries `cwd` and `timestamp` as plain top-level fields,
+    // so a `file-history-snapshot` or any other machinery record would
+    // otherwise decide what folder — and, last-wins, what session — the
+    // imported thread believes in.
+    const type = entry["type"];
+    if (typeof type === "string" && CLAUDE_METADATA_RECORD_TYPES.has(type)) {
+      if (typeof entry["sessionId"] === "string") transcript.providerSessionId = entry["sessionId"];
+      if (!transcript.cwd && typeof entry["cwd"] === "string") transcript.cwd = entry["cwd"];
+      if (!transcript.startedAt && typeof entry["timestamp"] === "string") {
+        transcript.startedAt = entry["timestamp"];
+      }
     }
     const message = messageFrom(entry);
     if (message) transcript.messages.push(message);

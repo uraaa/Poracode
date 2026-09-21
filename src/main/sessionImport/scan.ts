@@ -12,7 +12,7 @@ import type { ImportableSession, ImportedSessionProvider } from "@/shared/contra
 import { isSameFolderPath } from "@/shared/pathUtils";
 import type { ImportHome } from "./homes";
 import { readClaudeTitle, readCodexTitles } from "./titles";
-import { stripInjectedContext } from "./transcript";
+import { CLAUDE_METADATA_RECORD_TYPES, stripInjectedContext } from "./transcript";
 
 /**
  * Discovery reads as little of each transcript as it can get away with. A real
@@ -228,9 +228,6 @@ function codexHeadFields(prefix: string): RawHeadFields {
   };
 }
 
-/** Claude record types that legitimately carry the session's own metadata. */
-const CLAUDE_HEAD_RECORD_TYPES = new Set(["user", "assistant", "bridge-session", "summary"]);
-
 /**
  * Claude has no single meta line — `sessionId` / `cwd` / `timestamp` /
  * `ownerAccountUuid` are spread across ordinary conversation records. Scan
@@ -248,7 +245,7 @@ function claudeHeadFields(prefix: string): RawHeadFields {
   for (const line of prefix.split(/\r?\n/u)) {
     if (line.length === 0) continue;
     const type = rawField(line, "type");
-    if (!type || !CLAUDE_HEAD_RECORD_TYPES.has(type)) continue;
+    if (!type || !CLAUDE_METADATA_RECORD_TYPES.has(type)) continue;
     id ??= rawField(line, "sessionId");
     cwd ??= rawField(line, "cwd");
     startedAt ??= rawField(line, "timestamp");

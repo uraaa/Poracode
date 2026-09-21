@@ -54,6 +54,47 @@ describe("parseClaudeTranscript", () => {
     expect(parseClaudeTranscript(path).messages.map((m) => m.text)).toEqual(["fix the bug"]);
   });
 
+  it("drops an interruption marker that shares its turn with injected context", () => {
+    // Claude Code writes the marker into a turn that can already carry a
+    // system reminder. Tested against the raw text the anchored pattern
+    // fails, and the turn then strips down to the bare marker and is
+    // replayed as if the user had typed it.
+    const path = writeLog([
+      {
+        type: "user",
+        message: {
+          role: "user",
+          content:
+            "<system-reminder>Codebase instructions…</system-reminder>[Request interrupted by user]",
+        },
+      },
+      USER_TEXT,
+    ]);
+    expect(parseClaudeTranscript(path).messages.map((m) => m.text)).toEqual(["fix the bug"]);
+  });
+
+  it("takes session metadata only from records that legitimately carry it", () => {
+    // The scan gates head fields on the same record kinds. Every Claude
+    // record carries `cwd` and `timestamp` as plain top-level fields, so a
+    // `file-history-snapshot` either side of the conversation would
+    // otherwise decide what folder and session the thread believes in.
+    const path = writeLog([
+      {
+        type: "file-history-snapshot",
+        sessionId: "not-the-session",
+        cwd: "F:\\pasted",
+        timestamp: "2020-01-01T00:00:00.000Z",
+      },
+      USER_TEXT,
+      { type: "file-history-snapshot", sessionId: "also-not-the-session", cwd: "F:\\pasted" },
+    ]);
+
+    const transcript = parseClaudeTranscript(path);
+    expect(transcript.cwd).toBe("F:\\repo");
+    expect(transcript.startedAt).toBe("2026-09-20T05:00:00.000Z");
+    expect(transcript.providerSessionId).toBe("9f1c6b22-0000-4000-8000-000000000001");
+  });
+
   it("drops a user line that only carries tool results", () => {
     const path = writeLog([
       {
