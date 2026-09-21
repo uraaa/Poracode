@@ -105,6 +105,7 @@ vi.mock("@/renderer/bridge", () => ({
 const createThreadMock = vi.hoisted(() => vi.fn<(input: unknown) => Thread>());
 const updateThreadRuntimeMock = vi.hoisted(() => vi.fn<(id: string, input: unknown) => void>());
 const deleteThreadMock = vi.hoisted(() => vi.fn<(id: string) => void>());
+const deleteProjectMock = vi.hoisted(() => vi.fn<(id: string) => void>());
 const addProjectWithResultMock = vi.hoisted(() =>
   vi.fn<
     (
@@ -120,6 +121,7 @@ const storeState = {
   updateThreadRuntime: updateThreadRuntimeMock,
   addProjectWithResult: addProjectWithResultMock,
   deleteThread: deleteThreadMock,
+  deleteProject: deleteProjectMock,
 };
 const statusState = {
   agentStatuses: [
@@ -197,6 +199,7 @@ beforeEach(() => {
   createThreadMock.mockReset().mockReturnValue({ id: "new-thread" } as Thread);
   updateThreadRuntimeMock.mockReset();
   deleteThreadMock.mockReset();
+  deleteProjectMock.mockReset();
   addProjectWithResultMock
     .mockReset()
     .mockImplementation(() => ({ project: { id: "p-new" }, created: true }));
@@ -458,6 +461,12 @@ describe("ImportSessionsPanel", () => {
     importSessionTranscriptMock
       .mockRejectedValueOnce(new Error("unreadable"))
       .mockResolvedValueOnce({ messageCount: 2, path: "F:/other.jsonl" });
+    // Both sessions share a folder: the real store dedupes the second lookup
+    // (`created: false`), so only the first import creates a fresh project.
+    addProjectWithResultMock
+      .mockReset()
+      .mockReturnValueOnce({ project: { id: "p-new" }, created: true })
+      .mockReturnValue({ project: { id: "p-new" }, created: false });
 
     render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
     fireEvent.click(await screen.findByRole("button", { name: /select all/iu }));
@@ -467,5 +476,7 @@ describe("ImportSessionsPanel", () => {
     expect(importSessionTranscriptMock).toHaveBeenCalledTimes(2);
     // The failed session's half-built thread is rolled back; the other stays.
     await vi.waitFor(() => expect(deleteThreadMock).toHaveBeenCalledTimes(1));
+    // The project created for the failed import is rolled back with it.
+    expect(deleteProjectMock).toHaveBeenCalledExactlyOnceWith("p-new");
   });
 });

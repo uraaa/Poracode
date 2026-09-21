@@ -88,18 +88,18 @@ function hostLocation(path: string): ProjectLocation {
 export function resolveImportProjectId(
   session: ImportableSession,
   fallbackProjectId?: string,
-): string | undefined {
+): { projectId: string | undefined; created: boolean } {
   if (session.cwd && session.cwdExists) {
-    const { project } = useAppStore
+    const { project, created } = useAppStore
       .getState()
       .addProjectWithResult(
         hostLocation(session.cwd),
         undefined,
         getActiveWorkspaceId() ?? undefined,
       );
-    return project.id;
+    return { projectId: project.id, created };
   }
-  return fallbackProjectId;
+  return { projectId: fallbackProjectId, created: false };
 }
 
 /**
@@ -122,8 +122,12 @@ export async function importSessions(input: {
 
   for (const session of input.sessions) {
     let threadId: string | undefined;
+    let projectCreated = false;
+    let projectId: string | undefined;
     try {
-      const projectId = resolveImportProjectId(session, input.fallbackProjectId);
+      const resolved = resolveImportProjectId(session, input.fallbackProjectId);
+      projectId = resolved.projectId;
+      projectCreated = resolved.created;
       if (!projectId) {
         failed += 1;
         toast.danger(i18n._(msg`No project to import into — pick one for ${session.preview}.`));
@@ -177,6 +181,10 @@ export async function importSessions(input: {
       // A thread without its transcript is worse than no thread: drop the
       // half-built row so a retry does not leave duplicates behind.
       if (threadId) store.deleteThread(threadId);
+      // Only remove a project this import created for itself, and only once
+      // its thread is gone too — an existing project the import merely
+      // reused must survive a failed import.
+      if (projectCreated && projectId) store.deleteProject(projectId);
       failed += 1;
       toast.danger(
         error instanceof Error ? error.message : i18n._(msg`Could not import ${session.preview}.`),
