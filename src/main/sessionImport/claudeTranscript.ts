@@ -1,6 +1,11 @@
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
-import { capMessageText, type ImportedMessage, type ImportedTranscript } from "./transcript";
+import {
+  capMessageText,
+  stripInjectedContext,
+  type ImportedMessage,
+  type ImportedTranscript,
+} from "./transcript";
 
 /**
  * Claude Code writes one JSONL file per session under
@@ -57,9 +62,14 @@ function messageFrom(entry: Record<string, unknown>): ImportedMessage | undefine
   if (entry["isSidechain"] === true) return undefined;
   const message = entry["message"];
   if (!message || typeof message !== "object") return undefined;
-  const text = textFromContent((message as Record<string, unknown>)["content"]);
+  const raw = textFromContent((message as Record<string, unknown>)["content"]);
+  if (raw.trim().length === 0) return undefined;
+  if (role === "user" && INTERRUPTION_MARKER_RE.test(raw)) return undefined;
+  // Claude Code writes machine blocks (task notifications, slash-command
+  // echoes, system reminders) into the user role as plain text. Strip them so
+  // only what the user actually typed is replayed.
+  const text = role === "user" ? stripInjectedContext(raw) : raw;
   if (text.trim().length === 0) return undefined;
-  if (role === "user" && INTERRUPTION_MARKER_RE.test(text)) return undefined;
   const at = entry["timestamp"];
   return {
     role,

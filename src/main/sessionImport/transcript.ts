@@ -30,7 +30,7 @@ export const TRUNCATION_MARKER = "\n\n[… truncated on import]";
  * matched whole — whatever the user actually typed survives.
  */
 const INJECTED_WRAPPER_RE =
-  /<(app-context|recommended_plugins|environment_context|user_instructions|INSTRUCTIONS)>[\s\S]*?<\/\1>/gu;
+  /<(app-context|recommended_plugins|environment_context|user_instructions|INSTRUCTIONS|system-reminder|task-notification|local-command-stdout|local-command-stderr|command-name|command-message|command-args)>[\s\S]*?<\/\1>/gu;
 const AGENTS_HEADING_RE = /^\s*#\s*AGENTS\.md instructions[^\n]*/u;
 const HANDOFF_PREAMBLE_RE = /\[provider handoff\][\s\S]*$/u;
 

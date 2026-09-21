@@ -102,6 +102,44 @@ describe("parseClaudeTranscript", () => {
     expect(parseClaudeTranscript(path).messages.map((m) => m.text)).toEqual(["fix the bug"]);
   });
 
+  it("drops a user turn that is only a task notification", () => {
+    const path = writeLog([
+      {
+        type: "user",
+        sessionId: "9f1c6b22-0000-4000-8000-000000000001",
+        message: {
+          role: "user",
+          content:
+            "<task-notification>\n<task-id>b6v1</task-id>\n<status>completed</status>\n</task-notification>",
+        },
+      },
+      {
+        type: "user",
+        sessionId: "9f1c6b22-0000-4000-8000-000000000001",
+        message: { role: "user", content: "теперь почини импорт" },
+      },
+    ]);
+
+    expect(parseClaudeTranscript(path).messages.map((m) => m.text)).toEqual([
+      "теперь почини импорт",
+    ]);
+  });
+
+  it("keeps what the user typed around a system reminder", () => {
+    const path = writeLog([
+      {
+        type: "user",
+        sessionId: "9f1c6b22-0000-4000-8000-000000000001",
+        message: {
+          role: "user",
+          content: "проверь ветку<system-reminder>Codebase instructions…</system-reminder>",
+        },
+      },
+    ]);
+
+    expect(parseClaudeTranscript(path).messages.map((m) => m.text)).toEqual(["проверь ветку"]);
+  });
+
   it("skips malformed lines and caps a runaway message", () => {
     const dir = mkdtempSync(join(tmpdir(), "poracode-claude-transcript-"));
     const path = join(dir, "sess.jsonl");
