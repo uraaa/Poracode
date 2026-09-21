@@ -355,6 +355,31 @@ describe("scanImportableSessions", () => {
     expect(result.sessions[0]?.providerSessionId).toBe("cx-old");
   });
 
+  it("matches the query against the folder, and keeps offering every folder while a query narrows the page", () => {
+    const homes: ImportHome[] = [
+      {
+        provider: "codex",
+        agentKind: "codex",
+        dir: codexHome([
+          { id: "cx-alpha", cwd: "F:\\alpha", prompt: "alpha task" },
+          { id: "cx-beta", cwd: "F:\\beta", prompt: "beta task" },
+        ]),
+      },
+    ];
+
+    // Matches only via the folder path — neither session has an indexed
+    // title, so this exercises the query predicate's folder branch.
+    const result = scanImportableSessions({ homes, query: "alpha" });
+
+    expect(result.sessions).toHaveLength(1);
+    expect(result.sessions[0]?.providerSessionId).toBe("cx-alpha");
+    // The facets are computed under the *other* filters only: folding the
+    // query into them would make "F:\beta" vanish from the dropdown the
+    // moment the query excludes its only session, collapsing the list of
+    // folders the user could pick to broaden the search.
+    expect(result.facets.folders).toEqual(expect.arrayContaining(["F:\\alpha", "F:\\beta"]));
+  });
+
   it("lists a session whose first user text is beyond the preview window", () => {
     const dir = mkdtempSync(join(tmpdir(), "poracode-scan-nopreview-"));
     const sessionsDir = join(dir, "sessions");

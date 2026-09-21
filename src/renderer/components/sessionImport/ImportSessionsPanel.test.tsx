@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from "@testing-library/react";
+import { act, fireEvent, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ImportableSession, Thread } from "@/shared/contracts";
@@ -88,6 +88,9 @@ function found(sessions: ImportableSession[]) {
       accounts: [...new Set(sessions.map((s) => s.agentKind))],
       folders: [...new Set(sessions.flatMap((s) => (s.cwd ? [s.cwd] : [])))],
     },
+    // Every case that doesn't care about truncation should still resolve a
+    // real boolean here, not `undefined` fed into a `useState(false)`.
+    truncated: false,
   };
 }
 
@@ -527,6 +530,35 @@ describe("ImportSessionsPanel", () => {
 
     await screen.findByText("fix the race condition");
     expect(screen.queryByText(/Showing the 200 most recent/iu)).not.toBeInTheDocument();
+  });
+
+  it("debounces the query 400ms before rescanning, and sends it only once settled", async () => {
+    render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
+    await screen.findByText("fix the race condition");
+    // The mount scan carries no query: `filters.query` starts empty.
+    expect(listImportableSessionsMock).toHaveBeenCalledExactlyOnceWith({ cwd: "F:\\repo" });
+
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(screen.getByLabelText("Search sessions"), { target: { value: "deploy" } });
+
+      act(() => {
+        vi.advanceTimersByTime(399);
+      });
+      // Still just the one call from mount — the debounce hasn't elapsed.
+      expect(listImportableSessionsMock).toHaveBeenCalledTimes(1);
+
+      act(() => {
+        vi.advanceTimersByTime(1);
+      });
+      expect(listImportableSessionsMock).toHaveBeenCalledTimes(2);
+      expect(listImportableSessionsMock).toHaveBeenLastCalledWith({
+        cwd: "F:\\repo",
+        query: "deploy",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("reports a failed import without blocking the rest", async () => {

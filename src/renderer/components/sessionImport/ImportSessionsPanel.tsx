@@ -73,12 +73,14 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
 
   // The query text the scan searches with, debounced so typing doesn't
   // trigger a rescan (and the file reads that pay for it) on every keystroke.
+  // 400ms rather than 200ms: 200 is shorter than a normal mid-word typing
+  // pause, so a several-character query could still fire a handful of scans.
   // The panel's own `applyImportFilters` below still matches `filters.query`
   // immediately against the returned page, so the visible list reacts at
   // once even while the debounced scan is still catching up.
   const [debouncedQuery, setDebouncedQuery] = useState(filters.query);
   useEffect(() => {
-    const handle = setTimeout(() => setDebouncedQuery(filters.query), 200);
+    const handle = setTimeout(() => setDebouncedQuery(filters.query), 400);
     return () => clearTimeout(handle);
   }, [filters.query]);
 

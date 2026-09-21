@@ -37,6 +37,49 @@ const PREVIEW_CHUNK_BYTES = 512 * 1024;
 const PREVIEW_MAX_CHARS = 200;
 /** Sessions returned per scan. The UI pages; the disk does not. */
 const DEFAULT_LIMIT = 200;
+/**
+ * Cap on the module-level title cache below. A title read is a real file
+ * read for Claude (`readClaudeTitle`'s 128 KB tail seek) — cheap once, not
+ * cheap N times per scan. Bounding by entry count rather than letting it grow
+ * unbounded keeps a long-running main process from holding one entry per
+ * transcript ever seen.
+ */
+const TITLE_CACHE_LIMIT = 4000;
+
+/**
+ * Titles read this session, keyed by file path + `mtimeMs` so a rewritten
+ * transcript (new mtime) is read again rather than serving a stale title, and
+ * scoped to the module rather than one `scanImportableSessions` call so a
+ * rescan — which a query triggers on every debounced keystroke — reuses what
+ * the previous scan already paid to read instead of re-reading the same
+ * files. Insertion order doubles as recency: a hit is moved to the end, so
+ * evicting from the front is an LRU eviction.
+ */
+const titleCache = new Map<string, string | undefined>();
+
+function titleCacheKey(path: string, mtimeMs: number): string {
+  return `${path}:${mtimeMs}`;
+}
+
+/** `undefined` here means "not cached", not "cached as titleless" — check `hit`. */
+function recallTitle(path: string, mtimeMs: number): { hit: boolean; title: string | undefined } {
+  const key = titleCacheKey(path, mtimeMs);
+  if (!titleCache.has(key)) return { hit: false, title: undefined };
+  const title = titleCache.get(key);
+  titleCache.delete(key);
+  titleCache.set(key, title);
+  return { hit: true, title };
+}
+
+function rememberTitle(path: string, mtimeMs: number, title: string | undefined): void {
+  const key = titleCacheKey(path, mtimeMs);
+  titleCache.delete(key);
+  titleCache.set(key, title);
+  if (titleCache.size > TITLE_CACHE_LIMIT) {
+    const oldestKey = titleCache.keys().next().value;
+    if (oldestKey !== undefined) titleCache.delete(oldestKey);
+  }
+}
 
 interface DiscoveredFile {
   readonly home: ImportHome;
@@ -413,14 +456,14 @@ export function scanImportableSessions(input: {
     return titles.get(providerSessionId);
   };
   // The query predicate and the page-building loop below both want a
-  // candidate's title; memoised per candidate so a Claude session (whose
-  // title read is a small file read, not an indexed lookup) isn't read twice.
-  const titleCache = new Map<string, string | undefined>();
+  // candidate's title; the module-level cache above means a title already
+  // read by an earlier scan (or earlier in this one) is never read twice.
   const cachedTitleFor = (candidate: SessionCandidate): string | undefined => {
-    if (!titleCache.has(candidate.id)) {
-      titleCache.set(candidate.id, titleFor(candidate.file, candidate.head.providerSessionId));
-    }
-    return titleCache.get(candidate.id);
+    const cached = recallTitle(candidate.file.path, candidate.file.mtimeMs);
+    if (cached.hit) return cached.title;
+    const title = titleFor(candidate.file, candidate.head.providerSessionId);
+    rememberTitle(candidate.file.path, candidate.file.mtimeMs, title);
+    return title;
   };
   const files: DiscoveredFile[] = [];
   for (const home of input.homes) {
@@ -461,10 +504,12 @@ export function scanImportableSessions(input: {
   const matchesCwd = (candidate: SessionCandidate) =>
     !input.cwd || samePath(candidate.head.cwd, input.cwd, platform);
   const query = input.query?.trim().toLowerCase();
+  // The folder is already in memory — free to test. Only fall through to the
+  // title, a real file read for Claude, when the folder didn't already match.
   const matchesQuery = (candidate: SessionCandidate) =>
     !query ||
-    (cachedTitleFor(candidate) ?? "").toLowerCase().includes(query) ||
-    (candidate.head.cwd ?? "").toLowerCase().includes(query);
+    (candidate.head.cwd ?? "").toLowerCase().includes(query) ||
+    (cachedTitleFor(candidate) ?? "").toLowerCase().includes(query);
 
   // Each facet offers the values that still have sessions under the *other*
   // filters, so picking a provider never leaves an unreachable folder listed.
