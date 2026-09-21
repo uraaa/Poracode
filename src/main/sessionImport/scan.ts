@@ -260,14 +260,25 @@ interface RawHeadFields {
  * started: `session_meta.payload.model`, `turn_context.payload.model`, or
  * `event_msg.payload.thread_settings.model` on the `event_msg` whose
  * `payload.type` is `thread_settings_applied`. All are always within the
- * first few lines of the file, so scanning stops as soon as every field this
- * function returns is known rather than scanning the whole chunk.
+ * first few lines of the file. Everything except the model only ever comes
+ * from `session_meta`, and Codex always writes that first, so scanning stops
+ * once `session_meta` has been seen and the model is known — not once every
+ * field this function returns is known, which a `session_meta` missing one
+ * field (a different CLI version, say) could otherwise never satisfy,
+ * chasing a field that can no longer arrive through the rest of the chunk.
  *
  * The head chunk can still cut a line in half — a `session_meta` line can
  * carry the whole system prompt and run past `HEAD_CHUNK_BYTES` on its own —
  * so a line that fails to parse only gets the old regex-based extraction
  * when it is the final line of the chunk. Every other unparseable line (real
- * corruption, not a boundary cut) is simply skipped.
+ * corruption, not a boundary cut) is simply skipped. The `session_meta`
+ * fallback fields are further gated on `index === 0`: Codex only ever writes
+ * `session_meta` as the very first line, so a later, corrupted line whose
+ * regex-read `type` merely *says* `session_meta` (text inside a truncated
+ * value can say anything) must not be trusted for those fields the way the
+ * structural path and the old pre-Task-14 code never did either. `model`
+ * has no such position: it can legitimately come from a `turn_context` (or,
+ * structurally, an `event_msg`) at any line, so that half stays unrestricted.
  */
 function codexHeadFields(prefix: string): RawHeadFields {
   const lines = prefix.split(/\r?\n/u).filter((line) => line.length > 0);
@@ -278,24 +289,16 @@ function codexHeadFields(prefix: string): RawHeadFields {
   let source: string | undefined;
   let threadSource: string | undefined;
   let model: string | undefined;
+  let sawSessionMeta = false;
 
   for (let index = 0; index < lines.length; index++) {
-    if (
-      id !== undefined &&
-      cwd !== undefined &&
-      startedAt !== undefined &&
-      originator !== undefined &&
-      source !== undefined &&
-      threadSource !== undefined &&
-      model !== undefined
-    ) {
-      break;
-    }
+    if (sawSessionMeta && model !== undefined) break;
     const line = lines[index] as string;
     const record = parseJsonRecord(line);
     if (record) {
       const type = record["type"];
       if (type === "session_meta") {
+        sawSessionMeta = true;
         const payload = objectField(record["payload"]);
         if (payload) {
           id ??= stringField(payload["session_id"]);
@@ -321,15 +324,16 @@ function codexHeadFields(prefix: string): RawHeadFields {
     if (index !== lines.length - 1) continue;
     // Final line only, and only because it failed to parse.
     const fallbackType = rawField(line, "type");
-    if (fallbackType === "session_meta") {
+    if (fallbackType === "session_meta" && index === 0) {
+      sawSessionMeta = true;
       id ??= rawField(line, "session_id");
       cwd ??= rawField(line, "cwd");
       startedAt ??= rawField(line, "timestamp");
       originator ??= rawField(line, "originator");
       source ??= rawField(line, "source");
       threadSource ??= rawField(line, "thread_source");
-      model ??= rawField(line, "model");
-    } else if (fallbackType === "turn_context") {
+    }
+    if (fallbackType === "session_meta" || fallbackType === "turn_context") {
       model ??= rawField(line, "model");
     }
   }
