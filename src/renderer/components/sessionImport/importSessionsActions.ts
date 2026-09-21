@@ -113,10 +113,17 @@ export async function importSessions(input: {
   fallbackProjectId?: string;
   /** Account to import into; sessions of another provider keep their own. */
   targetAgentKind?: string;
-}): Promise<{ imported: number; failed: number; threadIds: Map<string, string> }> {
+}): Promise<{
+  imported: number;
+  failed: number;
+  /** Sessions another thread already held; nothing was replayed for these. */
+  alreadyImported: number;
+  threadIds: Map<string, string>;
+}> {
   const store = useAppStore.getState();
   let imported = 0;
   let failed = 0;
+  let alreadyImported = 0;
   /** Session id → thread id, for every session that made it through. */
   const threadIds = new Map<string, string>();
 
@@ -165,7 +172,7 @@ export async function importSessions(input: {
           discoveredAt: new Date().toISOString(),
         },
       });
-      const { path: resumePath } = await readBridge().importSessionTranscript({
+      const { path: resumePath, existingThreadId } = await readBridge().importSessionTranscript({
         threadId: thread.id,
         provider: session.provider,
         path: session.path,
@@ -173,6 +180,17 @@ export async function importSessions(input: {
         // can resume the session; main skips the copy when it already has it.
         targetAgentKind: agentKind,
       });
+      if (existingThreadId) {
+        // Another thread already holds this session and nothing was replayed
+        // into the one just created — drop it rather than leave an empty
+        // duplicate, and point the list at the thread that does hold it.
+        store.deleteThread(thread.id);
+        threadId = undefined;
+        if (projectCreated && projectId) store.deleteProject(projectId);
+        threadIds.set(session.id, existingThreadId);
+        alreadyImported += 1;
+        continue;
+      }
       // Importing under another account can copy the transcript into that
       // account's home; the thread must resume the copy it actually holds,
       // not the original it was imported from. Replaying a large transcript
@@ -208,5 +226,5 @@ export async function importSessions(input: {
       );
     }
   }
-  return { imported, failed, threadIds };
+  return { imported, failed, alreadyImported, threadIds };
 }

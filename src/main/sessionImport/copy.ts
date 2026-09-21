@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import type { ImportedSessionProvider } from "@/shared/contracts";
 import type { ImportHome } from "./homes";
@@ -48,9 +48,27 @@ export function copySessionIntoHome(input: {
     throw new Error(`Transcript ${input.path} is not inside a known ${input.provider} home.`);
   }
   const destination = join(target.dir, root, relative(join(source.dir, root), input.path));
-  if (!existsSync(destination)) {
+  if (!existsSync(destination) || isStale(input.path, destination)) {
     mkdirSync(dirname(destination), { recursive: true });
     copyFileSync(input.path, destination);
   }
   return destination;
+}
+
+/**
+ * Whether the copy predates the source. A cross-account import can have left
+ * a copy weeks ago, and the conversation went on in its original home since:
+ * skipping the copy then would replay the old file, and the thread would
+ * resume a transcript missing its latest turns. A destination at least as new
+ * as the source is the copy this import would have made anyway — and once a
+ * profile resumes a session, that copy is the one being written to, so it
+ * must not be overwritten by the original it was made from.
+ */
+function isStale(source: string, destination: string): boolean {
+  try {
+    return statSync(source).mtimeMs > statSync(destination).mtimeMs;
+  } catch {
+    // Something moved underneath us; let the copy below decide the outcome.
+    return true;
+  }
 }

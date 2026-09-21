@@ -133,8 +133,9 @@ describe("listImportableSessions", () => {
 });
 
 describe("importSessionTranscript", () => {
-  it("refuses to import a session a thread already holds", () => {
+  it("points at the thread that already holds the session instead of importing it twice", () => {
     const { dir, path } = codexHomeWith("cx-dup", "F:\\repo", "hello");
+    const applied: RuntimeEvent[] = [];
     const existing = thread({
       id: "already",
       config: {
@@ -143,17 +144,66 @@ describe("importSessionTranscript", () => {
       },
     });
 
+    const result = importSessionTranscript(
+      { threadId: "t1", provider: "codex", path },
+      {
+        readSharedSettings: () => settingsWithHome(dir),
+        getThreads: () => [existing, thread({ id: "t1" })],
+        applyRuntimeEvents: (_threadId, events) => applied.push(...events),
+        flushRuntimeWrites: vi.fn<(threadId: string) => void>(),
+      },
+    );
+
+    // Throwing here left the caller rolling back its own half-built thread
+    // and showing an error naming a thread the other window may have rolled
+    // back too. Naming the holder lets the caller point the user at it.
+    expect(result).toEqual({ messageCount: 0, path, existingThreadId: "already" });
+    expect(applied).toEqual([]);
+  });
+
+  it("names the thread this process just imported into, before the database has it", () => {
+    // The renderer stamps a new thread and persists it asynchronously, so
+    // `getThreads()` can still show the session free to a second window
+    // importing it at the same moment. Neither thread below carries a stamp,
+    // which is exactly the state that produced two duplicate threads.
+    const { dir, path } = codexHomeWith("cx-race", "F:\\repo", "hello");
+    const deps = {
+      readSharedSettings: () => settingsWithHome(dir),
+      getThreads: () => [thread({ id: "t1" }), thread({ id: "t2" })],
+      applyRuntimeEvents: vi.fn<(threadId: string, events: readonly RuntimeEvent[]) => void>(),
+      flushRuntimeWrites: vi.fn<(threadId: string) => void>(),
+    };
+
+    const first = importSessionTranscript({ threadId: "t1", provider: "codex", path }, deps);
+    expect(first).toEqual({ messageCount: 2, path });
+
+    const second = importSessionTranscript({ threadId: "t2", provider: "codex", path }, deps);
+    expect(second).toEqual({ messageCount: 0, path, existingThreadId: "t1" });
+  });
+
+  it("releases its claim when the import fails, so the session can be imported after", () => {
+    const { dir, path } = codexHomeWith("cx-retry", "F:\\repo", "hello");
+    const deps = {
+      readSharedSettings: () => settingsWithHome(dir),
+      getThreads: () => [thread({ id: "t1" }), thread({ id: "t2" })],
+      applyRuntimeEvents: vi.fn<(threadId: string, events: readonly RuntimeEvent[]) => void>(),
+      flushRuntimeWrites: vi.fn<(threadId: string) => void>(),
+    };
+
+    // The copy throws after the claim is taken: no account is configured as
+    // `codex:gone`. A claim left behind would make the session unimportable
+    // for the life of the main process.
     expect(() =>
       importSessionTranscript(
-        { threadId: "t1", provider: "codex", path },
-        {
-          readSharedSettings: () => settingsWithHome(dir),
-          getThreads: () => [existing, thread({ id: "t1" })],
-          applyRuntimeEvents: vi.fn<(threadId: string, events: readonly RuntimeEvent[]) => void>(),
-          flushRuntimeWrites: vi.fn<(threadId: string) => void>(),
-        },
+        { threadId: "t1", provider: "codex", path, targetAgentKind: "codex:gone" },
+        deps,
       ),
-    ).toThrow(/already imported/iu);
+    ).toThrow(/codex:gone/u);
+
+    expect(importSessionTranscript({ threadId: "t2", provider: "codex", path }, deps)).toEqual({
+      messageCount: 2,
+      path,
+    });
   });
 
   it("does not match the target thread against its own just-stamped path and session id", () => {
@@ -238,6 +288,29 @@ describe("importSessionTranscript", () => {
     expect(existsSync(result.path)).toBe(true);
     // The base home keeps its file: the copy is the profile's own.
     expect(existsSync(join(dir, "sessions", "rollout-cx-copy.jsonl"))).toBe(true);
+  });
+
+  it("refuses to replay a transcript that is no longer the session that was scanned", () => {
+    const { dir, path } = codexHomeWith("cx-now", "F:\\repo", "hello");
+    // The renderer stamps the thread with the id the *scan* reported. If the
+    // file at that path has been replaced since, replaying it would leave the
+    // thread showing one conversation and resuming another.
+    const stamped = thread({
+      id: "t1",
+      sessionRef: { providerSessionId: "cx-was", discoveredAt: "2026-09-20T06:00:00.000Z" },
+    });
+
+    expect(() =>
+      importSessionTranscript(
+        { threadId: "t1", provider: "codex", path },
+        {
+          readSharedSettings: () => settingsWithHome(dir),
+          getThreads: () => [stamped],
+          applyRuntimeEvents: vi.fn<(threadId: string, events: readonly RuntimeEvent[]) => void>(),
+          flushRuntimeWrites: vi.fn<(threadId: string) => void>(),
+        },
+      ),
+    ).toThrow(/changed on disk/iu);
   });
 
   it("throws for an unknown thread and for a missing file", () => {

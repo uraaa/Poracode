@@ -113,5 +113,13 @@ export const importSessionTranscriptResultSchema = z.object({
   messageCount: z.number().int().nonnegative(),
   /** Transcript the thread resumes from — the copy, when one was made. */
   path: z.string().min(1),
+  /**
+   * Set when another thread already holds this session, in which case nothing
+   * was replayed. The caller should roll its own thread back and point the
+   * user at this one: two windows importing the same session at the same
+   * moment would otherwise each build a thread and each fail the other's
+   * duplicate check, leaving the user with two errors and no threads.
+   */
+  existingThreadId: z.string().min(1).optional(),
 });
 export type ImportSessionTranscriptResult = z.infer<typeof importSessionTranscriptResultSchema>;

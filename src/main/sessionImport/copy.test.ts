@@ -1,4 +1,11 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -82,6 +89,30 @@ describe("copySessionIntoHome", () => {
 
     expect(copied).toBe(existing);
     expect(readFileSync(existing, "utf8")).toBe("profile copy\n");
+  });
+
+  it("re-copies when the source has moved on since the profile's copy", () => {
+    const base = home("codex", "codex");
+    const work = home("codex", "codex:work");
+    const path = rolloutIn(base, "2026", "rollout-e.jsonl");
+    const existing = rolloutIn(work, "2026", "rollout-e.jsonl");
+    writeFileSync(existing, "stale copy\n", "utf8");
+    // The conversation continued after that copy was made. Replaying the old
+    // copy would resume a transcript missing its latest turns.
+    const grown = '{"type":"session_meta"}\n{"type":"response_item"}\n';
+    writeFileSync(path, grown, "utf8");
+    const later = new Date(Date.now() + 60_000);
+    utimesSync(path, later, later);
+
+    const copied = copySessionIntoHome({
+      provider: "codex",
+      path,
+      homes: [base, work],
+      targetAgentKind: "codex:work",
+    });
+
+    expect(copied).toBe(existing);
+    expect(readFileSync(existing, "utf8")).toBe(grown);
   });
 
   it("rejects an unknown target or a transcript outside every home", () => {

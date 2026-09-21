@@ -72,7 +72,9 @@ const listImportableSessionsMock = vi.hoisted(() =>
   vi.fn<(payload: unknown) => Promise<unknown>>(),
 );
 const importSessionTranscriptMock = vi.hoisted(() =>
-  vi.fn<(payload: unknown) => Promise<{ messageCount: number; path: string }>>(),
+  vi.fn<
+    (payload: unknown) => Promise<{ messageCount: number; path: string; existingThreadId?: string }>
+  >(),
 );
 
 /**
@@ -634,6 +636,25 @@ describe("ImportSessionsPanel", () => {
       expect(screen.queryByText("fix the race condition")).not.toBeInTheDocument(),
     );
     expect(screen.getByRole("button", { name: /import 0 sessions/iu })).toBeInTheDocument();
+  });
+
+  it("rolls its own thread back when main names the thread already holding the session", async () => {
+    importSessionTranscriptMock.mockResolvedValue({
+      messageCount: 0,
+      path: "F:\\home\\.codex\\sessions\\rollout-cx-1.jsonl",
+      existingThreadId: "held-by",
+    });
+    render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
+    fireEvent.click(await screen.findByRole("checkbox", { name: /fix the race condition/iu }));
+    fireEvent.click(screen.getByRole("button", { name: /import 1 session/iu }));
+
+    // Nothing was replayed into the thread the panel just created, so it must
+    // not be left behind as an empty duplicate.
+    await vi.waitFor(() => expect(deleteThreadMock).toHaveBeenCalledExactlyOnceWith("new-thread"));
+    // The row is marked against the thread that does hold the session, so the
+    // user can find it instead of trying the import again.
+    await vi.waitFor(() => expect(screen.getByText("Imported")).toBeInTheDocument());
+    expect(toastMock.danger).not.toHaveBeenCalled();
   });
 
   it("reports a failed import without blocking the rest", async () => {
