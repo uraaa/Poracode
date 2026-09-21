@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { parseClaudeTranscript, readClaudeSessionHead } from "./claudeTranscript";
+import { parseClaudeTranscript } from "./claudeTranscript";
 import { MAX_IMPORTED_MESSAGE_CHARS } from "./transcript";
 
 function writeLog(lines: unknown[]): string {
@@ -32,24 +32,6 @@ const ASSISTANT_TEXT = {
     ],
   },
 };
-
-describe("readClaudeSessionHead", () => {
-  it("takes the session id from the first line that carries one", () => {
-    const path = writeLog([{ type: "mode", mode: "normal" }, USER_TEXT]);
-    expect(readClaudeSessionHead(path)).toEqual({
-      providerSessionId: "9f1c6b22-0000-4000-8000-000000000001",
-      cwd: "F:\\repo",
-      startedAt: "2026-09-20T05:00:00.000Z",
-    });
-  });
-
-  it("falls back to the file name when no line carries a session id", () => {
-    const path = writeLog([{ type: "mode", mode: "normal" }]);
-    expect(readClaudeSessionHead(path)?.providerSessionId).toBe(
-      "9f1c6b22-0000-4000-8000-000000000001",
-    );
-  });
-});
 
 describe("parseClaudeTranscript", () => {
   it("keeps string and text-array content, dropping thinking and tool_use", () => {

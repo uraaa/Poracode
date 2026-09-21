@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { parseCodexTranscript, readCodexSessionHead } from "./codexTranscript";
+import { parseCodexTranscript } from "./codexTranscript";
 import { MAX_IMPORTED_MESSAGE_CHARS } from "./transcript";
 
 function writeRollout(lines: unknown[]): string {
@@ -28,21 +28,6 @@ function message(role: string, text: string, kind = "input_text") {
     payload: { type: "message", role, content: [{ type: kind, text }] },
   };
 }
-
-describe("readCodexSessionHead", () => {
-  it("reads id, cwd, and start time from the first line only", () => {
-    const path = writeRollout([META, message("user", "hi")]);
-    expect(readCodexSessionHead(path)).toEqual({
-      providerSessionId: "01a0bc7b-6665-7473-bad7-4d7866c20dea",
-      cwd: "F:\\repo",
-      startedAt: "2026-09-20T04:43:18.000Z",
-    });
-  });
-
-  it("returns undefined when the file does not start with session_meta", () => {
-    expect(readCodexSessionHead(writeRollout([message("user", "hi")]))).toBeUndefined();
-  });
-});
 
 describe("parseCodexTranscript", () => {
   it("keeps user and assistant text in order", () => {

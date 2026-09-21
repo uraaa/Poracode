@@ -1,4 +1,4 @@
-import { closeSync, openSync, readFileSync, readSync } from "node:fs";
+import { closeSync, openSync, readSync } from "node:fs";
 import { basename } from "node:path";
 import { StringDecoder } from "node:string_decoder";
 import {
@@ -16,12 +16,6 @@ import {
  * sub-agent traffic, which the import drops so the transcript matches what the
  * user actually saw in their own pane.
  */
-
-interface ClaudeHead {
-  providerSessionId?: string;
-  cwd?: string;
-  startedAt?: string;
-}
 
 /**
  * Claude Code writes its own bracketed notes into the `user` role when a turn
@@ -110,27 +104,6 @@ function messageFrom(entry: Record<string, unknown>): ImportedMessage | undefine
     text: capMessageText(text),
     ...(typeof at === "string" ? { at } : {}),
   };
-}
-
-export function readClaudeSessionHead(path: string): ClaudeHead | undefined {
-  let raw: string;
-  try {
-    raw = readFileSync(path, "utf8");
-  } catch {
-    return undefined;
-  }
-  const head: ClaudeHead = { providerSessionId: sessionIdFromFileName(path) };
-  for (const line of raw.split(/\r?\n/u)) {
-    const entry = parseLine(line);
-    if (!entry) continue;
-    if (typeof entry["sessionId"] === "string") head.providerSessionId = entry["sessionId"];
-    if (!head.cwd && typeof entry["cwd"] === "string") head.cwd = entry["cwd"];
-    if (!head.startedAt && typeof entry["timestamp"] === "string") {
-      head.startedAt = entry["timestamp"];
-    }
-    if (head.cwd && head.startedAt) break;
-  }
-  return head;
 }
 
 export function parseClaudeTranscript(path: string): ImportedTranscript {

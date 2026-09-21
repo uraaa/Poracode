@@ -1,4 +1,4 @@
-import { closeSync, openSync, readFileSync, readSync } from "node:fs";
+import { closeSync, openSync, readSync } from "node:fs";
 import { StringDecoder } from "node:string_decoder";
 import {
   capMessageText,
@@ -73,19 +73,6 @@ function headFrom(entry: Record<string, unknown>): CodexHead | undefined {
   if (typeof meta["cwd"] === "string") head.cwd = meta["cwd"];
   if (typeof meta["timestamp"] === "string") head.startedAt = meta["timestamp"];
   return head;
-}
-
-/** Read only the first line — enough to list a session without parsing it all. */
-export function readCodexSessionHead(path: string): CodexHead | undefined {
-  let raw: string;
-  try {
-    raw = readFileSync(path, "utf8");
-  } catch {
-    return undefined;
-  }
-  const [firstLine = ""] = raw.split(/\r?\n/u, 1);
-  const entry = parseLine(firstLine);
-  return entry ? headFrom(entry) : undefined;
 }
 
 function messageFrom(entry: Record<string, unknown>): ImportedMessage | undefined {
