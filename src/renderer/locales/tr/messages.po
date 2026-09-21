@@ -13586,6 +13586,10 @@ msgstr "bu proje"
 msgid "This project's remote server is offline. Reconnect it to start a thread."
 msgstr "Bu projenin uzak sunucusu çevrimdışı. Bir iş parçacığı başlatmak için yeniden bağlanın."
 
+#: src/renderer/components/thread/ThreadAccountLabel.tsx
+msgid "This provider reports no signed-in account."
+msgstr ""
+
 #: src/renderer/components/thread/ThreadFollowUpQueue.tsx
 #: src/renderer/i18n/sharedMessages.ts
 msgid "This queued follow-up changed. Reopen it before saving."

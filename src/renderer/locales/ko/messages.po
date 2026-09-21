@@ -13586,6 +13586,10 @@ msgstr "이 프로젝트"
 msgid "This project's remote server is offline. Reconnect it to start a thread."
 msgstr "이 프로젝트의 원격 서버가 오프라인입니다. 스레드를 시작하려면 다시 연결하세요."
 
+#: src/renderer/components/thread/ThreadAccountLabel.tsx
+msgid "This provider reports no signed-in account."
+msgstr ""
+
 #: src/renderer/components/thread/ThreadFollowUpQueue.tsx
 #: src/renderer/i18n/sharedMessages.ts
 msgid "This queued follow-up changed. Reopen it before saving."
