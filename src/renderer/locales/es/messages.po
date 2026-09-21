@@ -6363,6 +6363,10 @@ msgstr "Importar skills de agentes externos"
 msgid "Import external skills"
 msgstr "Importar skills externos"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Import into account"
+msgstr "Importar en la cuenta"
+
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
 msgid "Import Lightcode data"
 msgstr "Importar datos de Lightcode"
@@ -11376,6 +11380,10 @@ msgstr "Depuración de runtime"
 msgid "Runtime options"
 msgstr "Opciones de runtime"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Same account as the session"
+msgstr "La misma cuenta que la sesión"
+
 #: src/renderer/views/SettingsOverlay/parts/ModelOrderSection.tsx
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
 msgid "Same provider order on all machines"
@@ -11594,6 +11602,10 @@ msgstr "Búsqueda"
 #: src/renderer/components/sessionImport/SearchableSelect.tsx
 msgid "Search {0}"
 msgstr "Buscar {0}"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search accounts…"
+msgstr "Buscar cuentas…"
 
 #: src/renderer/views/SettingsOverlay/parts/AcpRegistrySettings.tsx
 msgid "Search agents"
@@ -13028,6 +13040,10 @@ msgstr "Toca + para agregar una carpeta o clonar un repositorio en tu escritorio
 #~ msgid "Tap + to pair with Poracode on your desktop."
 #~ msgstr "Toca + para emparejar con Poracode en tu escritorio."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Target account"
+msgstr "Cuenta de destino"
+
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CreatePrModal.tsx
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/PrSection.tsx
 msgid "Target branch"
@@ -13356,6 +13372,10 @@ msgstr "La sesión del hilo no está disponible para los seguimientos en cola."
 #: src/renderer/i18n/sharedMessages.ts
 msgid "The threads linked to this worktree changed. Refresh and try again."
 msgstr "Los hilos vinculados a este worktree han cambiado. Actualiza la vista y vuelve a intentarlo."
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "The transcript is copied into that account's home so it can resume the session. Sessions from the other provider keep their own account."
+msgstr "La transcripción se copia en el directorio de esa cuenta para que pueda reanudar la sesión. Las sesiones del otro proveedor conservan su propia cuenta."
 
 #: src/renderer/i18n/sharedMessages.ts
 msgid "The update operation failed."

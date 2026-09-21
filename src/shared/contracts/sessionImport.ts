@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isClaudeProfileKind, isCodexProfileKind } from "./agentInstance";
 
 /**
  * Importing an existing CLI conversation into a Poracode thread. Discovery
@@ -12,6 +13,18 @@ import { z } from "zod";
 export const importedSessionProviderSchema = z.enum(["codex", "claude"]);
 export type ImportedSessionProvider = z.infer<typeof importedSessionProviderSchema>;
 
+/**
+ * Which provider's transcripts an agent kind can own: the base account and
+ * every profile of that driver. Any other kind cannot take an imported session.
+ */
+export function importedSessionProviderForAgentKind(
+  kind: string,
+): ImportedSessionProvider | undefined {
+  if (kind === "codex" || isCodexProfileKind(kind)) return "codex";
+  if (kind === "claude" || isClaudeProfileKind(kind)) return "claude";
+  return undefined;
+}
+
 export const threadImportedFromSchema = z.object({
   provider: importedSessionProviderSchema,
   /** Absolute path of the transcript the thread was imported from. */
@@ -21,7 +34,11 @@ export const threadImportedFromSchema = z.object({
 export type ThreadImportedFrom = z.infer<typeof threadImportedFromSchema>;
 
 export const importableSessionSchema = z.object({
-  /** `<provider>:<providerSessionId>` — stable across scans, used as a React key. */
+  /**
+   * `<provider>:<providerSessionId>` — stable across scans, used as a React
+   * key. A session copied into a profile home shares its original's id and
+   * the scan lists whichever copy was written last.
+   */
   id: z.string().min(1),
   provider: importedSessionProviderSchema,
   /** Agent kind owning the home this was found in (`codex`, `codex:work`, …). */
@@ -56,10 +73,18 @@ export const importSessionTranscriptPayloadSchema = z.object({
   threadId: z.string().min(1),
   provider: importedSessionProviderSchema,
   path: z.string().min(1),
+  /**
+   * Agent kind the thread runs under when it differs from the home the
+   * transcript was found in. The transcript is copied into that kind's home
+   * first so the provider can resume it there.
+   */
+  targetAgentKind: z.string().min(1).optional(),
 });
 export type ImportSessionTranscriptPayload = z.infer<typeof importSessionTranscriptPayloadSchema>;
 
 export const importSessionTranscriptResultSchema = z.object({
   messageCount: z.number().int().nonnegative(),
+  /** Transcript the thread resumes from — the copy, when one was made. */
+  path: z.string().min(1),
 });
 export type ImportSessionTranscriptResult = z.infer<typeof importSessionTranscriptResultSchema>;

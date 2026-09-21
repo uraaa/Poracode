@@ -6363,6 +6363,10 @@ msgstr "Nhập skill của tác tử bên ngoài"
 msgid "Import external skills"
 msgstr "Nhập skill bên ngoài"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Import into account"
+msgstr "Nhập vào tài khoản"
+
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
 msgid "Import Lightcode data"
 msgstr "Nhập dữ liệu Lightcode"
@@ -11376,6 +11380,10 @@ msgstr "Gỡ lỗi thời gian chạy"
 msgid "Runtime options"
 msgstr "Tùy chọn thời gian chạy"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Same account as the session"
+msgstr "Cùng tài khoản với phiên"
+
 #: src/renderer/views/SettingsOverlay/parts/ModelOrderSection.tsx
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
 msgid "Same provider order on all machines"
@@ -11594,6 +11602,10 @@ msgstr "Tìm kiếm"
 #: src/renderer/components/sessionImport/SearchableSelect.tsx
 msgid "Search {0}"
 msgstr "Tìm {0}"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search accounts…"
+msgstr "Tìm tài khoản…"
 
 #: src/renderer/views/SettingsOverlay/parts/AcpRegistrySettings.tsx
 msgid "Search agents"
@@ -13028,6 +13040,10 @@ msgstr "Nhấn + để thêm một thư mục hoặc sao chép một kho lưu tr
 #~ msgid "Tap + to pair with Poracode on your desktop."
 #~ msgstr "Nhấn + để ghép đôi với Poracode trên máy tính của bạn."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Target account"
+msgstr "Tài khoản đích"
+
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CreatePrModal.tsx
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/PrSection.tsx
 msgid "Target branch"
@@ -13356,6 +13372,10 @@ msgstr "Không có phiên của cuộc trò chuyện để xử lý tin nhắn t
 #: src/renderer/i18n/sharedMessages.ts
 msgid "The threads linked to this worktree changed. Refresh and try again."
 msgstr "Các luồng liên kết với worktree này đã thay đổi. Hãy làm mới và thử lại."
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "The transcript is copied into that account's home so it can resume the session. Sessions from the other provider keep their own account."
+msgstr "Bản ghi được sao chép vào thư mục của tài khoản đó để nó có thể tiếp tục phiên. Các phiên của nhà cung cấp còn lại giữ nguyên tài khoản của mình."
 
 #: src/renderer/i18n/sharedMessages.ts
 msgid "The update operation failed."

@@ -72,7 +72,7 @@ const listImportableSessionsMock = vi.hoisted(() =>
   vi.fn<(payload: unknown) => Promise<ImportableSession[]>>(),
 );
 const importSessionTranscriptMock = vi.hoisted(() =>
-  vi.fn<(payload: unknown) => Promise<{ messageCount: number }>>(),
+  vi.fn<(payload: unknown) => Promise<{ messageCount: number; path: string }>>(),
 );
 
 vi.mock("@/renderer/bridge", () => ({
@@ -104,13 +104,32 @@ const storeState = {
 };
 const statusState = {
   agentStatuses: [
-    { kind: "codex", capabilities: { models: [{ id: "gpt-5.6-luna", label: "GPT" }] } },
+    {
+      kind: "codex",
+      label: "Codex",
+      installed: true,
+      capabilities: { models: [{ id: "gpt-5.6-luna", label: "GPT" }] },
+    },
+    {
+      kind: "codex:work",
+      label: "Work account",
+      installed: true,
+      capabilities: { models: [{ id: "gpt-5.5", label: "GPT 5.5" }] },
+    },
+    { kind: "claude", label: "Claude Code", installed: true, capabilities: { models: [] } },
+    { kind: "cursor", label: "Cursor", installed: true, capabilities: { models: [] } },
   ],
 };
 
-vi.mock("@/renderer/state/agentStatusesStore", () => ({
-  useAgentStatusesStore: { getState: () => statusState },
-}));
+vi.mock("@/renderer/state/agentStatusesStore", () => {
+  const useAgentStatusesStore = ((selector: (state: typeof statusState) => unknown) =>
+    selector(statusState)) as unknown as {
+    (selector: (state: typeof statusState) => unknown): unknown;
+    getState: () => typeof statusState;
+  };
+  useAgentStatusesStore.getState = () => statusState;
+  return { useAgentStatusesStore };
+});
 
 vi.mock("@/renderer/state/workspaceStore", () => ({
   getActiveWorkspaceId: () => "ws-active",
@@ -146,7 +165,9 @@ function session(overrides: Partial<ImportableSession> = {}): ImportableSession 
 
 beforeEach(() => {
   listImportableSessionsMock.mockReset().mockResolvedValue([session()]);
-  importSessionTranscriptMock.mockReset().mockResolvedValue({ messageCount: 4 });
+  importSessionTranscriptMock
+    .mockReset()
+    .mockResolvedValue({ messageCount: 4, path: "F:\\home\\.codex\\sessions\\rollout.jsonl" });
   createThreadMock.mockReset().mockReturnValue({ id: "new-thread" } as Thread);
   updateThreadRuntimeMock.mockReset();
   deleteThreadMock.mockReset();
@@ -217,6 +238,57 @@ describe("ImportSessionsPanel", () => {
       path: "F:\\home\\.codex\\sessions\\rollout-cx-1.jsonl",
     });
     await vi.waitFor(() => expect(toastMock.success).toHaveBeenCalled());
+  });
+
+  it("imports under another account of the same provider and copies the transcript", async () => {
+    listImportableSessionsMock.mockResolvedValue([
+      session(),
+      session({
+        id: "claude:cl-1",
+        provider: "claude",
+        agentKind: "claude",
+        providerSessionId: "cl-1",
+        path: "F:\\home\\.claude\\projects\\F--repo\\cl-1.jsonl",
+        preview: "claude work",
+      }),
+    ]);
+    createThreadMock
+      .mockReturnValueOnce({ id: "codex-thread" } as Thread)
+      .mockReturnValueOnce({ id: "claude-thread" } as Thread);
+    render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
+
+    const target = await screen.findByLabelText("Target account");
+    // Only accounts that can own a Codex or Claude session are offered.
+    expect(Array.from((target as HTMLSelectElement).options).map((o) => o.value)).toEqual([
+      "",
+      "codex",
+      "codex:work",
+      "claude",
+    ]);
+    fireEvent.change(target, { target: { value: "codex:work" } });
+    fireEvent.click(screen.getByRole("button", { name: "Select all" }));
+    fireEvent.click(screen.getByRole("button", { name: /import 2 session/iu }));
+
+    await vi.waitFor(() => expect(importSessionTranscriptMock).toHaveBeenCalledTimes(2));
+    expect(createThreadMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentKind: "codex:work",
+        config: expect.objectContaining({ model: "gpt-5.5" }),
+      }),
+    );
+    expect(importSessionTranscriptMock).toHaveBeenCalledWith({
+      threadId: "codex-thread",
+      provider: "codex",
+      path: "F:\\home\\.codex\\sessions\\rollout-cx-1.jsonl",
+      targetAgentKind: "codex:work",
+    });
+    // A Claude log cannot move to a Codex profile: it keeps its own account.
+    expect(createThreadMock).toHaveBeenCalledWith(expect.objectContaining({ agentKind: "claude" }));
+    expect(importSessionTranscriptMock).toHaveBeenCalledWith({
+      threadId: "claude-thread",
+      provider: "claude",
+      path: "F:\\home\\.claude\\projects\\F--repo\\cl-1.jsonl",
+    });
   });
 
   it("creates a project for an unknown folder and files it into the active workspace", async () => {
@@ -316,7 +388,7 @@ describe("ImportSessionsPanel", () => {
     ]);
     importSessionTranscriptMock
       .mockRejectedValueOnce(new Error("unreadable"))
-      .mockResolvedValueOnce({ messageCount: 2 });
+      .mockResolvedValueOnce({ messageCount: 2, path: "F:/other.jsonl" });
 
     render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
     fireEvent.click(await screen.findByRole("button", { name: /select all/iu }));

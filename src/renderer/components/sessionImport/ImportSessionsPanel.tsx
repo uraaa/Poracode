@@ -4,8 +4,10 @@ import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
 import type { ImportableSession } from "@/shared/contracts";
+import { importedSessionProviderForAgentKind } from "@/shared/contracts";
 import { readBridge } from "@/renderer/bridge";
 import { Input, PixelLoader } from "@/renderer/components/common";
+import { useAgentStatusesStore } from "@/renderer/state/agentStatusesStore";
 import { useAppStore } from "@/renderer/state/appStore";
 import {
   ALL,
@@ -18,6 +20,9 @@ import {
 import { importSessions } from "./importSessionsActions";
 import { SearchableSelect } from "./SearchableSelect";
 
+/** Target-account value meaning "the account each session was found under". */
+const SOURCE_ACCOUNT = "";
+
 /**
  * Lists Codex and Claude Code conversations found on disk and turns the chosen
  * ones into threads. The same full panel backs the Settings → Import page and
@@ -28,11 +33,31 @@ import { SearchableSelect } from "./SearchableSelect";
 export function ImportSessionsPanel(props: { initialFolder?: string; initialProjectId?: string }) {
   const { t } = useLingui();
   const projects = useAppStore((state) => state.projects);
+  const agentStatuses = useAgentStatusesStore((state) => state.agentStatuses);
   const [sessions, setSessions] = useState<ImportableSession[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [projectId, setProjectId] = useState(props.initialProjectId ?? projects[0]?.id ?? "");
+  const [targetAgentKind, setTargetAgentKind] = useState(SOURCE_ACCOUNT);
+  // Every installed account that can own a Codex or Claude session. The
+  // target only applies to sessions of its own provider (see
+  // `resolveImportAgentKind`), which the label makes visible.
+  const accounts = useMemo(
+    () =>
+      agentStatuses.flatMap((status) => {
+        const provider = importedSessionProviderForAgentKind(status.kind);
+        if (!provider || !status.installed) return [];
+        return [
+          {
+            value: status.kind,
+            label: status.label,
+            hint: provider === "codex" ? "Codex" : "Claude Code",
+          },
+        ];
+      }),
+    [agentStatuses],
+  );
   const [filters, setFilters] = useState<ImportFilters>(() => ({
     ...EMPTY_FILTERS,
     ...(props.initialFolder ? { folder: props.initialFolder } : {}),
@@ -103,6 +128,7 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
       const { imported, failed, threadIds } = await importSessions({
         sessions: chosen,
         ...(projectId ? { fallbackProjectId: projectId } : {}),
+        ...(targetAgentKind !== SOURCE_ACCOUNT ? { targetAgentKind } : {}),
       });
       if (imported > 0) {
         toast.success(i18n._(msg`Imported ${imported} session(s).`));
@@ -206,6 +232,27 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
           value={filters.query}
           onChange={(event) => select({ query: event.target.value })}
         />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+        <span>
+          <Trans>Import into account</Trans>
+        </span>
+        <SearchableSelect
+          label={t`Target account`}
+          value={targetAgentKind}
+          options={[{ value: SOURCE_ACCOUNT, label: t`Same account as the session` }, ...accounts]}
+          searchPlaceholder={t`Search accounts…`}
+          onChange={setTargetAgentKind}
+        />
+        {targetAgentKind !== SOURCE_ACCOUNT ? (
+          <span className="basis-full text-[10px]">
+            <Trans>
+              The transcript is copied into that account's home so it can resume the session.
+              Sessions from the other provider keep their own account.
+            </Trans>
+          </span>
+        ) : null}
       </div>
 
       <div className="flex items-center gap-2 text-xs text-muted">

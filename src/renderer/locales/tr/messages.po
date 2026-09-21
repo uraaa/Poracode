@@ -6363,6 +6363,10 @@ msgstr "Harici aracı becerilerini içe aktar"
 msgid "Import external skills"
 msgstr "Harici becerileri içe aktar"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Import into account"
+msgstr "Hesaba aktar"
+
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
 msgid "Import Lightcode data"
 msgstr "Lightcode verilerini içe aktar"
@@ -11376,6 +11380,10 @@ msgstr "Çalışma zamanı hata ayıklaması"
 msgid "Runtime options"
 msgstr "Çalışma zamanı seçenekleri"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Same account as the session"
+msgstr "Oturumla aynı hesap"
+
 #: src/renderer/views/SettingsOverlay/parts/ModelOrderSection.tsx
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
 msgid "Same provider order on all machines"
@@ -11594,6 +11602,10 @@ msgstr "Ara"
 #: src/renderer/components/sessionImport/SearchableSelect.tsx
 msgid "Search {0}"
 msgstr "{0} ara"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search accounts…"
+msgstr "Hesapları ara…"
 
 #: src/renderer/views/SettingsOverlay/parts/AcpRegistrySettings.tsx
 msgid "Search agents"
@@ -13028,6 +13040,10 @@ msgstr "Masaüstünüzde bir klasör eklemek veya bir depoyu klonlamak için + �
 #~ msgid "Tap + to pair with Poracode on your desktop."
 #~ msgstr "Masaüstünüzdeki Poracode ile eşleştirmek için + öğesine dokunun."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Target account"
+msgstr "Hedef hesap"
+
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CreatePrModal.tsx
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/PrSection.tsx
 msgid "Target branch"
@@ -13356,6 +13372,10 @@ msgstr "Kuyruğa alınan takip mesajları için konu oturumu kullanılamıyor."
 #: src/renderer/i18n/sharedMessages.ts
 msgid "The threads linked to this worktree changed. Refresh and try again."
 msgstr "Bu worktree'ye bağlı iş parçacıkları değişti. Yenileyip tekrar deneyin."
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "The transcript is copied into that account's home so it can resume the session. Sessions from the other provider keep their own account."
+msgstr "Dökümü, oturumu sürdürebilmesi için o hesabın ana dizinine kopyalanır. Diğer sağlayıcının oturumları kendi hesabında kalır."
 
 #: src/renderer/i18n/sharedMessages.ts
 msgid "The update operation failed."

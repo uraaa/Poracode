@@ -6363,6 +6363,10 @@ msgstr "导入外部智能体技能"
 msgid "Import external skills"
 msgstr "导入外部技能"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Import into account"
+msgstr "导入到账户"
+
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
 msgid "Import Lightcode data"
 msgstr "导入 Lightcode 数据"
@@ -11375,6 +11379,10 @@ msgstr "运行时调试"
 msgid "Runtime options"
 msgstr "运行时选项"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Same account as the session"
+msgstr "与会话相同的账户"
+
 #: src/renderer/views/SettingsOverlay/parts/ModelOrderSection.tsx
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
 msgid "Same provider order on all machines"
@@ -11593,6 +11601,10 @@ msgstr "搜索"
 #: src/renderer/components/sessionImport/SearchableSelect.tsx
 msgid "Search {0}"
 msgstr "搜索{0}"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search accounts…"
+msgstr "搜索账户…"
 
 #: src/renderer/views/SettingsOverlay/parts/AcpRegistrySettings.tsx
 msgid "Search agents"
@@ -13027,6 +13039,10 @@ msgstr "点击 + 在桌面端添加文件夹或克隆存储库。"
 #~ msgid "Tap + to pair with Poracode on your desktop."
 #~ msgstr "点击 + 与桌面端的 Poracode 配对。"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Target account"
+msgstr "目标账户"
+
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CreatePrModal.tsx
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/PrSection.tsx
 msgid "Target branch"
@@ -13355,6 +13371,10 @@ msgstr "聊天线程会话不可用于排队的后续消息。"
 #: src/renderer/i18n/sharedMessages.ts
 msgid "The threads linked to this worktree changed. Refresh and try again."
 msgstr "与此工作树关联的线程已更改。请刷新后重试。"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "The transcript is copied into that account's home so it can resume the session. Sessions from the other provider keep their own account."
+msgstr "会话记录会复制到该账户的主目录，以便它继续该会话。另一提供商的会话保留其原有账户。"
 
 #: src/renderer/i18n/sharedMessages.ts
 msgid "The update operation failed."

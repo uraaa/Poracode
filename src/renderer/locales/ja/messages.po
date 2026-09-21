@@ -6362,6 +6362,10 @@ msgstr "外部エージェントのスキルをインポート"
 msgid "Import external skills"
 msgstr "外部スキルをインポート"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Import into account"
+msgstr "アカウントにインポート"
+
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
 msgid "Import Lightcode data"
 msgstr "Lightcode データをインポート"
@@ -11374,6 +11378,10 @@ msgstr "ランタイムデバッグ"
 msgid "Runtime options"
 msgstr "実行時オプション"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Same account as the session"
+msgstr "セッションと同じアカウント"
+
 #: src/renderer/views/SettingsOverlay/parts/ModelOrderSection.tsx
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
 msgid "Same provider order on all machines"
@@ -11592,6 +11600,10 @@ msgstr "検索"
 #: src/renderer/components/sessionImport/SearchableSelect.tsx
 msgid "Search {0}"
 msgstr "{0} を検索"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search accounts…"
+msgstr "アカウントを検索…"
 
 #: src/renderer/views/SettingsOverlay/parts/AcpRegistrySettings.tsx
 msgid "Search agents"
@@ -13026,6 +13038,10 @@ msgstr "+ をタップしてデスクトップでフォルダーを追加する�
 #~ msgid "Tap + to pair with Poracode on your desktop."
 #~ msgstr "+ をタップしてデスクトップの Poracode とペアリングしてください。"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Target account"
+msgstr "インポート先アカウント"
+
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CreatePrModal.tsx
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/PrSection.tsx
 msgid "Target branch"
@@ -13354,6 +13370,10 @@ msgstr "キューに入ったフォローアップにはスレッドセッショ
 #: src/renderer/i18n/sharedMessages.ts
 msgid "The threads linked to this worktree changed. Refresh and try again."
 msgstr "このワークツリーに関連付けられたスレッドが変更されました。更新してもう一度お試しください。"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "The transcript is copied into that account's home so it can resume the session. Sessions from the other provider keep their own account."
+msgstr "セッションを再開できるよう、トランスクリプトはそのアカウントのホームにコピーされます。もう一方のプロバイダーのセッションは元のアカウントのままです。"
 
 #: src/renderer/i18n/sharedMessages.ts
 msgid "The update operation failed."

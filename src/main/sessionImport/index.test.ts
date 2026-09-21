@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -129,9 +129,42 @@ describe("importSessionTranscript", () => {
       },
     );
 
-    expect(result).toEqual({ messageCount: 2 });
+    expect(result).toEqual({ messageCount: 2, path });
     expect(applied.filter((event) => event.type === "item.started")).toHaveLength(2);
     expect(flushRuntimeWrites).toHaveBeenCalledExactlyOnceWith("t1");
+  });
+
+  it("copies the transcript into the target profile home before replaying", () => {
+    const { dir, path } = codexHomeWith("cx-copy", "F:\repo", "hello");
+    const profileDir = mkdtempSync(join(tmpdir(), "poracode-import-profile-"));
+    const applied: RuntimeEvent[] = [];
+
+    const result = importSessionTranscript(
+      { threadId: "t1", provider: "codex", path, targetAgentKind: "codex:work" },
+      {
+        readSharedSettings: () => ({
+          ...defaultSharedSettings,
+          agentInstances: {
+            src: { id: "src", driver: "codex", displayName: "Source", config: { homeDir: dir } },
+            work: {
+              id: "work",
+              driver: "codex",
+              displayName: "Work",
+              config: { homeDir: profileDir },
+            },
+          },
+        }),
+        getThreads: () => [thread({ agentKind: "codex:work" })],
+        applyRuntimeEvents: (_threadId, events) => applied.push(...events),
+        flushRuntimeWrites: vi.fn<(threadId: string) => void>(),
+      },
+    );
+
+    expect(result.path).toBe(join(profileDir, "sessions", "rollout-cx-copy.jsonl"));
+    expect(result.messageCount).toBe(2);
+    expect(existsSync(result.path)).toBe(true);
+    // The base home keeps its file: the copy is the profile's own.
+    expect(existsSync(join(dir, "sessions", "rollout-cx-copy.jsonl"))).toBe(true);
   });
 
   it("throws for an unknown thread and for a missing file", () => {

@@ -6363,6 +6363,10 @@ msgstr "Импортировать навыки внешних агентов"
 msgid "Import external skills"
 msgstr "Импортировать внешние навыки"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Import into account"
+msgstr "Импортировать в аккаунт"
+
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
 msgid "Import Lightcode data"
 msgstr "Импортировать данные Lightcode"
@@ -11376,6 +11380,10 @@ msgstr "Отладка среды выполнения"
 msgid "Runtime options"
 msgstr "Параметры среды выполнения"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Same account as the session"
+msgstr "Тот же аккаунт, что у сессии"
+
 #: src/renderer/views/SettingsOverlay/parts/ModelOrderSection.tsx
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
 msgid "Same provider order on all machines"
@@ -11594,6 +11602,10 @@ msgstr "Поиск"
 #: src/renderer/components/sessionImport/SearchableSelect.tsx
 msgid "Search {0}"
 msgstr "Поиск: {0}"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search accounts…"
+msgstr "Поиск аккаунтов…"
 
 #: src/renderer/views/SettingsOverlay/parts/AcpRegistrySettings.tsx
 msgid "Search agents"
@@ -13028,6 +13040,10 @@ msgstr "Нажмите +, чтобы добавить папку или клон
 #~ msgid "Tap + to pair with Poracode on your desktop."
 #~ msgstr "Нажмите +, чтобы подключиться к Poracode на компьютере."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Target account"
+msgstr "Целевой аккаунт"
+
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CreatePrModal.tsx
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/PrSection.tsx
 msgid "Target branch"
@@ -13356,6 +13372,10 @@ msgstr "Сессия треда недоступна для сообщений �
 #: src/renderer/i18n/sharedMessages.ts
 msgid "The threads linked to this worktree changed. Refresh and try again."
 msgstr "Потоки, связанные с этим worktree, изменились. Обновите страницу и попробуйте снова."
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "The transcript is copied into that account's home so it can resume the session. Sessions from the other provider keep their own account."
+msgstr "Транскрипт копируется в домашнюю папку этого аккаунта, чтобы он мог продолжить сессию. Сессии другого провайдера остаются в своём аккаунте."
 
 #: src/renderer/i18n/sharedMessages.ts
 msgid "The update operation failed."
