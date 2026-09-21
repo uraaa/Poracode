@@ -522,6 +522,32 @@ describe("scanImportableSessions", () => {
     expect(sessions[0]?.cwd).toBe("F:\\real");
   });
 
+  it("picks up a Codex thread renamed between scans", () => {
+    const dir = codexHome([{ id: "cx-named", cwd: "F:\\repo", prompt: "hello" }]);
+    const homes: ImportHome[] = [{ provider: "codex", agentKind: "codex", dir }];
+    const stateFile = join(dir, "state_1.sqlite");
+    const db = new Database(stateFile);
+    db.exec("CREATE TABLE threads (id TEXT PRIMARY KEY, name TEXT, title TEXT)");
+    db.prepare("INSERT INTO threads (id, name, title) VALUES (?, ?, ?)").run(
+      "cx-named",
+      "First name",
+      null,
+    );
+    db.close();
+
+    expect(scanImportableSessions({ homes }).sessions[0]?.title).toBe("First name");
+
+    const renamer = new Database(stateFile);
+    renamer.prepare("UPDATE threads SET name = ? WHERE id = ?").run("Renamed", "cx-named");
+    renamer.close();
+
+    // A Codex title lives in `state_<n>.sqlite`, which the transcript's own
+    // mtime knows nothing about — memoising it under that mtime would pin
+    // the old name for the life of the main process. It buys nothing either:
+    // `readCodexTitles` is already one map per home per scan.
+    expect(scanImportableSessions({ homes }).sessions[0]?.title).toBe("Renamed");
+  });
+
   it("reads a preview whose first user turn sits past the head chunk", () => {
     const dir = mkdtempSync(join(tmpdir(), "poracode-scan-deep-"));
     const sessionsDir = join(dir, "sessions");

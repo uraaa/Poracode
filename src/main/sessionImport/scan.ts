@@ -503,6 +503,16 @@ export function scanImportableSessions(input: {
   // candidate's title; the module-level cache above means a title already
   // read by an earlier scan (or earlier in this one) is never read twice.
   const cachedTitleFor = (candidate: SessionCandidate): string | undefined => {
+    // Claude only. A Claude title is read out of the transcript's own tail, so
+    // the transcript's `mtimeMs` is exactly the right thing to key it on. A
+    // Codex title lives in `state_<n>.sqlite`, which that mtime knows nothing
+    // about: keying it there would mean a thread renamed in Codex Desktop
+    // never reaching the panel for the life of the main process. It would buy
+    // nothing anyway — `readCodexTitles` is one map per home per scan, and
+    // `codexTitlesByHome` above already keeps it to one read.
+    if (candidate.file.home.provider !== "claude") {
+      return titleFor(candidate.file, candidate.head.providerSessionId);
+    }
     const key = memoKey(candidate.file.path, candidate.file.mtimeMs);
     const cached = titleCache.recall(key);
     if (cached.hit) return cached.value;
