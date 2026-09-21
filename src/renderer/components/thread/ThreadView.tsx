@@ -25,6 +25,7 @@ import type { PendingLaunchProviderSwitch } from "@/renderer/state/slices/launch
 import { useContinueInProviderStore } from "@/renderer/state/continueInProviderStore";
 import { GuiThreadContent } from "./ThreadContent";
 import { TerminalThreadContent } from "./TerminalThreadContent";
+import { ThreadAccountLabel } from "./ThreadAccountLabel";
 import { ThreadHeaderStatusButton } from "./ThreadHeaderStatus";
 import { ThreadToolRail } from "./ThreadToolRail";
 
@@ -417,6 +418,11 @@ export const ThreadView = memo(function ThreadView(props: ThreadViewProps) {
                 </Tooltip>
               </div>
               <div className="flex shrink-0 items-center">
+                <ThreadAccountLabel
+                  agentKind={thread.agentKind}
+                  agentLabel={agentStatus?.label}
+                  providerMetadata={agentStatus?.providerMetadata}
+                />
                 {projectName ? (
                   <span className="px-1 text-sm leading-tight text-muted/60 @max-[560px]:text-xs @max-[360px]:text-[11px]">
                     {projectName}
