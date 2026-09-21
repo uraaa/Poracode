@@ -133,6 +133,29 @@ describe("listImportableSessions", () => {
 });
 
 describe("importSessionTranscript", () => {
+  it("refuses to import a session a thread already holds", () => {
+    const { dir, path } = codexHomeWith("cx-dup", "F:\\repo", "hello");
+    const existing = thread({
+      id: "already",
+      config: {
+        model: "gpt-5.5",
+        importedFrom: { provider: "codex", path, importedAt: "2026-09-20T06:00:00.000Z" },
+      },
+    });
+
+    expect(() =>
+      importSessionTranscript(
+        { threadId: "t1", provider: "codex", path },
+        {
+          readSharedSettings: () => settingsWithHome(dir),
+          getThreads: () => [existing, thread({ id: "t1" })],
+          applyRuntimeEvents: vi.fn<(threadId: string, events: readonly RuntimeEvent[]) => void>(),
+          flushRuntimeWrites: vi.fn<(threadId: string) => void>(),
+        },
+      ),
+    ).toThrow(/already imported/iu);
+  });
+
   it("replays the transcript into the thread and reports the message count", () => {
     const { path } = codexHomeWith("cx-2", "F:\\repo", "hello");
     const applied: RuntimeEvent[] = [];

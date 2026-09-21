@@ -67,9 +67,24 @@ export function importSessionTranscript(
   payload: ImportSessionTranscriptPayload,
   deps: SessionImportDeps,
 ): ImportSessionTranscriptResult {
-  const exists = deps.getThreads().some((thread) => thread.id === payload.threadId);
-  if (!exists) {
+  const threads = deps.getThreads();
+  const currentThread = threads.find((thread) => thread.id === payload.threadId);
+  if (!currentThread) {
     throw new Error(`Cannot import into unknown thread ${payload.threadId}.`);
+  }
+  // The renderer already stamps this thread with the target path and session
+  // id before calling in, so it would otherwise match against itself: exclude
+  // it before checking whether another thread already holds this session.
+  const { byPath, bySessionId } = importedThreads(
+    threads.filter((thread) => thread.id !== payload.threadId),
+  );
+  const sessionId = currentThread.sessionRef?.providerSessionId;
+  const duplicateThreadId =
+    byPath.get(payload.path) ?? (sessionId ? bySessionId.get(sessionId) : undefined);
+  if (duplicateThreadId) {
+    throw new Error(
+      `Session at ${payload.path} was already imported into thread ${duplicateThreadId}.`,
+    );
   }
   // Copy before replaying: a failed copy leaves the thread empty, which the
   // renderer rolls back; a replayed thread whose provider cannot resume it
