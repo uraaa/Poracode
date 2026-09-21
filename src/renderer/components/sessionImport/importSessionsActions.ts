@@ -7,6 +7,7 @@ import { resolveModelSelection } from "@/shared/agentSelection";
 import { isWindows, readBridge } from "@/renderer/bridge";
 import { useAgentStatusesStore } from "@/renderer/state/agentStatusesStore";
 import { useAppStore } from "@/renderer/state/appStore";
+import { rehydrateThreadRuntimeItems } from "@/renderer/state/chatRuntimePersister";
 import { getActiveWorkspaceId } from "@/renderer/state/workspaceStore";
 
 /** Title lines stay short enough to read in the sidebar. */
@@ -166,6 +167,9 @@ export async function importSessions(input: {
         // that account can resume the session.
         ...(agentKind !== session.agentKind ? { targetAgentKind: agentKind } : {}),
       });
+      // The replay wrote straight to SQLite; a pane opened meanwhile hydrated
+      // an empty transcript and has to read it again.
+      await rehydrateThreadRuntimeItems(thread.id);
       threadIds.set(session.id, thread.id);
       imported += 1;
     } catch (error) {

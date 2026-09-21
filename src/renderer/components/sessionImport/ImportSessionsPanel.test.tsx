@@ -131,6 +131,13 @@ vi.mock("@/renderer/state/agentStatusesStore", () => {
   return { useAgentStatusesStore };
 });
 
+const rehydrateThreadRuntimeItemsMock = vi.hoisted(() =>
+  vi.fn<(threadId: string) => Promise<void>>().mockResolvedValue(undefined),
+);
+vi.mock("@/renderer/state/chatRuntimePersister", () => ({
+  rehydrateThreadRuntimeItems: rehydrateThreadRuntimeItemsMock,
+}));
+
 vi.mock("@/renderer/state/workspaceStore", () => ({
   getActiveWorkspaceId: () => "ws-active",
 }));
@@ -238,6 +245,8 @@ describe("ImportSessionsPanel", () => {
       path: "F:\\home\\.codex\\sessions\\rollout-cx-1.jsonl",
     });
     await vi.waitFor(() => expect(toastMock.success).toHaveBeenCalled());
+    // A pane opened mid-import must re-read the replayed transcript.
+    expect(rehydrateThreadRuntimeItemsMock).toHaveBeenCalledWith("new-thread");
   });
 
   it("imports under another account of the same provider and copies the transcript", async () => {
