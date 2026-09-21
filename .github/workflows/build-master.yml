@@ -1,0 +1,47 @@
+name: Build (master)
+
+# Proves that whatever landed on the fork's master builds on every platform,
+# without anyone running a local build. The installers are kept as workflow
+# artifacts only — nothing is tagged, nothing is published, and the
+# auto-updater never sees them. Releases stay a deliberate, separate command
+# (`Release (stable)`).
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Read version from package.json
+        id: read
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Building master as $version"
+
+  build:
+    name: Build
+    needs: version
+    uses: ./.github/workflows/_build.yml
+    with:
+      ref: ${{ github.sha }}
+      version: ${{ needs.version.outputs.version }}
+      channel: stable
+      sentry_environment: development
+    secrets: inherit
