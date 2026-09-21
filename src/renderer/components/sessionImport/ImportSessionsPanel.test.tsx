@@ -201,6 +201,20 @@ describe("ImportSessionsPanel", () => {
     expect(screen.getByLabelText("Target project")).toHaveValue("p1");
   });
 
+  it("shows the provider's title over the first prompt and names the thread after it", async () => {
+    listImportableSessionsMock.mockResolvedValue([session({ title: "Race fix" })]);
+    render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
+
+    const checkbox = await screen.findByRole("checkbox", { name: "Race fix" });
+    expect(screen.getByText("fix the race condition")).toBeInTheDocument();
+    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByRole("button", { name: /import 1 session/iu }));
+
+    await vi.waitFor(() =>
+      expect(createThreadMock).toHaveBeenCalledWith(expect.objectContaining({ title: "Race fix" })),
+    );
+  });
+
   it("disables a session that was already imported", async () => {
     listImportableSessionsMock.mockResolvedValue([session({ importedThreadId: "old" })]);
     render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);

@@ -33,6 +33,7 @@ function matches(session: ImportableSession, filters: ImportFilters, skip?: Face
   if (needle.length === 0) return true;
   return (
     session.preview.toLowerCase().includes(needle) ||
+    (session.title ?? "").toLowerCase().includes(needle) ||
     (session.cwd ?? "").toLowerCase().includes(needle)
   );
 }

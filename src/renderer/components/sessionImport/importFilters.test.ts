@@ -76,6 +76,12 @@ describe("selectImportFilter", () => {
 });
 
 describe("applyImportFilters", () => {
+  it("matches the search against the provider's title too", () => {
+    const named = session({ id: "codex:named", title: "Deploy pipeline", preview: "hi" });
+    expect(applyImportFilters([named], { ...EMPTY_FILTERS, query: "pipeline" })).toEqual([named]);
+    expect(applyImportFilters([named], { ...EMPTY_FILTERS, query: "nope" })).toEqual([]);
+  });
+
   it("combines every facet with the search", () => {
     expect(
       applyImportFilters(SESSIONS, {

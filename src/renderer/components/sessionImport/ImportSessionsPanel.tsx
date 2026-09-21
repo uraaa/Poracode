@@ -289,7 +289,7 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
             >
               <input
                 type="checkbox"
-                aria-label={session.preview || session.providerSessionId}
+                aria-label={session.title ?? (session.preview || session.providerSessionId)}
                 className="mt-1"
                 checked={selected.has(session.id)}
                 disabled={alreadyImported || busy}
@@ -297,8 +297,11 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
               />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs text-foreground">
-                  {session.preview || session.providerSessionId}
+                  {session.title ?? (session.preview || session.providerSessionId)}
                 </p>
+                {session.title && session.preview ? (
+                  <p className="truncate text-[10px] text-muted">{session.preview}</p>
+                ) : null}
                 <p className="truncate font-mono text-[10px] text-muted">
                   {session.agentKind} · {session.cwd ?? t`unknown folder`}
                 </p>

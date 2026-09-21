@@ -10,6 +10,7 @@ import {
 import { basename, join } from "node:path";
 import type { ImportableSession, ImportedSessionProvider } from "@/shared/contracts";
 import type { ImportHome } from "./homes";
+import { readClaudeTitle, readCodexTitles } from "./titles";
 import { stripInjectedContext } from "./transcript";
 
 /**
@@ -264,6 +265,18 @@ export function scanImportableSessions(input: {
   provider?: ImportedSessionProvider;
   limit?: number;
 }): ImportableSession[] {
+  // Codex titles come from one index per home; opened on first use so a
+  // scan that never reaches a home's files never touches its database.
+  const codexTitlesByHome = new Map<string, Map<string, string>>();
+  const titleFor = (file: DiscoveredFile, providerSessionId: string): string | undefined => {
+    if (file.home.provider === "claude") return readClaudeTitle(file.path);
+    let titles = codexTitlesByHome.get(file.home.dir);
+    if (!titles) {
+      titles = readCodexTitles(file.home.dir);
+      codexTitlesByHome.set(file.home.dir, titles);
+    }
+    return titles.get(providerSessionId);
+  };
   const files: DiscoveredFile[] = [];
   for (const home of input.homes) {
     if (input.provider && home.provider !== input.provider) continue;
@@ -293,6 +306,7 @@ export function scanImportableSessions(input: {
     const preview = readPreview(file);
     if (preview.length === 0) continue;
     seen.add(id);
+    const title = titleFor(file, head.providerSessionId);
     sessions.push({
       id,
       provider: file.home.provider,
@@ -303,6 +317,7 @@ export function scanImportableSessions(input: {
       ...(head.startedAt ? { startedAt: head.startedAt } : {}),
       updatedAt: new Date(file.mtimeMs).toISOString(),
       preview,
+      ...(title ? { title } : {}),
       cwdExists: head.cwd !== undefined && existsSync(head.cwd),
     });
   }

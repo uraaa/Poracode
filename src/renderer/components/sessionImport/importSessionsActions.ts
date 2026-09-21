@@ -13,10 +13,11 @@ import { getActiveWorkspaceId } from "@/renderer/state/workspaceStore";
 /** Title lines stay short enough to read in the sidebar. */
 const TITLE_MAX_CHARS = 60;
 
+/** The provider's own name for the chat when it has one, else its first prompt. */
 function titleFor(session: ImportableSession): string {
-  const preview = session.preview.trim();
-  if (preview.length === 0) return i18n._(msg`Imported session`);
-  return preview.length > TITLE_MAX_CHARS ? `${preview.slice(0, TITLE_MAX_CHARS)}…` : preview;
+  const title = (session.title ?? session.preview).trim();
+  if (title.length === 0) return i18n._(msg`Imported session`);
+  return title.length > TITLE_MAX_CHARS ? `${title.slice(0, TITLE_MAX_CHARS)}…` : title;
 }
 
 /**
