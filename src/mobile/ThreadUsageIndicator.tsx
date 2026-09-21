@@ -11,34 +11,12 @@ import { useProviderUsageRefresh } from "@/renderer/components/providers/useProv
 import { usageStatusText } from "@/renderer/components/providers/usageFormat";
 import {
   resolveDisplayedProviders,
+  resolveThreadUsageProviderId,
   USAGE_PROVIDERS,
 } from "@/renderer/components/providers/usageProviders";
 import { useProviderUsage, useProviderUsageStore } from "@/renderer/state/providerUsageStore";
 import { useSharedSettings } from "@/renderer/state/sharedSettingsStore";
 import { BottomSheet, useSheet } from "./components";
-
-/**
- * Best-match usage provider id for a thread, given the snapshots currently in
- * the store. A plain provider's id is its `agentKind` ("claude", "codex"); a
- * Claude profile's is an instance-scoped kind ("claude:<id>"). We try the
- * thread's own kind, then a `<base>:<instance>` composite, then any snapshot
- * that shares the base provider, and finally fall back to the raw kind so the
- * ring still renders (empty) with the correct provider icon.
- */
-export function resolveThreadUsageProviderId(
-  thread: { readonly agentKind: string; readonly agentInstanceId?: string | undefined },
-  availableIds: readonly string[],
-): string {
-  const ids = new Set(availableIds);
-  const base = baseAgentKind(thread.agentKind);
-  const candidates = thread.agentInstanceId
-    ? [thread.agentKind, `${base}:${thread.agentInstanceId}`]
-    : [thread.agentKind];
-  for (const candidate of candidates) {
-    if (ids.has(candidate)) return candidate;
-  }
-  return availableIds.find((id) => baseAgentKind(id) === base) ?? thread.agentKind;
-}
 
 /**
  * Hydrates the provider-usage store when a thread opens. Mounted with

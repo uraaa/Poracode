@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { resolveThreadUsageProviderId } from "./ThreadUsageIndicator";
+import { resolveThreadUsageProviderId } from "@/renderer/components/providers/usageProviders";
 
 describe("resolveThreadUsageProviderId", () => {
   it("matches a plain provider by its agentKind", () => {

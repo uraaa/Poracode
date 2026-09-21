@@ -380,3 +380,26 @@ export function resolveDisplayedProviders(
   }
   return ordered;
 }
+
+/**
+ * Best-match usage provider id for a thread, given the ids currently available
+ * (snapshot keys, or the rail's rendered providers). A plain provider's id is
+ * its `agentKind` ("claude", "codex"); a Claude profile's is an instance-scoped
+ * kind ("claude:<id>"). We try the thread's own kind, then a
+ * `<base>:<instance>` composite, then any id that shares the base provider, and
+ * finally fall back to the raw kind so a caller still gets the right provider.
+ */
+export function resolveThreadUsageProviderId(
+  thread: { readonly agentKind: string; readonly agentInstanceId?: string | undefined },
+  availableIds: readonly string[],
+): string {
+  const ids = new Set(availableIds);
+  const base = baseAgentKind(thread.agentKind);
+  const candidates = thread.agentInstanceId
+    ? [thread.agentKind, `${base}:${thread.agentInstanceId}`]
+    : [thread.agentKind];
+  for (const candidate of candidates) {
+    if (ids.has(candidate)) return candidate;
+  }
+  return availableIds.find((id) => baseAgentKind(id) === base) ?? thread.agentKind;
+}
