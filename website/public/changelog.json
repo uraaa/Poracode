@@ -2,7 +2,7 @@
   "releases": [
     {
       "version": "1.8.6",
-      "tagline": "Import you can trust",
+      "tagline": "Trustworthy Import",
       "date": "2026-09-21",
       "title": "Session import fixed end to end, plus account and usage cues in the UI",
       "summary": "Importing a Codex or Claude Code conversation now lists every session of the folder you picked, opens the thread on the model the conversation actually used, and replays Claude chats without the machine blocks the CLI writes into them. Scanning a large store got an order of magnitude faster on repeat opens, duplicate imports are refused, and the sidebar and thread header now say which account you are looking at.",
