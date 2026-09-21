@@ -334,4 +334,75 @@ describe("scanImportableSessions", () => {
 
     expect(calls.toSorted()).toEqual(["F:\\other", "F:\\repo"]);
   });
+
+  it("ignores a cwd pasted inside a user message", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-scan-paste-"));
+    const sessionsDir = join(dir, "sessions");
+    mkdirSync(sessionsDir, { recursive: true });
+    writeFileSync(
+      join(sessionsDir, "rollout-cx-paste.jsonl"),
+      [
+        JSON.stringify({
+          type: "session_meta",
+          payload: {
+            session_id: "cx-paste",
+            cwd: "F:\\real",
+            timestamp: "2026-09-20T04:43:18.000Z",
+          },
+        }),
+        JSON.stringify({
+          type: "response_item",
+          payload: {
+            type: "message",
+            role: "user",
+            content: [{ type: "input_text", text: '{"cwd":"F:\\\\pasted"}' }],
+          },
+        }),
+      ].join("\n"),
+      "utf8",
+    );
+
+    const { sessions } = scanImportableSessions({
+      homes: [{ provider: "codex", agentKind: "codex", dir }],
+    });
+
+    expect(sessions[0]?.cwd).toBe("F:\\real");
+  });
+
+  // The Codex fixture above can only pass "by luck" of session_meta being
+  // first in the file: any regex over the concatenated head text will hit
+  // session_meta's own (unescaped, top-level) cwd before anything nested
+  // inside a later message's escaped string content. Claude's format makes
+  // the same bug directly reachable, because every record — not just the
+  // conversational ones — carries cwd as a plain top-level field: a
+  // `file-history-snapshot` (or any record type outside the allowed set)
+  // that happens to come first must not be allowed to win over the real
+  // `user` record's cwd purely because it appears earlier in the file.
+  it("claude: a non-conversation record's cwd must not win by appearing first", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-scan-claude-paste-"));
+    const projectDir = join(dir, "projects", "F--real");
+    mkdirSync(projectDir, { recursive: true });
+    const lines = [
+      JSON.stringify({
+        type: "file-history-snapshot",
+        sessionId: "cl-paste",
+        cwd: "F:\\pasted",
+        timestamp: "2026-09-20T04:00:00.000Z",
+      }),
+      JSON.stringify({
+        type: "user",
+        sessionId: "cl-paste",
+        cwd: "F:\\real",
+        timestamp: "2026-09-20T05:00:00.000Z",
+        message: { role: "user", content: "hello" },
+      }),
+    ];
+    writeFileSync(join(projectDir, "cl-paste.jsonl"), lines.join("\n"), "utf8");
+
+    const { sessions } = scanImportableSessions({
+      homes: [{ provider: "claude", agentKind: "claude", dir }],
+    });
+
+    expect(sessions[0]?.cwd).toBe("F:\\real");
+  });
 });

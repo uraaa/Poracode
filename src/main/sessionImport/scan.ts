@@ -132,31 +132,85 @@ interface SessionHead {
   readonly accountId?: string;
 }
 
+interface RawHeadFields {
+  readonly id?: string | undefined;
+  readonly cwd?: string | undefined;
+  readonly startedAt?: string | undefined;
+  readonly originator?: string | undefined;
+  readonly source?: string | undefined;
+  readonly threadSource?: string | undefined;
+  readonly accountId?: string | undefined;
+}
+
+/**
+ * Codex's `session_meta` is always the first line of a rollout and is the
+ * only record carrying `session_id` / `cwd` / `timestamp` / `originator` /
+ * `source` / `thread_source`. Scanning only that line — rather than the whole
+ * head chunk — means nothing a user typed in a later message (which can
+ * itself look like JSON) can be mistaken for one of these fields.
+ */
+function codexHeadFields(prefix: string): RawHeadFields {
+  const metaLine = prefix.split(/\r?\n/u)[0] ?? "";
+  return {
+    id: rawField(metaLine, "session_id"),
+    cwd: rawField(metaLine, "cwd"),
+    startedAt: rawField(metaLine, "timestamp"),
+    originator: rawField(metaLine, "originator"),
+    source: rawField(metaLine, "source"),
+    threadSource: rawField(metaLine, "thread_source"),
+  };
+}
+
+/** Claude record types that legitimately carry the session's own metadata. */
+const CLAUDE_HEAD_RECORD_TYPES = new Set(["user", "assistant", "bridge-session", "summary"]);
+
+/**
+ * Claude has no single meta line — `sessionId` / `cwd` / `timestamp` /
+ * `ownerAccountUuid` are spread across ordinary conversation records. Scan
+ * line by line, skipping any record whose `type` isn't one of the ones that
+ * legitimately carries them (a `user` record's own message text can't fool
+ * this: it's read from the same line, but only after that line's `type` is
+ * confirmed to be one of the safe kinds), and stop once both `cwd` and the
+ * timestamp are known.
+ */
+function claudeHeadFields(prefix: string): RawHeadFields {
+  let id: string | undefined;
+  let cwd: string | undefined;
+  let startedAt: string | undefined;
+  let accountId: string | undefined;
+  for (const line of prefix.split(/\r?\n/u)) {
+    if (line.length === 0) continue;
+    const type = rawField(line, "type");
+    if (!type || !CLAUDE_HEAD_RECORD_TYPES.has(type)) continue;
+    id ??= rawField(line, "sessionId");
+    cwd ??= rawField(line, "cwd");
+    startedAt ??= rawField(line, "timestamp");
+    accountId ??= rawField(line, "ownerAccountUuid");
+    if (cwd !== undefined && startedAt !== undefined) break;
+  }
+  return { id, cwd, startedAt, accountId };
+}
+
 function readHead(file: DiscoveredFile): SessionHead | undefined {
   const prefix = readPrefix(file.path, HEAD_CHUNK_BYTES);
   if (prefix.length === 0) return undefined;
+  const fields =
+    file.home.provider === "codex" ? codexHeadFields(prefix) : claudeHeadFields(prefix);
   const id =
-    rawField(prefix, file.home.provider === "codex" ? "session_id" : "sessionId") ??
+    fields.id ??
     // Claude names the file after the session; Codex embeds the id in the name.
     basename(file.path)
       .replace(/\.jsonl$/iu, "")
       .replace(/^rollout-[\dT-]*?-/u, "");
   if (!id) return undefined;
-  const cwd = rawField(prefix, "cwd");
-  const startedAt = rawField(prefix, "timestamp");
-  const originator = rawField(prefix, "originator");
-  const source = rawField(prefix, "source");
-  const threadSource = rawField(prefix, "thread_source");
-  const accountId =
-    file.home.provider === "claude" ? rawField(prefix, "ownerAccountUuid") : undefined;
   return {
     providerSessionId: id,
-    ...(cwd ? { cwd } : {}),
-    ...(startedAt ? { startedAt } : {}),
-    ...(originator ? { originator } : {}),
-    ...(source ? { source } : {}),
-    ...(threadSource ? { threadSource } : {}),
-    ...(accountId ? { accountId } : {}),
+    ...(fields.cwd ? { cwd: fields.cwd } : {}),
+    ...(fields.startedAt ? { startedAt: fields.startedAt } : {}),
+    ...(fields.originator ? { originator: fields.originator } : {}),
+    ...(fields.source ? { source: fields.source } : {}),
+    ...(fields.threadSource ? { threadSource: fields.threadSource } : {}),
+    ...(file.home.provider === "claude" && fields.accountId ? { accountId: fields.accountId } : {}),
   };
 }
 
