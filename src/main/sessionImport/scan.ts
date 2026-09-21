@@ -38,48 +38,65 @@ const PREVIEW_MAX_CHARS = 200;
 /** Sessions returned per scan. The UI pages; the disk does not. */
 const DEFAULT_LIMIT = 200;
 /**
- * Cap on the module-level title cache below. A title read is a real file
- * read for Claude (`readClaudeTitle`'s 128 KB tail seek) — cheap once, not
- * cheap N times per scan. Bounding by entry count rather than letting it grow
- * unbounded keeps a long-running main process from holding one entry per
- * transcript ever seen.
+ * Cap on each of the module-level memos below. Everything a scan reads off
+ * disk — a head, a preview, a title — is memoised per transcript, so bounding
+ * by entry count keeps a long-running main process from holding one entry per
+ * transcript it has ever seen. The values are small (a head is a handful of
+ * strings, a preview at most {@link PREVIEW_MAX_CHARS}); the file *bytes*
+ * they were derived from are never kept.
  */
-const TITLE_CACHE_LIMIT = 4000;
+const SCAN_MEMO_LIMIT = 4000;
+
+interface ScanMemo<T> {
+  /** `hit` distinguishes "not memoised" from "memoised as `undefined`". */
+  recall: (key: string) => { hit: boolean; value: T | undefined };
+  remember: (key: string, value: T) => void;
+}
 
 /**
- * Titles read this session, keyed by file path + `mtimeMs` so a rewritten
- * transcript (new mtime) is read again rather than serving a stale title, and
- * scoped to the module rather than one `scanImportableSessions` call so a
- * rescan — which a query triggers on every debounced keystroke — reuses what
- * the previous scan already paid to read instead of re-reading the same
- * files. Insertion order doubles as recency: a hit is moved to the end, so
- * evicting from the front is an LRU eviction.
+ * A bounded memo scoped to the module rather than one
+ * `scanImportableSessions` call, so a rescan — which a query triggers on
+ * every debounced keystroke — reuses what the previous scan already paid to
+ * read instead of re-reading the same files on the Electron main thread.
+ * Insertion order doubles as recency: a hit is moved to the end, so evicting
+ * from the front is an LRU eviction.
  */
-const titleCache = new Map<string, string | undefined>();
+function createScanMemo<T>(limit: number): ScanMemo<T> {
+  const entries = new Map<string, T>();
+  return {
+    recall: (key) => {
+      if (!entries.has(key)) return { hit: false, value: undefined };
+      const value = entries.get(key) as T;
+      entries.delete(key);
+      entries.set(key, value);
+      return { hit: true, value };
+    },
+    remember: (key, value) => {
+      entries.delete(key);
+      entries.set(key, value);
+      if (entries.size > limit) {
+        const oldestKey = entries.keys().next().value;
+        if (oldestKey !== undefined) entries.delete(oldestKey);
+      }
+    },
+  };
+}
 
-function titleCacheKey(path: string, mtimeMs: number): string {
+/**
+ * Keyed by file path + `mtimeMs` so a rewritten transcript (new mtime) is a
+ * new key and is read again, rather than serving whatever the old bytes said
+ * for the life of the main process.
+ */
+function memoKey(path: string, mtimeMs: number): string {
   return `${path}:${mtimeMs}`;
 }
 
-/** `undefined` here means "not cached", not "cached as titleless" — check `hit`. */
-function recallTitle(path: string, mtimeMs: number): { hit: boolean; title: string | undefined } {
-  const key = titleCacheKey(path, mtimeMs);
-  if (!titleCache.has(key)) return { hit: false, title: undefined };
-  const title = titleCache.get(key);
-  titleCache.delete(key);
-  titleCache.set(key, title);
-  return { hit: true, title };
-}
-
-function rememberTitle(path: string, mtimeMs: number, title: string | undefined): void {
-  const key = titleCacheKey(path, mtimeMs);
-  titleCache.delete(key);
-  titleCache.set(key, title);
-  if (titleCache.size > TITLE_CACHE_LIMIT) {
-    const oldestKey = titleCache.keys().next().value;
-    if (oldestKey !== undefined) titleCache.delete(oldestKey);
-  }
-}
+/** One head per transcript, the candidate pass's whole per-file disk cost. */
+const headCache = createScanMemo<SessionHead | undefined>(SCAN_MEMO_LIMIT);
+/** One preview per transcript, read only for sessions that reach the page. */
+const previewCache = createScanMemo<string>(SCAN_MEMO_LIMIT);
+/** A title read is a real file read for Claude (`readClaudeTitle`'s tail seek). */
+const titleCache = createScanMemo<string | undefined>(SCAN_MEMO_LIMIT);
 
 interface DiscoveredFile {
   readonly home: ImportHome;
@@ -116,25 +133,31 @@ function sessionFilesFor(home: ImportHome): string[] {
     : walkFiles(join(home.dir, "projects"), (name) => name.endsWith(".jsonl"));
 }
 
+interface FilePrefix {
+  readonly text: string;
+  /** Whether the file continues past what was read — worth a deeper read. */
+  readonly cut: boolean;
+}
+
 /**
  * First `maxBytes` of a file, truncated back to the last complete line so a
  * caller can `JSON.parse` what it gets without meeting half an object.
  */
-function readPrefix(path: string, maxBytes: number): string {
+function readPrefix(path: string, maxBytes: number): FilePrefix {
   let fd: number | undefined;
   try {
     fd = openSync(path, "r");
     const size = fstatSync(fd).size;
     const length = Math.min(size, maxBytes);
-    if (length === 0) return "";
+    if (length === 0) return { text: "", cut: false };
     const buffer = Buffer.allocUnsafe(length);
     readSync(fd, buffer, 0, length, 0);
     const text = buffer.toString("utf8");
-    if (length >= size) return text;
+    if (length >= size) return { text, cut: false };
     const lastNewline = text.lastIndexOf("\n");
-    return lastNewline >= 0 ? text.slice(0, lastNewline) : text;
+    return { text: lastNewline >= 0 ? text.slice(0, lastNewline) : text, cut: true };
   } catch {
-    return "";
+    return { text: "", cut: false };
   } finally {
     if (fd !== undefined) {
       try {
@@ -234,8 +257,8 @@ function claudeHeadFields(prefix: string): RawHeadFields {
   return { id, cwd, startedAt, accountId };
 }
 
-function readHead(file: DiscoveredFile): SessionHead | undefined {
-  const prefix = readPrefix(file.path, HEAD_CHUNK_BYTES);
+function parseHead(file: DiscoveredFile): SessionHead | undefined {
+  const prefix = readPrefix(file.path, HEAD_CHUNK_BYTES).text;
   if (prefix.length === 0) return undefined;
   const fields =
     file.home.provider === "codex" ? codexHeadFields(prefix) : claudeHeadFields(prefix);
@@ -271,6 +294,20 @@ function readHead(file: DiscoveredFile): SessionHead | undefined {
     ...(fields.threadSource ? { threadSource: fields.threadSource } : {}),
     ...(file.home.provider === "claude" && fields.accountId ? { accountId: fields.accountId } : {}),
   };
+}
+
+/**
+ * The candidate pass's one read per transcript — the single biggest cost of a
+ * scan at a few hundred files, and repaid in full on every debounced
+ * keystroke before this memo existed.
+ */
+function readHead(file: DiscoveredFile): SessionHead | undefined {
+  const key = memoKey(file.path, file.mtimeMs);
+  const cached = headCache.recall(key);
+  if (cached.hit) return cached.value;
+  const head = parseHead(file);
+  headCache.remember(key, head);
+  return head;
 }
 
 /**
@@ -339,9 +376,12 @@ function claudeUserText(entry: Record<string, unknown>): string | undefined {
     .join("");
 }
 
-/** First thing the user actually typed, read from the head of the file only. */
-function readPreview(file: DiscoveredFile): string {
-  const prefix = readPrefix(file.path, PREVIEW_CHUNK_BYTES);
+/**
+ * First thing the user actually typed inside `prefix`, or `undefined` when
+ * this much of the file held nothing — which is what tells the caller a
+ * deeper read might still find something.
+ */
+function firstUserText(prefix: string, provider: ImportedSessionProvider): string | undefined {
   for (const line of prefix.split(/\r?\n/u)) {
     if (line.length === 0) continue;
     let entry: Record<string, unknown>;
@@ -350,13 +390,36 @@ function readPreview(file: DiscoveredFile): string {
     } catch {
       continue;
     }
-    const raw = file.home.provider === "codex" ? codexUserText(entry) : claudeUserText(entry);
+    const raw = provider === "codex" ? codexUserText(entry) : claudeUserText(entry);
     if (raw === undefined) continue;
     const text = stripInjectedContext(raw).replace(/\s+/gu, " ").trim();
     if (text.length === 0) continue;
     return text.length > PREVIEW_MAX_CHARS ? `${text.slice(0, PREVIEW_MAX_CHARS)}…` : text;
   }
-  return "";
+  return undefined;
+}
+
+/**
+ * First thing the user actually typed, read from the head of the file only.
+ *
+ * Reads the same 128 KB the candidate pass read rather than 512 KB outright:
+ * a session's first user turn is almost always inside it, so the deep read
+ * that exists for the rare transcript whose injected preamble runs past the
+ * head chunk is paid only by that transcript. Memoised per transcript so a
+ * rescan does not repeat either read.
+ */
+function readPreview(file: DiscoveredFile): string {
+  const key = memoKey(file.path, file.mtimeMs);
+  const cached = previewCache.recall(key);
+  if (cached.hit) return cached.value ?? "";
+  const head = readPrefix(file.path, HEAD_CHUNK_BYTES);
+  let text = firstUserText(head.text, file.home.provider);
+  if (text === undefined && head.cut) {
+    text = firstUserText(readPrefix(file.path, PREVIEW_CHUNK_BYTES).text, file.home.provider);
+  }
+  const preview = text ?? "";
+  previewCache.remember(key, preview);
+  return preview;
 }
 
 /**
@@ -459,10 +522,11 @@ export function scanImportableSessions(input: {
   // candidate's title; the module-level cache above means a title already
   // read by an earlier scan (or earlier in this one) is never read twice.
   const cachedTitleFor = (candidate: SessionCandidate): string | undefined => {
-    const cached = recallTitle(candidate.file.path, candidate.file.mtimeMs);
-    if (cached.hit) return cached.title;
+    const key = memoKey(candidate.file.path, candidate.file.mtimeMs);
+    const cached = titleCache.recall(key);
+    if (cached.hit) return cached.value;
     const title = titleFor(candidate.file, candidate.head.providerSessionId);
-    rememberTitle(candidate.file.path, candidate.file.mtimeMs, title);
+    titleCache.remember(key, title);
     return title;
   };
   const files: DiscoveredFile[] = [];

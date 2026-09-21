@@ -522,6 +522,90 @@ describe("scanImportableSessions", () => {
     expect(sessions[0]?.cwd).toBe("F:\\real");
   });
 
+  it("reads a preview whose first user turn sits past the head chunk", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-scan-deep-"));
+    const sessionsDir = join(dir, "sessions");
+    mkdirSync(sessionsDir, { recursive: true });
+    // A real `session_meta` carries the whole system prompt; 200 KB of it
+    // pushes the first user turn past the 128 KB head chunk the candidate
+    // pass reads, so the preview can only come from a deeper read.
+    writeFileSync(
+      join(sessionsDir, "rollout-cx-deep.jsonl"),
+      [
+        JSON.stringify({
+          type: "session_meta",
+          payload: {
+            session_id: "cx-deep",
+            cwd: "F:\\repo",
+            timestamp: "2026-09-20T04:43:18.000Z",
+            instructions: "p".repeat(200 * 1024),
+          },
+        }),
+        JSON.stringify({
+          type: "response_item",
+          payload: {
+            type: "message",
+            role: "user",
+            content: [{ type: "input_text", text: "buried but real" }],
+          },
+        }),
+      ].join("\n"),
+      "utf8",
+    );
+
+    const { sessions } = scanImportableSessions({
+      homes: [{ provider: "codex", agentKind: "codex", dir }],
+    });
+
+    expect(sessions.map((s) => s.providerSessionId)).toEqual(["cx-deep"]);
+    expect(sessions[0]?.preview).toBe("buried but real");
+  });
+
+  it("rescans to the same result, and re-reads a transcript that changed", () => {
+    const dir = codexHome([{ id: "cx-1", cwd: "F:\\repo", prompt: "first prompt" }]);
+    const homes: ImportHome[] = [{ provider: "codex", agentKind: "codex", dir }];
+    const file = join(
+      dir,
+      "sessions",
+      "2026",
+      "09",
+      "20",
+      "rollout-2026-09-20T04-43-18-cx-1.jsonl",
+    );
+
+    const first = scanImportableSessions({ homes });
+    const second = scanImportableSessions({ homes });
+    // Anything memoised between scans has to be invisible: same sessions,
+    // same previews, same titles as the scan that paid to read them.
+    expect(second).toEqual(first);
+    expect(second.sessions[0]?.preview).toBe("first prompt");
+
+    writeFileSync(
+      file,
+      [
+        JSON.stringify({
+          type: "session_meta",
+          payload: { session_id: "cx-1", cwd: "F:\\repo", timestamp: "2026-09-20T04:43:18.000Z" },
+        }),
+        JSON.stringify({
+          type: "response_item",
+          payload: {
+            type: "message",
+            role: "user",
+            content: [{ type: "input_text", text: "rewritten prompt" }],
+          },
+        }),
+      ].join("\n"),
+      "utf8",
+    );
+    // A rewritten transcript is a new `mtimeMs`, so nothing cached under the
+    // old one can serve it — a stale preview here would outlive the process.
+    const later = new Date(Date.now() + 60_000);
+    utimesSync(file, later, later);
+
+    expect(scanImportableSessions({ homes }).sessions[0]?.preview).toBe("rewritten prompt");
+  });
+
   it("compares folders case-insensitively on win32 and case-sensitively elsewhere", () => {
     const homes: ImportHome[] = [
       {
