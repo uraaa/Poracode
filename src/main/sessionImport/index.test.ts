@@ -75,7 +75,7 @@ describe("listImportableSessions", () => {
       },
     });
 
-    const sessions = listImportableSessions(
+    const { sessions } = listImportableSessions(
       {},
       {
         readSharedSettings: () => settingsWithHome(dir),
@@ -97,7 +97,7 @@ describe("listImportableSessions", () => {
       sessionRef: { providerSessionId: "cx-live", discoveredAt: "2026-09-20T06:00:00.000Z" },
     });
 
-    const sessions = listImportableSessions(
+    const { sessions } = listImportableSessions(
       {},
       {
         readSharedSettings: () => settingsWithHome(dir),
@@ -110,6 +110,25 @@ describe("listImportableSessions", () => {
     expect(
       sessions.find((session) => session.providerSessionId === "cx-live")?.importedThreadId,
     ).toBe("live");
+  });
+
+  it("filters by account and still reports the accounts it saw", () => {
+    const { dir } = codexHomeWith("cx-1", "F:\\repo", "fix the bug");
+    const deps = {
+      readSharedSettings: () => settingsWithHome(dir),
+      getThreads: () => [],
+      applyRuntimeEvents: vi.fn<(threadId: string, events: readonly RuntimeEvent[]) => void>(),
+      flushRuntimeWrites: vi.fn<(threadId: string) => void>(),
+    };
+
+    const mine = listImportableSessions({ agentKind: "codex:work" }, deps);
+    expect(mine.sessions.map((session) => session.providerSessionId)).toEqual(["cx-1"]);
+
+    const other = listImportableSessions({ agentKind: "codex:nobody" }, deps);
+    expect(other.sessions).toEqual([]);
+    // The account facet ignores the account filter, or picking one account
+    // would leave the dropdown holding only that account.
+    expect(other.facets.accounts).toContain("codex:work");
   });
 });
 

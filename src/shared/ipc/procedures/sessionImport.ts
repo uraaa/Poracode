@@ -3,15 +3,15 @@ import {
   listImportableSessionsPayloadSchema,
   type ImportSessionTranscriptPayload,
   type ImportSessionTranscriptResult,
-  type ImportableSession,
   type ListImportableSessionsPayload,
+  type ListImportableSessionsResult,
 } from "../../contracts";
 import { definePayloadProcedure } from "../core";
 
 export const sessionImportProcedures = {
   listImportableSessions: definePayloadProcedure<
     ListImportableSessionsPayload,
-    ImportableSession[],
+    ListImportableSessionsResult,
     "main-local"
   >("listImportableSessions", "main-local", listImportableSessionsPayloadSchema),
   importSessionTranscript: definePayloadProcedure<

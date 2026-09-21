@@ -3,7 +3,7 @@ import { Button, toast } from "@heroui/react";
 import { i18n } from "@lingui/core";
 import { msg } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react/macro";
-import type { ImportableSession } from "@/shared/contracts";
+import type { ImportSessionFacets, ImportableSession } from "@/shared/contracts";
 import { importedSessionProviderForAgentKind } from "@/shared/contracts";
 import { readBridge } from "@/renderer/bridge";
 import { Input, PixelLoader } from "@/renderer/components/common";
@@ -13,8 +13,7 @@ import {
   ALL,
   applyImportFilters,
   EMPTY_FILTERS,
-  importFacetOptions,
-  selectImportFilter,
+  reconcileFilters,
   type ImportFilters,
 } from "./importFilters";
 import { importSessions } from "./importSessionsActions";
@@ -62,14 +61,33 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
     ...EMPTY_FILTERS,
     ...(props.initialFolder ? { folder: props.initialFolder } : {}),
   }));
+  const [facets, setFacets] = useState<ImportSessionFacets>({
+    providers: [],
+    accounts: [],
+    folders: [],
+  });
 
-  const load = useCallback(() => readBridge().listImportableSessions({}), []);
+  // The scan applies these itself. Filtering client-side instead would only
+  // ever see the newest page of sessions, so a folder whose conversations are
+  // older than that page would look empty however far back its history goes.
+  const load = useCallback(
+    () =>
+      readBridge().listImportableSessions({
+        ...(filters.provider === ALL ? {} : { provider: filters.provider }),
+        ...(filters.account === ALL ? {} : { agentKind: filters.account }),
+        ...(filters.folder === ALL ? {} : { cwd: filters.folder }),
+      }),
+    [filters.account, filters.folder, filters.provider],
+  );
 
   useEffect(() => {
     let cancelled = false;
     void load()
       .then((found) => {
-        if (!cancelled) setSessions(found);
+        if (cancelled) return;
+        setSessions(found.sessions);
+        setFacets(found.facets);
+        setFilters((current) => reconcileFilters(current, found.facets));
       })
       .catch((error: unknown) => {
         if (!cancelled) {
@@ -88,12 +106,11 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
     };
   }, [load]);
 
-  // Each dropdown offers only values compatible with the other selections;
-  // picking one facet drops any other selection it just made impossible.
-  const facets = useMemo(() => importFacetOptions(sessions, filters), [filters, sessions]);
+  // The scan has already applied the dropdowns; this is the search text, plus
+  // a harmless re-check while a scan for new filters is still in flight.
   const visible = useMemo(() => applyImportFilters(sessions, filters), [filters, sessions]);
   const select = (patch: Partial<ImportFilters>) =>
-    setFilters((current) => selectImportFilter(sessions, current, patch));
+    setFilters((current) => ({ ...current, ...patch }));
 
   const importable = useMemo(
     () => visible.filter((session) => session.importedThreadId === undefined),

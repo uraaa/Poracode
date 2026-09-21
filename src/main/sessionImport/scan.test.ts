@@ -107,7 +107,7 @@ describe("scanImportableSessions", () => {
         dir: claudeHome([{ id: "cl-1", cwd: "F:\\repo", prompt: "write a test" }]),
       },
     ];
-    const sessions = scanImportableSessions({ homes });
+    const { sessions } = scanImportableSessions({ homes });
     expect(sessions).toHaveLength(2);
     expect(sessions.find((s) => s.provider === "codex")).toMatchObject({
       id: "codex:cx-1",
@@ -141,11 +141,13 @@ describe("scanImportableSessions", () => {
         dir: claudeHome([{ id: "cl-here", cwd: "F:\\repo", prompt: "claude here" }]),
       },
     ];
-    const matching = scanImportableSessions({ homes, cwd: "f:\\REPO" });
+    const { sessions: matching } = scanImportableSessions({ homes, cwd: "f:\\REPO" });
     expect(matching).toHaveLength(2);
     expect(matching.map((s) => s.providerSessionId).sort()).toEqual(["cl-here", "cx-here"]);
     expect(
-      scanImportableSessions({ homes, provider: "codex" }).every((s) => s.provider === "codex"),
+      scanImportableSessions({ homes, provider: "codex" }).sessions.every(
+        (s) => s.provider === "codex",
+      ),
     ).toBe(true);
   });
 
@@ -155,7 +157,7 @@ describe("scanImportableSessions", () => {
       { id: "cl-mine", cwd: "F:\\repo", prompt: "my chat", owner: "acct-base" },
       { id: "cl-other", cwd: "F:\\repo", prompt: "unknown owner", owner: "acct-nobody" },
     ]);
-    const sessions = scanImportableSessions({
+    const { sessions } = scanImportableSessions({
       homes: [
         { provider: "claude", agentKind: "claude", dir: base, accountId: "acct-base" },
         {
@@ -186,7 +188,7 @@ describe("scanImportableSessions", () => {
       { provider: "codex", agentKind: "codex:work", dir: shared },
       { provider: "codex", agentKind: "codex:gone", dir: join(tmpdir(), "poracode-not-there") },
     ];
-    expect(scanImportableSessions({ homes })).toHaveLength(1);
+    expect(scanImportableSessions({ homes }).sessions).toHaveLength(1);
   });
 
   it("returns an empty list rather than throwing on an unreadable transcript", () => {
@@ -195,7 +197,7 @@ describe("scanImportableSessions", () => {
     mkdirSync(sessionsDir, { recursive: true });
     writeFileSync(join(sessionsDir, "rollout-broken.jsonl"), "{ not json", "utf8");
     expect(
-      scanImportableSessions({ homes: [{ provider: "codex", agentKind: "codex", dir }] }),
+      scanImportableSessions({ homes: [{ provider: "codex", agentKind: "codex", dir }] }).sessions,
     ).toEqual([]);
   });
 
@@ -212,7 +214,7 @@ describe("scanImportableSessions", () => {
       "real words",
     );
 
-    const sessions = scanImportableSessions({
+    const { sessions } = scanImportableSessions({
       homes: [{ provider: "codex", agentKind: "codex", dir }],
     });
     expect(sessions.map((session) => session.providerSessionId)).toEqual(["real"]);
@@ -231,7 +233,7 @@ describe("scanImportableSessions", () => {
 
     const [session] = scanImportableSessions({
       homes: [{ provider: "codex", agentKind: "codex", dir }],
-    });
+    }).sessions;
     expect(session?.preview).toBe("ship it");
   });
 
@@ -244,6 +246,26 @@ describe("scanImportableSessions", () => {
         dir: codexHome([{ id: "cx-real", cwd: realFolder, prompt: "real folder" }]),
       },
     ];
-    expect(scanImportableSessions({ homes })[0]?.cwdExists).toBe(true);
+    expect(scanImportableSessions({ homes }).sessions[0]?.cwdExists).toBe(true);
+  });
+
+  it("reports every folder it saw, including folders past the page limit", () => {
+    const homes: ImportHome[] = [
+      {
+        provider: "codex",
+        agentKind: "codex",
+        dir: codexHome([
+          { id: "cx-1", cwd: "F:\\busy", prompt: "one" },
+          { id: "cx-2", cwd: "F:\\busy", prompt: "two" },
+          { id: "cx-3", cwd: "F:\\busy", prompt: "three" },
+          { id: "cx-4", cwd: "F:\\quiet", prompt: "four" },
+        ]),
+      },
+    ];
+
+    const result = scanImportableSessions({ homes, limit: 2 });
+
+    expect(result.sessions).toHaveLength(2);
+    expect(result.facets.folders).toEqual(expect.arrayContaining(["F:\\busy", "F:\\quiet"]));
   });
 });

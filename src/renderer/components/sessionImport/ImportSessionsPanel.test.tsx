@@ -1,4 +1,4 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ImportableSession, Thread } from "@/shared/contracts";
@@ -69,16 +69,35 @@ vi.mock("./SearchableSelect", () => ({
 }));
 
 const listImportableSessionsMock = vi.hoisted(() =>
-  vi.fn<(payload: unknown) => Promise<ImportableSession[]>>(),
+  vi.fn<(payload: unknown) => Promise<unknown>>(),
 );
 const importSessionTranscriptMock = vi.hoisted(() =>
   vi.fn<(payload: unknown) => Promise<{ messageCount: number; path: string }>>(),
 );
 
+/**
+ * The scan reports the facets it saw alongside the page of sessions. Tests
+ * that only care about the page keep returning a plain array; this derives the
+ * facets those sessions imply, so only a test about facets has to spell them out.
+ */
+function found(sessions: ImportableSession[]) {
+  return {
+    sessions,
+    facets: {
+      providers: [...new Set(sessions.map((s) => s.provider))],
+      accounts: [...new Set(sessions.map((s) => s.agentKind))],
+      folders: [...new Set(sessions.flatMap((s) => (s.cwd ? [s.cwd] : [])))],
+    },
+  };
+}
+
 vi.mock("@/renderer/bridge", () => ({
   isWindows: () => true,
   readBridge: () => ({
-    listImportableSessions: listImportableSessionsMock,
+    listImportableSessions: async (payload: unknown) => {
+      const value = await listImportableSessionsMock(payload);
+      return Array.isArray(value) ? found(value) : value;
+    },
     importSessionTranscript: importSessionTranscriptMock,
   }),
 }));
@@ -194,11 +213,36 @@ describe("ImportSessionsPanel", () => {
     render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
 
     expect(await screen.findByText("fix the race condition")).toBeInTheDocument();
-    expect(listImportableSessionsMock).toHaveBeenCalledWith({});
     expect(screen.getByLabelText("Project")).toHaveValue("F:\\repo");
     expect(screen.queryByText("elsewhere")).not.toBeInTheDocument();
     // The project picker is always offered, seeded with the given project.
     expect(screen.getByLabelText("Target project")).toHaveValue("p1");
+  });
+
+  it("scans for the folder it is filtered to, not for everything", async () => {
+    render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
+
+    await screen.findByText("fix the race condition");
+    await vi.waitFor(() =>
+      expect(listImportableSessionsMock).toHaveBeenCalledWith({ cwd: "F:\\repo" }),
+    );
+  });
+
+  it("offers a folder the scan saw even when no session on this page is in it", async () => {
+    listImportableSessionsMock.mockResolvedValue({
+      sessions: [session()],
+      facets: {
+        providers: ["codex"],
+        accounts: ["codex"],
+        folders: ["F:\\repo", "F:\\quiet"],
+      },
+    });
+    render(<ImportSessionsPanel initialProjectId="p1" />);
+
+    await screen.findByText("fix the race condition");
+    expect(
+      within(screen.getByLabelText("Project")).getByRole("option", { name: "quiet" }),
+    ).toBeInTheDocument();
   });
 
   it("shows the provider's title over the first prompt and names the thread after it", async () => {

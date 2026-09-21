@@ -1,8 +1,8 @@
 import type {
   ImportSessionTranscriptPayload,
   ImportSessionTranscriptResult,
-  ImportableSession,
   ListImportableSessionsPayload,
+  ListImportableSessionsResult,
   RuntimeEvent,
   Thread,
 } from "@/shared/contracts";
@@ -45,18 +45,22 @@ function importedThreads(threads: readonly Thread[]): {
 export function listImportableSessions(
   payload: ListImportableSessionsPayload,
   deps: SessionImportDeps,
-): ImportableSession[] {
+): ListImportableSessionsResult {
   const homes = resolveImportHomes(deps.readSharedSettings());
-  const sessions = scanImportableSessions({
+  const { sessions, facets } = scanImportableSessions({
     homes,
     ...(payload.cwd ? { cwd: payload.cwd } : {}),
     ...(payload.provider ? { provider: payload.provider } : {}),
+    ...(payload.agentKind ? { agentKind: payload.agentKind } : {}),
   });
   const { byPath, bySessionId } = importedThreads(deps.getThreads());
-  return sessions.map((session) => {
-    const threadId = byPath.get(session.path) ?? bySessionId.get(session.providerSessionId);
-    return threadId ? { ...session, importedThreadId: threadId } : session;
-  });
+  return {
+    sessions: sessions.map((session) => {
+      const threadId = byPath.get(session.path) ?? bySessionId.get(session.providerSessionId);
+      return threadId ? { ...session, importedThreadId: threadId } : session;
+    }),
+    facets,
+  };
 }
 
 export function importSessionTranscript(

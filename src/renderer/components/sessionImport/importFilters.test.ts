@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { ImportableSession } from "@/shared/contracts";
+import type { ImportableSession, ImportedSessionProvider } from "@/shared/contracts";
 import {
   ALL,
   applyImportFilters,
   EMPTY_FILTERS,
   importFacetOptions,
+  reconcileFilters,
   selectImportFilter,
 } from "./importFilters";
 
@@ -72,6 +73,26 @@ describe("selectImportFilter", () => {
       { provider: "codex" },
     );
     expect(filters).toMatchObject({ provider: "codex", folder: "F:\\a" });
+  });
+});
+
+describe("reconcileFilters", () => {
+  const facets = {
+    providers: ["claude", "codex"] as ImportedSessionProvider[],
+    accounts: ["claude"],
+    folders: ["F:\\a"],
+  };
+
+  it("drops a selection the scan no longer offers", () => {
+    expect(
+      reconcileFilters({ ...EMPTY_FILTERS, account: "codex:work", folder: "F:\\a" }, facets),
+    ).toMatchObject({ account: ALL, folder: "F:\\a" });
+  });
+
+  it("leaves the query and the valid selections alone", () => {
+    expect(
+      reconcileFilters({ provider: "codex", account: "claude", folder: ALL, query: "bet" }, facets),
+    ).toEqual({ provider: "codex", account: "claude", folder: ALL, query: "bet" });
   });
 });
 

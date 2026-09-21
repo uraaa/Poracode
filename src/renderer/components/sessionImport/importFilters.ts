@@ -1,4 +1,8 @@
-import type { ImportableSession, ImportedSessionProvider } from "@/shared/contracts";
+import type {
+  ImportSessionFacets,
+  ImportableSession,
+  ImportedSessionProvider,
+} from "@/shared/contracts";
 
 /**
  * Faceted filtering over discovered sessions. Each dropdown offers only the
@@ -65,6 +69,26 @@ export function importFacetOptions(
         .map((s) => s.cwd)
         .filter((cwd): cwd is string => cwd !== undefined),
     ),
+  };
+}
+
+/**
+ * Drop any selection the latest scan no longer offers, so a stale "account"
+ * cannot keep filtering after "provider" moved. The scan reports each facet
+ * ignoring its own filter, so a selection that survives there is still
+ * reachable. The search text is never touched — it filters what came back.
+ */
+export function reconcileFilters(
+  filters: ImportFilters,
+  facets: ImportSessionFacets,
+): ImportFilters {
+  const keep = <T extends string>(value: T, valid: readonly string[]): T | typeof ALL =>
+    value === ALL || valid.includes(value) ? value : ALL;
+  return {
+    ...filters,
+    provider: keep(filters.provider, facets.providers),
+    account: keep(filters.account, facets.accounts),
+    folder: keep(filters.folder, facets.folders),
   };
 }
 

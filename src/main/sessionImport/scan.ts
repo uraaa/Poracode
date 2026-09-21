@@ -259,12 +259,38 @@ function samePath(left: string | undefined, right: string | undefined): boolean 
  * throws: an unreadable file or a missing home is skipped so one bad session
  * cannot hide the rest of a user's history.
  */
+export interface ImportScanFacets {
+  /** Every provider, account and folder the scan saw, page limit or not. */
+  readonly providers: ImportedSessionProvider[];
+  readonly accounts: string[];
+  readonly folders: string[];
+}
+
+export interface ImportScanResult {
+  readonly sessions: ImportableSession[];
+  readonly facets: ImportScanFacets;
+}
+
+interface SessionCandidate {
+  readonly file: DiscoveredFile;
+  readonly head: SessionHead;
+  readonly id: string;
+  readonly agentKind: string;
+}
+
+function sortedUnique(values: readonly string[]): string[] {
+  return [...new Set(values)].toSorted((left, right) =>
+    left.localeCompare(right, undefined, { sensitivity: "base" }),
+  );
+}
+
 export function scanImportableSessions(input: {
   homes: readonly ImportHome[];
   cwd?: string;
   provider?: ImportedSessionProvider;
+  agentKind?: string;
   limit?: number;
-}): ImportableSession[] {
+}): ImportScanResult {
   // Codex titles come from one index per home; opened on first use so a
   // scan that never reaches a home's files never touches its database.
   const codexTitlesByHome = new Map<string, Map<string, string>>();
@@ -292,25 +318,60 @@ export function scanImportableSessions(input: {
   }
   files.sort((left, right) => right.mtimeMs - left.mtimeMs);
 
-  const limit = input.limit ?? DEFAULT_LIMIT;
-  const sessions: ImportableSession[] = [];
+  // Heads first, for every file: they cost a small read each and are what the
+  // filters and the facet lists are made of. Reading them all is what lets a
+  // folder whose sessions are old still be offered and still be listed — the
+  // page limit below counts sessions that survived the filters, so cutting
+  // before them would hide most of a quiet folder's history.
+  const candidates: SessionCandidate[] = [];
   const seen = new Set<string>();
   for (const file of files) {
-    if (sessions.length >= limit) break;
     const head = readHead(file);
     if (!head) continue;
     if (isMachineSession(head)) continue;
     const id = `${file.home.provider}:${head.providerSessionId}`;
     if (seen.has(id)) continue;
-    if (input.cwd && !samePath(head.cwd, input.cwd)) continue;
+    seen.add(id);
+    candidates.push({ file, head, id, agentKind: ownerAgentKind(file, head, input.homes) });
+  }
+
+  const matchesProvider = (candidate: SessionCandidate) =>
+    !input.provider || candidate.file.home.provider === input.provider;
+  const matchesAccount = (candidate: SessionCandidate) =>
+    !input.agentKind || candidate.agentKind === input.agentKind;
+  const matchesCwd = (candidate: SessionCandidate) =>
+    !input.cwd || samePath(candidate.head.cwd, input.cwd);
+
+  // Each facet offers the values that still have sessions under the *other*
+  // filters, so picking a provider never leaves an unreachable folder listed.
+  const under = (...predicates: Array<(candidate: SessionCandidate) => boolean>) =>
+    candidates.filter((candidate) => predicates.every((predicate) => predicate(candidate)));
+  const facets: ImportScanFacets = {
+    providers: sortedUnique(
+      under(matchesAccount, matchesCwd).map((candidate) => candidate.file.home.provider),
+    ) as ImportedSessionProvider[],
+    accounts: sortedUnique(
+      under(matchesProvider, matchesCwd).map((candidate) => candidate.agentKind),
+    ),
+    folders: sortedUnique(
+      under(matchesProvider, matchesAccount)
+        .map((candidate) => candidate.head.cwd)
+        .filter((cwd): cwd is string => cwd !== undefined),
+    ),
+  };
+
+  const limit = input.limit ?? DEFAULT_LIMIT;
+  const sessions: ImportableSession[] = [];
+  for (const candidate of under(matchesProvider, matchesAccount, matchesCwd)) {
+    if (sessions.length >= limit) break;
+    const { file, head } = candidate;
     const preview = readPreview(file);
     if (preview.length === 0) continue;
-    seen.add(id);
     const title = titleFor(file, head.providerSessionId);
     sessions.push({
-      id,
+      id: candidate.id,
       provider: file.home.provider,
-      agentKind: ownerAgentKind(file, head, input.homes),
+      agentKind: candidate.agentKind,
       providerSessionId: head.providerSessionId,
       path: file.path,
       ...(head.cwd ? { cwd: head.cwd } : {}),
@@ -321,5 +382,5 @@ export function scanImportableSessions(input: {
       cwdExists: head.cwd !== undefined && existsSync(head.cwd),
     });
   }
-  return sessions;
+  return { sessions, facets };
 }

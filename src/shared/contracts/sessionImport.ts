@@ -71,8 +71,26 @@ export const listImportableSessionsPayloadSchema = z.object({
   /** Keep only sessions recorded against this working directory. */
   cwd: z.string().min(1).optional(),
   provider: importedSessionProviderSchema.optional(),
+  /** Keep only sessions belonging to this agent kind (account or profile). */
+  agentKind: z.string().min(1).optional(),
 });
 export type ListImportableSessionsPayload = z.infer<typeof listImportableSessionsPayloadSchema>;
+
+/**
+ * Every value the discovery pass saw, whatever the page limit cut. The filter
+ * dropdowns are built from this: a folder whose sessions are all old would
+ * otherwise disappear from the list of folders you can pick.
+ */
+export interface ImportSessionFacets {
+  providers: ImportedSessionProvider[];
+  accounts: string[];
+  folders: string[];
+}
+
+export interface ListImportableSessionsResult {
+  sessions: ImportableSession[];
+  facets: ImportSessionFacets;
+}
 
 export const importSessionTranscriptPayloadSchema = z.object({
   /** Thread the renderer already created; the transcript is replayed into it. */
