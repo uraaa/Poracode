@@ -142,7 +142,13 @@ describe("scanImportableSessions", () => {
         dir: claudeHome([{ id: "cl-here", cwd: "F:\\repo", prompt: "claude here" }]),
       },
     ];
-    const { sessions: matching } = scanImportableSessions({ homes, cwd: "f:\\REPO" });
+    // Case folding is Windows-only, so the platform is pinned rather than
+    // inherited: on a Linux runner these Windows paths would not match.
+    const { sessions: matching } = scanImportableSessions({
+      homes,
+      cwd: "f:\\REPO",
+      platform: "win32",
+    });
     expect(matching).toHaveLength(2);
     expect(matching.map((s) => s.providerSessionId).sort()).toEqual(["cl-here", "cx-here"]);
     expect(
