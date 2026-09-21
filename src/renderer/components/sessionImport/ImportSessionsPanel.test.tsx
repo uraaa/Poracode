@@ -599,6 +599,43 @@ describe("ImportSessionsPanel", () => {
     expect(screen.getByLabelText("Provider")).toBeInTheDocument();
   });
 
+  it("says a rescan is in flight instead of leaving a stale list live", async () => {
+    render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
+    fireEvent.click(await screen.findByRole("checkbox", { name: /fix the race condition/iu }));
+    expect(screen.getByRole("button", { name: /import 1 session/iu })).toBeEnabled();
+
+    // A scan that never lands. For its whole duration the list on screen is
+    // the previous one; importing from it is importing from a list the panel
+    // already knows is out of date.
+    listImportableSessionsMock.mockImplementation(() => new Promise(() => {}));
+    fireEvent.change(screen.getByLabelText("Provider"), { target: { value: "codex" } });
+
+    await vi.waitFor(() => expect(listImportableSessionsMock).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() =>
+      expect(screen.getByRole("button", { name: /import 1 session/iu })).toBeDisabled(),
+    );
+    expect(screen.getByRole("list")).toHaveAttribute("aria-busy", "true");
+  });
+
+  it("drops a selected session the rescan no longer returns", async () => {
+    const second = session({ id: "codex:cx-2", providerSessionId: "cx-2", preview: "second" });
+    listImportableSessionsMock.mockResolvedValue([session(), second]);
+    render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
+    fireEvent.click(await screen.findByRole("checkbox", { name: /fix the race condition/iu }));
+    expect(screen.getByRole("button", { name: /import 1 session/iu })).toBeInTheDocument();
+
+    // The rescan no longer carries the ticked session. `runImport` resolves
+    // ids against the *new* list, so leaving it selected promises an import
+    // the panel cannot perform.
+    listImportableSessionsMock.mockResolvedValue([second]);
+    fireEvent.change(screen.getByLabelText("Provider"), { target: { value: "codex" } });
+
+    await vi.waitFor(() =>
+      expect(screen.queryByText("fix the race condition")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByRole("button", { name: /import 0 sessions/iu })).toBeInTheDocument();
+  });
+
   it("reports a failed import without blocking the rest", async () => {
     listImportableSessionsMock.mockResolvedValue([
       session(),
