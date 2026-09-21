@@ -122,24 +122,44 @@ message is empty", so the writer can skip both without a second rule.
 
 ### Keeping the index current
 
-`src/main/db/messageSearchStore.ts` exposes writes used by the runtime layer:
+`src/main/db/messageSearchStore.ts` exposes writes used by the runtime layer. They
+take the open connection because the runtime layer calls them inside its own
+transaction, and they take item ids rather than items because position is assigned by
+the database, not carried on `PersistedRuntimeItem`:
 
 ```ts
-export function dbIndexThreadMessage(item: PersistedRuntimeItem, threadId: string): void;
-export function dbRemoveThreadMessage(threadId: string, itemId: string): void;
-export function dbReindexThread(threadId: string, items: PersistedRuntimeItem[]): void;
-export function dbClearThreadMessages(threadId: string): void;
+export function indexThreadMessages(
+  sqlite: SqliteDatabase,
+  threadId: string,
+  itemIds: readonly string[],
+): void;
+export function removeThreadMessages(
+  sqlite: SqliteDatabase,
+  threadId: string,
+  itemIds: readonly string[],
+): void;
+export function clearThreadMessages(sqlite: SqliteDatabase, threadId: string): void;
+export function removeThreadMessagesAfter(
+  sqlite: SqliteDatabase,
+  threadId: string,
+  position: number,
+): void;
 ```
+
+`indexThreadMessages` reads each row back and decides from its state: a `user_message`
+is indexed as soon as it is touched, because its text arrives complete with the item
+and it may never receive a separate completion event; an `assistant_message` is
+indexed only when its row state is `completed`, because its text arrives as deltas.
 
 Call sites in `src/main/db/runtimeItems.ts`:
 
-| Existing path                                          | Index effect                                              |
-| ------------------------------------------------------ | --------------------------------------------------------- |
-| `dbApplyThreadRuntimeEvents`, item reaches `completed` | `dbIndexThreadMessage` (upsert on `(thread_id, item_id)`) |
-| item deleted                                           | `dbRemoveThreadMessage`                                   |
-| `dbReplaceThreadRuntimeItems`                          | `dbReindexThread`                                         |
-| `dbClearThreadRuntimeItems`                            | `dbClearThreadMessages`                                   |
-| `dbTruncateThreadRuntimeAfter`                         | delete indexed rows past the truncation position          |
+| Existing path                                             | Index effect                                              |
+| --------------------------------------------------------- | --------------------------------------------------------- |
+| `applyThreadRuntimeEventsNow`, items touched by the batch | `indexThreadMessages`, once at the end of the transaction |
+| an item deleted while applying events                     | `removeThreadMessages`                                    |
+| `dbReplaceThreadRuntimeItems`                             | `clearThreadMessages` then `indexThreadMessages`          |
+| `dbClearThreadRuntimeItems`                               | `clearThreadMessages`                                     |
+| `dbTruncateThreadRuntimeAfter`                            | `removeThreadMessagesAfter`                               |
 
 Imports need no special handling: `sessionImport/replay.ts` emits the same canonical
 events, so a replayed message completes and is indexed like a live one.
@@ -164,7 +184,7 @@ interface ThreadMessageSearchHit {
 ```sql
 SELECT th.id AS thread_id, th.title, th.project_id, th.updated_at,
        m.item_id, m.position, m.role,
-       snippet(thread_message_fts, 0, '<<', '>>', '…', 12) AS snippet,
+       snippet(thread_message_fts, 0, ?, ?, '…', 12) AS snippet,
        bm25(thread_message_fts) AS rank
 FROM thread_message_fts
 JOIN thread_message_text m ON m.rowid = thread_message_fts.rowid
@@ -186,8 +206,9 @@ the input and wraps the whole thing in quotes, so FTS5 reads it as one phrase an
 every operator character (`*`, `-`, `:`, `NEAR`, `AND`) is literal. Feeding raw user
 input to `MATCH` would otherwise turn a stray quote or colon into a syntax error.
 
-Snippet delimiters are markers, not markup: the renderer splits on them and applies
-its own highlight, so nothing user-typed is interpreted as HTML.
+The snippet delimiters are bound parameters holding two control characters (U+0001
+and U+0002), not markup: the renderer splits on them and applies its own highlight, so
+nothing user-typed is interpreted as HTML.
 
 ### IPC
 
