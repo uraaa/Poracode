@@ -255,6 +255,31 @@ function codexHeadFields(prefix: string): RawHeadFields {
 }
 
 /**
+ * `message.model` scoped to the `message` object's own keys, the same way
+ * `codexHeadFields` scopes to `metaLine` rather than the whole head chunk.
+ * The `type === "assistant"` gate alone is not enough: an assistant's own
+ * `content` can carry a tool call whose arguments are real, unescaped JSON —
+ * a call to a completion tool with a `model` argument, say — and a bare
+ * `rawField(line, "model")` over the whole line would happily match that
+ * instead of the record's real `message.model`, or instead of nothing at all
+ * when the record has no model of its own. Slicing from `"message":{` to the
+ * `content` key excludes `content` (and everything nested inside it)
+ * entirely, so only the message's own sibling fields — `id` / `type` /
+ * `role` / `model`, always serialised ahead of `content` — are ever in play.
+ * A record cut short before reaching `content` searches to the end of what
+ * was read instead, which is still safe: everything up to that point is
+ * still the message's own fields, never `content`'s.
+ */
+function claudeAssistantModel(line: string): string | undefined {
+  const messageStart = line.indexOf('"message":{');
+  if (messageStart === -1) return undefined;
+  const contentStart = line.indexOf('"content"', messageStart);
+  const scope =
+    contentStart === -1 ? line.slice(messageStart) : line.slice(messageStart, contentStart);
+  return rawField(scope, "model");
+}
+
+/**
  * Claude has no single meta line — `sessionId` / `cwd` / `timestamp` /
  * `ownerAccountUuid` are spread across ordinary conversation records. Scan
  * line by line, skipping any record whose `type` isn't one of the ones that
@@ -264,10 +289,15 @@ function codexHeadFields(prefix: string): RawHeadFields {
  *
  * `message.model` is narrower still: it only ever appears on an `assistant`
  * record, so it is read only there even though `assistant` is otherwise
- * treated the same as `user` above. Keep scanning until every field —
- * including the model — is known or the head chunk runs out; a session whose
- * first assistant reply sits later in the file (a long opening user turn)
- * still finds it as long as it's inside the chunk already read.
+ * treated the same as `user` above — see `claudeAssistantModel` for why the
+ * search is further scoped to the `message` object itself. Keep scanning
+ * until every field — including the model — is known or the head chunk runs
+ * out; a session whose first assistant reply sits later in the file (a long
+ * opening user turn) still finds it as long as it's inside the chunk already
+ * read. The cost of that is bounded: at most the {@link HEAD_CHUNK_BYTES}
+ * already in memory, on a scan that already runs synchronously on the main
+ * thread once per candidate file, so a chunk with no assistant record simply
+ * gets scanned in full instead of stopping at `cwd`/`startedAt` — no new I/O.
  */
 function claudeHeadFields(prefix: string): RawHeadFields {
   let id: string | undefined;
@@ -283,7 +313,7 @@ function claudeHeadFields(prefix: string): RawHeadFields {
     cwd ??= rawField(line, "cwd");
     startedAt ??= rawField(line, "timestamp");
     accountId ??= rawField(line, "ownerAccountUuid");
-    if (type === "assistant") model ??= rawField(line, "model");
+    if (type === "assistant") model ??= claudeAssistantModel(line);
     if (cwd !== undefined && startedAt !== undefined && model !== undefined) break;
   }
   return { id, cwd, startedAt, accountId, model };

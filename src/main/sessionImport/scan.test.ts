@@ -628,6 +628,53 @@ describe("scanImportableSessions", () => {
     expect(sessions[0]?.model).toBe("claude-opus-5");
   });
 
+  // Regression guard: an assistant record's `content` can carry a tool call
+  // whose arguments are real, unescaped JSON — here a completion tool called
+  // with a `model` argument, which is ordinary traffic in this app (Claude
+  // answering a question that involves an API config). A bare regex over the
+  // whole line would match that argument instead of the record's own,
+  // absent, `message.model` — the model must be read from the message
+  // object's own keys, not wherever `"model"` happens to appear on the line.
+  it("does not mistake a model-shaped tool call argument in content for the session's model", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-scan-claude-toolcall-"));
+    const projectDir = join(dir, "projects", "F--repo");
+    mkdirSync(projectDir, { recursive: true });
+    const lines = [
+      JSON.stringify({
+        type: "user",
+        sessionId: "cl-toolcall",
+        cwd: "F:\\repo",
+        timestamp: "2026-09-20T05:00:00.000Z",
+        message: { role: "user", content: "call the completion tool" },
+      }),
+      JSON.stringify({
+        type: "assistant",
+        sessionId: "cl-toolcall",
+        cwd: "F:\\repo",
+        timestamp: "2026-09-20T05:00:01.000Z",
+        message: {
+          role: "assistant",
+          // No `model` field on the message itself.
+          content: [
+            {
+              type: "tool_use",
+              id: "toolu_1",
+              name: "create_completion",
+              input: { model: "gpt-4o", prompt: "hello" },
+            },
+          ],
+        },
+      }),
+    ];
+    writeFileSync(join(projectDir, "cl-toolcall.jsonl"), lines.join("\n"), "utf8");
+
+    const { sessions } = scanImportableSessions({
+      homes: [{ provider: "claude", agentKind: "claude", dir }],
+    });
+
+    expect(sessions[0]).not.toHaveProperty("model");
+  });
+
   it("leaves model absent, not an empty string, when the head carries none", () => {
     const homes: ImportHome[] = [
       {
