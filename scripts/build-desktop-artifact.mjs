@@ -535,7 +535,7 @@ afterPack: build/after-pack.cjs
 
 publish:
   provider: github
-  owner: Porabuild
+  owner: uraaa
   repo: Poracode${publishChannelLine}
 
 win:

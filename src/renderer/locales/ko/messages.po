@@ -814,6 +814,7 @@ msgstr "현재 변경 사항 수락"
 msgid "Accept Incoming Change"
 msgstr "수신 변경 사항 수락"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/MainView/parts/CreateProject/CloneProjectModal.tsx
 msgid "Account"
 msgstr "계정"
@@ -1275,6 +1276,7 @@ msgstr "스레드에 응답이 필요할 때 알림"
 msgid "All"
 msgstr "전체"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/ProfileOverlay/parts/AccountFilter.tsx
 msgid "All accounts"
 msgstr "모든 계정"
@@ -1302,6 +1304,10 @@ msgstr "모든 추론 강도"
 msgid "All files"
 msgstr "모든 파일"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+#~ msgid "All folders"
+#~ msgstr "모든 폴더"
+
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeHeading.tsx
 msgid "All machines"
 msgstr "모든 기기"
@@ -1311,9 +1317,14 @@ msgid "All plugins are up to date."
 msgstr "모든 플러그인이 최신 상태입니다."
 
 #: src/mobile/views/ThreadsView.tsx
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectFilter.tsx
 msgid "All projects"
 msgstr "모든 프로젝트"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "All providers"
+msgstr "모든 제공자"
 
 #: src/renderer/components/skills/SkillMarketplaceModal.tsx
 msgid "All sources"
@@ -1995,6 +2006,10 @@ msgstr "브랜치"
 #: src/renderer/views/MainView/parts/RightPanel/parts/BrowserPanel/BrowserDockSlot.tsx
 msgid "Bring back to panel"
 msgstr "패널로 되돌리기"
+
+#: src/renderer/views/SettingsOverlay/parts/ImportSettings.tsx
+msgid "Bring conversations you started in Codex CLI or Claude Code into Poracode. Transcript files are read, never modified."
+msgstr "Codex CLI나 Claude Code에서 시작한 대화를 Poracode로 가져옵니다. 트랜스크립트 파일은 읽기만 하며 절대 수정하지 않습니다."
 
 #. placeholder {0}: props.agentLabel
 #: src/renderer/views/SettingsOverlay/parts/SingleAgentSettings/parts/AgentEnvironmentRow.tsx
@@ -2939,6 +2954,23 @@ msgstr "코드가 복사되었습니다."
 msgid "Codex"
 msgstr "Codex"
 
+#. placeholder {0}: trimmedName || displayLabel
+#: src/renderer/views/SettingsOverlay/parts/CodexProfileSettings.tsx
+msgid "Codex {0} profile saved."
+msgstr "Codex {0} 프로필이 저장되었습니다."
+
+#: src/renderer/views/SettingsOverlay/parts/CodexProfileSettings.tsx
+msgid "Codex profile home directory"
+msgstr "Codex 프로필 홈 디렉터리"
+
+#: src/renderer/views/SettingsOverlay/parts/CodexProfileSettings.tsx
+msgid "Codex profile name"
+msgstr "Codex 프로필 이름"
+
+#: src/renderer/views/SettingsOverlay/parts/CodexProfileSettings.tsx
+msgid "Codex runs this profile with CODEX_HOME set to the directory below. Use Login above to sign this profile in to its own account."
+msgstr "Codex는 CODEX_HOME을 아래 디렉터리로 설정하여 이 프로필을 실행합니다. 위의 로그인을 사용해 이 프로필을 별도 계정에 로그인하세요."
+
 #: src/renderer/components/thread/ThreadBackgroundTasksDock.tsx
 #: src/renderer/components/thread/ThreadErrorDock.tsx
 #: src/renderer/components/thread/ThreadImagesDock.tsx
@@ -3598,6 +3630,11 @@ msgstr "컨텍스트를 추출할 수 없습니다."
 msgid "Could not generate commit message: {detail}"
 msgstr "커밋 메시지를 생성할 수 없습니다: {detail}"
 
+#. placeholder {0}: session.preview
+#: src/renderer/components/sessionImport/importSessionsActions.ts
+msgid "Could not import {0}."
+msgstr "{0}을(를) 가져오지 못했습니다."
+
 #. placeholder {0}: failure.project.name
 #: src/renderer/views/PullRequestsView/PullRequestsView.tsx
 msgid "Could not load pull requests for {0}."
@@ -3606,6 +3643,10 @@ msgstr "{0}의 풀 리퀘스트를 불러올 수 없습니다."
 #: src/renderer/components/pdf/PdfViewer.tsx
 #~ msgid "Could not open this PDF."
 #~ msgstr "이 PDF를 열 수 없습니다."
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Could not read existing CLI sessions."
+msgstr "기존 CLI 세션을 읽지 못했습니다."
 
 #: src/renderer/components/thread/ChatPane/parts/items/useReadAbsoluteFile.tsx
 msgid "Could not read file."
@@ -5642,6 +5683,10 @@ msgstr "폴더"
 msgid "Folder name"
 msgstr "폴더 이름"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Folder no longer exists — imports into the project chosen above."
+msgstr "폴더가 더 이상 존재하지 않습니다 — 위에서 선택한 프로젝트로 가져옵니다."
+
 #: src/mobile/views/ManageProjectsView.tsx
 msgid "Folder on the server"
 msgstr "서버의 폴더"
@@ -6160,6 +6205,10 @@ msgstr "기록"
 msgid "Home"
 msgstr "홈"
 
+#: src/renderer/views/SettingsOverlay/parts/CodexProfileSettings.tsx
+msgid "Home directory"
+msgstr "홈 디렉터리"
+
 #: src/mobile/views/HostFolderPicker.tsx
 #: src/renderer/views/SettingsOverlay/parts/RemoteHostFolderPicker.tsx
 msgid "Home folder"
@@ -6242,6 +6291,10 @@ msgstr "ID 파일 경로"
 msgid "Idle"
 msgstr "유휴"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "If the folder is missing, import into"
+msgstr "폴더가 없으면 가져올 위치"
+
 #: src/renderer/components/plugins/pluginCopy.ts
 msgid "Ignored an unrecognized field in plugin.json."
 msgstr "plugin.json의 알 수 없는 필드를 무시했습니다."
@@ -6261,6 +6314,25 @@ msgstr "이미지 미리보기"
 #: src/renderer/views/ProjectSettingsOverlay/parts/ProjectIconPicker.tsx
 msgid "Images"
 msgstr "이미지"
+
+#. Settings section: import existing CLI sessions as threads
+#: src/renderer/views/SettingsOverlay/parts/SettingsSidebar.tsx
+msgid "Import"
+msgstr "가져오기"
+
+#. placeholder {0}: selected.size
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Import {0} session(s)"
+msgstr "{0}개 세션 가져오기"
+
+#. placeholder {0}: selected.size
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Import {0} sessions"
+msgstr "{0}개 세션 가져오기"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Import a conversation from Codex CLI or Claude Code. The thread keeps its provider session, so your next message continues where you left off."
+msgstr "Codex CLI 또는 Claude Code의 대화를 가져옵니다. 스레드가 제공자 세션을 유지하므로 다음 메시지는 중단한 지점에서 이어집니다."
 
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
 msgid "Import again"
@@ -6291,6 +6363,10 @@ msgstr "외부 에이전트 스킬 가져오기"
 msgid "Import external skills"
 msgstr "외부 스킬 가져오기"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Import into account"
+msgstr "계정으로 가져오기"
+
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
 msgid "Import Lightcode data"
 msgstr "Lightcode 데이터 가져오기"
@@ -6311,6 +6387,16 @@ msgstr "가져오기 방법"
 msgid "Import selected"
 msgstr "선택 항목 가져오기"
 
+#: src/renderer/components/sessionImport/ImportSessionsDialog.tsx
+#: src/renderer/views/MainView/parts/Sidebar/parts/SidebarProjectThreadList.tsx
+#: src/renderer/views/MainView/parts/Sidebar/Sidebar.tsx
+msgid "Import session"
+msgstr "세션 가져오기"
+
+#: src/renderer/views/SettingsOverlay/parts/ImportSettings.tsx
+msgid "Import sessions"
+msgstr "세션 가져오기"
+
 #: src/renderer/components/mcp/McpExternalImportModal.tsx
 msgid "Import to {destinationProjectName}"
 msgstr "{destinationProjectName}(으)로 가져오기"
@@ -6323,6 +6409,10 @@ msgstr "전역으로 가져오기"
 #~ msgid "Import to Project"
 #~ msgstr "프로젝트로 가져오기"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Imported"
+msgstr "가져옴"
+
 #. placeholder {0}: selectedSkills.length
 #. placeholder {1}: selectedSkills.length === 1 ? "skill" : "skills"
 #: src/renderer/components/skills/SkillImportModal.tsx
@@ -6334,9 +6424,25 @@ msgstr "전역으로 가져오기"
 msgid "Imported {0} skills."
 msgstr "스킬 {0}개를 가져왔습니다."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Imported {imported} session(s)."
+msgstr "{imported}개 세션을 가져왔습니다."
+
 #: src/renderer/components/skills/SkillImportModal.tsx
 msgid "Imported 1 skill."
 msgstr "스킬 1개를 가져왔습니다."
+
+#: src/renderer/components/thread/ChatPane/parts/ImportedThreadNotice.tsx
+msgid "Imported from Claude Code — text only, tool calls are not shown."
+msgstr "Claude Code에서 가져옴 — 텍스트만 표시되며 도구 호출은 보이지 않습니다."
+
+#: src/renderer/components/thread/ChatPane/parts/ImportedThreadNotice.tsx
+msgid "Imported from Codex CLI — text only, tool calls are not shown."
+msgstr "Codex CLI에서 가져옴 — 텍스트만 표시되며 도구 호출은 보이지 않습니다."
+
+#: src/renderer/components/sessionImport/importSessionsActions.ts
+msgid "Imported session"
+msgstr "가져온 세션"
 
 #: src/renderer/components/changelog/ChangelogView.tsx
 msgid "Improved"
@@ -7833,6 +7939,7 @@ msgstr "my-mcp-server"
 #: src/renderer/components/workspace/WorkspaceNameDialog.tsx
 #: src/renderer/views/ProfileOverlay/parts/EditProfileDialog.tsx
 #: src/renderer/views/SettingsOverlay/parts/ClaudeProfileSettings.tsx
+#: src/renderer/views/SettingsOverlay/parts/CodexProfileSettings.tsx
 #: src/renderer/views/SettingsOverlay/parts/CursorProfileIdentity.tsx
 #: src/renderer/views/SettingsOverlay/parts/RemoteServersSettings.tsx
 msgid "Name"
@@ -7935,6 +8042,10 @@ msgstr "새로운 Claude 프로필 구성 디렉터리"
 #: src/renderer/views/SettingsOverlay/parts/RemoteAccessSettings.tsx
 msgid "New code"
 msgstr "새 코드"
+
+#: src/renderer/views/SettingsOverlay/parts/CodexProfileSettings.tsx
+msgid "New Codex profile home directory"
+msgstr "새 Codex 프로필 홈 디렉터리"
 
 #: src/renderer/views/SettingsOverlay/parts/CursorProfileSettings.tsx
 msgid "New Cursor profile API key"
@@ -8210,6 +8321,10 @@ msgstr "실험 후보 {threadId}에 사용할 수 있는 채팅 응답이 없습
 msgid "No checks reported for this PR."
 msgstr "이 PR에 대해 보고된 검사가 없습니다."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "No Codex or Claude Code sessions found on this computer."
+msgstr "이 컴퓨터에서 Codex 또는 Claude Code 세션을 찾지 못했습니다."
+
 #: src/renderer/commands/CommandPalette.tsx
 msgid "No commands found"
 msgstr "명령을 찾을 수 없습니다."
@@ -8329,6 +8444,10 @@ msgstr "Lightcode 데이터를 찾을 수 없습니다."
 msgid "No marketplace skills match these filters."
 msgstr "이 필터와 일치하는 마켓플레이스 스킬이 없습니다."
 
+#: src/renderer/components/sessionImport/SearchableSelect.tsx
+msgid "No matches"
+msgstr "일치 항목 없음"
+
 #: src/renderer/components/thread/ChatPane/ChatRuntimeDebugPanel.tsx
 msgid "No matches for “{query}”."
 msgstr "\"{query}\"과(와) 일치하는 항목이 없습니다."
@@ -8420,6 +8539,11 @@ msgstr "이 실행에 활성화된 플러그인이 없습니다"
 msgid "No plugins match your search."
 msgstr "검색과 일치하는 플러그인이 없습니다."
 
+#. placeholder {0}: session.preview
+#: src/renderer/components/sessionImport/importSessionsActions.ts
+msgid "No project to import into — pick one for {0}."
+msgstr "가져올 프로젝트가 없습니다 — {0}에 사용할 프로젝트를 선택하세요."
+
 #: src/mobile/views/ManageProjectsView.tsx
 msgid "No projects"
 msgstr "프로젝트 없음"
@@ -8488,6 +8612,14 @@ msgstr "이 스레드에는 아직 런타임 항목이 없습니다."
 #: src/renderer/views/SettingsOverlay/parts/RemoteServersSettings.tsx
 #~ msgid "No servers connected yet."
 #~ msgstr "아직 연결된 서버가 없습니다."
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "No sessions could be imported."
+msgstr "세션을 하나도 가져오지 못했습니다."
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "No sessions match the current filters."
+msgstr "현재 필터와 일치하는 세션이 없습니다."
 
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "No shortcuts found"
@@ -9825,6 +9957,10 @@ msgstr "프로필 {displayName}을(를) 추가했습니다."
 #~ msgid "Profile API key"
 #~ msgstr "프로필 API 키"
 
+#: src/renderer/views/SettingsOverlay/parts/CodexProfileSettings.tsx
+msgid "Profile home"
+msgstr "프로필 홈"
+
 #: src/renderer/views/SettingsOverlay/parts/AgentProfileList.tsx
 msgid "Profile removed, but statuses could not be refreshed."
 msgstr "프로필을 제거했지만 상태를 새로 고칠 수 없었습니다."
@@ -9847,6 +9983,7 @@ msgstr "프로필"
 #: src/renderer/components/mcp/McpExternalImportModal.tsx
 #: src/renderer/components/plugins/PluginDetail.tsx
 #: src/renderer/components/plugins/PluginMarketplace.tsx
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/ThreadCommandPanel.tsx
 #: src/renderer/views/GitHubActionsView/GitHubActionsSidebar.tsx
 #: src/renderer/views/ProjectSettingsOverlay/ProjectSettingsOverlay.tsx
@@ -9959,6 +10096,7 @@ msgstr "지원되는 에이전트를 위해 Poracode에서 제공하고 관리�
 msgid "provider"
 msgstr "공급자"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/thread/AgentDiscoveryScreen.tsx
 msgid "Provider"
 msgstr "공급자"
@@ -10659,6 +10797,10 @@ msgstr "작업 트리를 삭제하시겠습니까?"
 msgid "Removing {profileName} deletes its saved API key. Threads that use this profile will no longer find their agent."
 msgstr "{profileName}을(를) 제거하면 저장된 API 키도 삭제됩니다. 이 프로필을 사용하는 스레드는 더 이상 에이전트를 찾을 수 없습니다."
 
+#: src/renderer/views/SettingsOverlay/parts/CodexProfileSettings.tsx
+msgid "Removing {profileName} drops it from Poracode. Its home directory and the Codex credentials inside it stay on disk."
+msgstr "{profileName}을(를) 제거하면 Poracode에서 삭제됩니다. 홈 디렉터리와 그 안의 Codex 자격 증명은 디스크에 남습니다."
+
 #: src/renderer/views/SettingsOverlay/parts/ClaudeProfileSettings.tsx
 msgid "Removing {profileName} drops its Poracode settings — env vars, models, and effort. Its config directory and the Claude credentials inside it stay on disk."
 msgstr "{profileName}을(를) 제거하면 환경 변수, 모델, Effort 등 Poracode 설정이 사라집니다. 구성 디렉터리와 그 안의 Claude 자격 증명은 디스크에 남습니다."
@@ -11117,6 +11259,10 @@ msgstr "{loginCommandDisplay}을 실행하여 로그인합니다."
 #~ msgid "Run a new thread on {0}."
 #~ msgstr "{0}에서 새 스레드를 실행합니다."
 
+#: src/renderer/views/SettingsOverlay/parts/CodexProfileSettings.tsx
+msgid "Run a second Codex account from its own CODEX_HOME. Each profile signs in separately and keeps its own sessions."
+msgstr "별도의 CODEX_HOME에서 두 번째 Codex 계정을 실행합니다. 각 프로필은 개별적으로 로그인하고 자체 세션을 유지합니다."
+
 #: src/renderer/views/GitHubActionsView/GitHubActionsRunDetail.tsx
 #: src/renderer/views/GitHubActionsView/GitHubActionsRunList.tsx
 msgid "Run actions"
@@ -11234,6 +11380,10 @@ msgstr "런타임 디버그"
 msgid "Runtime options"
 msgstr "런타임 옵션"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Same account as the session"
+msgstr "세션과 동일한 계정"
+
 #: src/renderer/views/SettingsOverlay/parts/ModelOrderSection.tsx
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
 msgid "Same provider order on all machines"
@@ -11251,6 +11401,7 @@ msgstr "채도와 밝기"
 #: src/renderer/views/FileEditorOverlay/parts/FileEditorPane/parts/EditorToolbar.tsx
 #: src/renderer/views/ProfileOverlay/parts/EditProfileDialog.tsx
 #: src/renderer/views/SettingsOverlay/parts/ClaudeProfileSettings.tsx
+#: src/renderer/views/SettingsOverlay/parts/CodexProfileSettings.tsx
 #: src/renderer/views/SettingsOverlay/parts/ProviderMcpServersSection.tsx
 #: src/renderer/views/SettingsOverlay/parts/RemoteServersSettings.tsx
 #: src/renderer/views/SettingsOverlay/parts/SingleAgentSettings/SingleAgentSettings.tsx
@@ -11269,6 +11420,10 @@ msgstr "변경 사항 저장"
 #: src/renderer/views/SettingsOverlay/parts/ClaudeProfileSettings.tsx
 msgid "Save Claude profile"
 msgstr "Claude 프로필 저장"
+
+#: src/renderer/views/SettingsOverlay/parts/CodexProfileSettings.tsx
+msgid "Save Codex profile"
+msgstr "Codex 프로필 저장"
 
 #: src/renderer/views/SettingsOverlay/parts/CursorProviderSettings.tsx
 #~ msgid "Save Cursor GUI runtime"
@@ -11443,6 +11598,15 @@ msgstr "SDK 설치되지 않음"
 msgid "Search"
 msgstr "검색"
 
+#. placeholder {0}: props.label
+#: src/renderer/components/sessionImport/SearchableSelect.tsx
+msgid "Search {0}"
+msgstr "{0} 검색"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search accounts…"
+msgstr "계정 검색…"
+
 #: src/renderer/views/SettingsOverlay/parts/AcpRegistrySettings.tsx
 msgid "Search agents"
 msgstr "에이전트 검색"
@@ -11455,10 +11619,18 @@ msgstr "에이전트 검색..."
 msgid "Search branches..."
 msgstr "브랜치 검색..."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+#~ msgid "Search by text or folder"
+#~ msgstr "텍스트 또는 폴더로 검색"
+
 #: src/mobile/views/FilesView.tsx
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
 msgid "Search files"
 msgstr "파일 검색"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+#~ msgid "Search folders…"
+#~ msgstr "폴더 검색…"
 
 #: src/renderer/views/ProjectSettingsOverlay/parts/ProjectIconPicker.tsx
 msgid "Search icons"
@@ -11504,6 +11676,10 @@ msgstr "플러그인 검색"
 msgid "Search plugins, skills, and servers..."
 msgstr "플러그인, 스킬, 서버 검색..."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search projects…"
+msgstr "프로젝트 검색…"
+
 #: src/renderer/views/PullRequestsView/PullRequestsView.tsx
 msgid "Search pull requests"
 msgstr "풀 리퀘스트 검색"
@@ -11523,6 +11699,10 @@ msgstr "런타임 항목 검색…"
 #: src/renderer/views/SchedulesView/SchedulesView.tsx
 msgid "Search scheduled tasks"
 msgstr "예약 작업 검색"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search sessions"
+msgstr "세션 검색"
 
 #: src/renderer/views/SettingsOverlay/parts/SettingsSidebar.tsx
 msgid "Search settings"
@@ -11558,6 +11738,11 @@ msgstr "스레드 검색"
 msgid "Search Threads"
 msgstr "스레드 검색"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search title or folder everywhere, message text in what's shown"
+msgstr ""
+
+#: src/renderer/components/sessionImport/SearchableSelect.tsx
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "Search…"
 msgstr "검색…"
@@ -11621,6 +11806,7 @@ msgid "Select account"
 msgstr "계정 선택"
 
 #: src/renderer/components/mcp/McpExternalImportModal.tsx
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 #: src/renderer/components/skills/SkillImportModal.tsx
 msgid "Select all"
 msgstr "모두 선택"
@@ -11982,6 +12168,10 @@ msgstr "음성 입력 버튼 표시"
 #: src/renderer/components/skills/SkillMarketplaceModal.tsx
 msgid "Showing {0, plural, one {# skill} other {# skills}}"
 msgstr "{0, plural, other {#개 스킬 표시 중}}"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Showing the 200 most recent — narrow the filters to see more"
+msgstr ""
 
 #: src/mobile/views/HostFolderPicker.tsx
 #: src/renderer/views/SettingsOverlay/parts/RemoteHostFolderPicker.tsx
@@ -12858,10 +13048,18 @@ msgstr "+를 탭하여 데스크톱에서 폴더를 추가하거나 저장소를
 #~ msgid "Tap + to pair with Poracode on your desktop."
 #~ msgstr "+를 탭하여 데스크톱의 Poracode와 페어링하세요."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Target account"
+msgstr "대상 계정"
+
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CreatePrModal.tsx
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/PrSection.tsx
 msgid "Target branch"
 msgstr "대상 브랜치"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Target project"
+msgstr "대상 프로젝트"
 
 #: src/renderer/views/MainView/parts/AppContent/parts/Thread/parts/ContinueInProviderDialog.tsx
 #~ msgid "Target provider"
@@ -13182,6 +13380,10 @@ msgstr "대기 중인 후속 메시지에 스레드 세션을 사용할 수 없�
 #: src/renderer/i18n/sharedMessages.ts
 msgid "The threads linked to this worktree changed. Refresh and try again."
 msgstr "이 worktree에 연결된 스레드가 변경되었습니다. 새로 고친 후 다시 시도하세요."
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "The transcript is copied into that account's home so it can resume the session. Sessions from the other provider keep their own account."
+msgstr "세션을 이어갈 수 있도록 대화 기록이 해당 계정의 홈에 복사됩니다. 다른 제공자의 세션은 원래 계정을 유지합니다."
 
 #: src/renderer/i18n/sharedMessages.ts
 msgid "The update operation failed."
@@ -13940,6 +14142,10 @@ msgstr "{agentLabel} 상태를 새로 고칠 수 없습니다."
 msgid "Unable to refresh Claude profiles."
 msgstr "Claude 프로필을 새로 고칠 수 없습니다."
 
+#: src/renderer/views/SettingsOverlay/parts/CodexProfileSettings.tsx
+msgid "Unable to refresh Codex profiles."
+msgstr "Codex 프로필을 새로 고칠 수 없습니다."
+
 #. placeholder {0}: agent.label
 #: src/renderer/views/SettingsOverlay/parts/SingleAgentSettings/SingleAgentSettings.tsx
 msgid "Unable to remove {0} credentials."
@@ -14158,6 +14364,10 @@ msgstr "{name} 제거"
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "Unknown"
 msgstr "알 수 없음"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "unknown folder"
+msgstr "알 수 없는 폴더"
 
 #: src/renderer/notifications.ts
 msgid "Unknown project"

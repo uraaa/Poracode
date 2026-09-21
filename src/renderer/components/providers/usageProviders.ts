@@ -4,8 +4,10 @@ import type { UsageSnapshot, UsageWindow } from "@poracode/agents-usage/types";
 import {
   baseAgentKind,
   claudeProfileKind,
+  codexProfileKind,
   cursorProfileKind,
   parseClaudeProfileInstanceConfig,
+  parseCodexProfileInstanceConfig,
   type AgentInstanceConfigMap,
 } from "@/shared/contracts";
 
@@ -173,6 +175,29 @@ function claudeProfileUsageProviders(
   return profiles;
 }
 
+function codexProfileUsageProviders(
+  agentInstances: AgentInstanceConfigMap | undefined,
+): UsageProvider[] {
+  if (!agentInstances) return [];
+  const profiles: UsageProvider[] = [];
+  for (const instance of Object.values(agentInstances)) {
+    if (instance.enabled === false || instance.driver !== "codex") continue;
+    try {
+      parseCodexProfileInstanceConfig(instance.config);
+    } catch {
+      continue;
+    }
+    const label = instance.displayName ?? instance.id;
+    profiles.push({
+      id: codexProfileKind(instance.id),
+      label: `Codex ${label}`,
+      ...rendererMeta("codex"),
+    });
+  }
+  profiles.sort((a, b) => a.label.localeCompare(b.label));
+  return profiles;
+}
+
 function cursorProfileUsageProviders(
   agentInstances: AgentInstanceConfigMap | undefined,
 ): UsageProvider[] {
@@ -197,14 +222,16 @@ export function usageProvidersForAgentInstances(
   agentInstances: AgentInstanceConfigMap | undefined,
 ): UsageProvider[] {
   const claudeProfiles = claudeProfileUsageProviders(agentInstances);
+  const codexProfiles = codexProfileUsageProviders(agentInstances);
   const cursorProfiles = cursorProfileUsageProviders(agentInstances);
-  if (claudeProfiles.length === 0 && cursorProfiles.length === 0) {
+  if (claudeProfiles.length === 0 && codexProfiles.length === 0 && cursorProfiles.length === 0) {
     return [...STATIC_USAGE_PROVIDERS];
   }
   const out: UsageProvider[] = [];
   for (const provider of STATIC_USAGE_PROVIDERS) {
     out.push(provider);
     if (provider.id === "claude") out.push(...claudeProfiles);
+    if (provider.id === "codex") out.push(...codexProfiles);
     if (provider.id === "cursor") out.push(...cursorProfiles);
   }
   return out;
