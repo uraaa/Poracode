@@ -512,6 +512,23 @@ describe("ImportSessionsPanel", () => {
     expect(screen.queryByText("fix the race condition")).not.toBeInTheDocument();
   });
 
+  it("shows a notice when the scan was cut at the page limit", async () => {
+    listImportableSessionsMock.mockResolvedValue({
+      ...found([session()]),
+      truncated: true,
+    });
+    render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
+
+    expect(await screen.findByText(/Showing the 200 most recent/iu)).toBeInTheDocument();
+  });
+
+  it("hides the truncation notice when every session fit", async () => {
+    render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
+
+    await screen.findByText("fix the race condition");
+    expect(screen.queryByText(/Showing the 200 most recent/iu)).not.toBeInTheDocument();
+  });
+
   it("reports a failed import without blocking the rest", async () => {
     listImportableSessionsMock.mockResolvedValue([
       session(),

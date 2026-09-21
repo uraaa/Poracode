@@ -351,6 +351,8 @@ export interface ImportScanFacets {
 export interface ImportScanResult {
   readonly sessions: ImportableSession[];
   readonly facets: ImportScanFacets;
+  /** Whether more sessions survived the filters than the page limit could hold. */
+  readonly truncated: boolean;
 }
 
 interface SessionCandidate {
@@ -461,9 +463,10 @@ export function scanImportableSessions(input: {
   };
 
   const limit = input.limit ?? DEFAULT_LIMIT;
+  const survivors = under(matchesProvider, matchesAccount, matchesCwd);
+  const truncated = survivors.length > limit;
   const sessions: ImportableSession[] = [];
-  for (const candidate of under(matchesProvider, matchesAccount, matchesCwd)) {
-    if (sessions.length >= limit) break;
+  for (const candidate of survivors.slice(0, limit)) {
     const { file, head } = candidate;
     const preview = readPreview(file);
     const title = titleFor(file, head.providerSessionId);
@@ -481,5 +484,5 @@ export function scanImportableSessions(input: {
       cwdExists: head.cwd !== undefined && cachedExists(head.cwd),
     });
   }
-  return { sessions, facets };
+  return { sessions, facets, truncated };
 }

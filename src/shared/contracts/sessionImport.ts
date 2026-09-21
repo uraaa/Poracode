@@ -90,6 +90,8 @@ export interface ImportSessionFacets {
 export interface ListImportableSessionsResult {
   sessions: ImportableSession[];
   facets: ImportSessionFacets;
+  /** Whether more sessions survived the filters than the page limit could hold. */
+  truncated: boolean;
 }
 
 export const importSessionTranscriptPayloadSchema = z.object({

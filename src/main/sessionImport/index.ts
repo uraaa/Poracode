@@ -47,7 +47,7 @@ export function listImportableSessions(
   deps: SessionImportDeps,
 ): ListImportableSessionsResult {
   const homes = resolveImportHomes(deps.readSharedSettings());
-  const { sessions, facets } = scanImportableSessions({
+  const { sessions, facets, truncated } = scanImportableSessions({
     homes,
     ...(payload.cwd ? { cwd: payload.cwd } : {}),
     ...(payload.provider ? { provider: payload.provider } : {}),
@@ -60,6 +60,7 @@ export function listImportableSessions(
       return threadId ? { ...session, importedThreadId: threadId } : session;
     }),
     facets,
+    truncated,
   };
 }
 

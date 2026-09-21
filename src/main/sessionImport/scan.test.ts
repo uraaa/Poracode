@@ -286,6 +286,38 @@ describe("scanImportableSessions", () => {
     expect(result.facets.folders).toEqual(expect.arrayContaining(["F:\\busy", "F:\\quiet"]));
   });
 
+  it("reports truncated when the page fills before the candidates run out", () => {
+    const homes: ImportHome[] = [
+      {
+        provider: "codex",
+        agentKind: "codex",
+        dir: codexHome([
+          { id: "cx-1", cwd: "F:\\repo", prompt: "one" },
+          { id: "cx-2", cwd: "F:\\repo", prompt: "two" },
+          { id: "cx-3", cwd: "F:\\repo", prompt: "three" },
+          { id: "cx-4", cwd: "F:\\repo", prompt: "four" },
+        ]),
+      },
+    ];
+
+    expect(scanImportableSessions({ homes, limit: 2 }).truncated).toBe(true);
+  });
+
+  it("reports not truncated when every matching session fit on the page", () => {
+    const homes: ImportHome[] = [
+      {
+        provider: "codex",
+        agentKind: "codex",
+        dir: codexHome([
+          { id: "cx-1", cwd: "F:\\repo", prompt: "one" },
+          { id: "cx-2", cwd: "F:\\repo", prompt: "two" },
+        ]),
+      },
+    ];
+
+    expect(scanImportableSessions({ homes, limit: 2 }).truncated).toBe(false);
+  });
+
   it("lists a session whose first user text is beyond the preview window", () => {
     const dir = mkdtempSync(join(tmpdir(), "poracode-scan-nopreview-"));
     const sessionsDir = join(dir, "sessions");

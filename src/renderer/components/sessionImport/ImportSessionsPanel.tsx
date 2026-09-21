@@ -66,6 +66,10 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
     accounts: [],
     folders: [],
   });
+  // Whether the last scan had to cut more sessions than the page limit could
+  // hold. The notice tells the user the list isn't the whole story instead of
+  // letting it quietly look complete.
+  const [truncated, setTruncated] = useState(false);
 
   // The scan applies these itself. Filtering client-side instead would only
   // ever see the newest page of sessions, so a folder whose conversations are
@@ -87,6 +91,7 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
         if (cancelled) return;
         setSessions(found.sessions);
         setFacets(found.facets);
+        setTruncated(found.truncated);
         setFilters((current) => reconcileFilters(current, found.facets));
       })
       .catch((error: unknown) => {
@@ -290,6 +295,12 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
           onChange={setProjectId}
         />
       </div>
+
+      {truncated ? (
+        <p className="text-[10px] text-muted">
+          <Trans>Showing the 200 most recent — narrow the filters to see more</Trans>
+        </p>
+      ) : null}
 
       <ul className="flex max-h-96 flex-col gap-1 overflow-y-auto">
         {visible.length === 0 ? (

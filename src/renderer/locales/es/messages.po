@@ -12165,6 +12165,10 @@ msgstr "Mostrar el botón de entrada de voz"
 msgid "Showing {0, plural, one {# skill} other {# skills}}"
 msgstr "Mostrando {0, plural, one {# skill} other {# skills}}"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Showing the 200 most recent — narrow the filters to see more"
+msgstr ""
+
 #: src/mobile/views/HostFolderPicker.tsx
 #: src/renderer/views/SettingsOverlay/parts/RemoteHostFolderPicker.tsx
 msgid "Showing the first 4,000 entries."
