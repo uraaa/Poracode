@@ -1,5 +1,6 @@
-import { readFileSync } from "node:fs";
+import { closeSync, openSync, readFileSync, readSync } from "node:fs";
 import { basename } from "node:path";
+import { StringDecoder } from "node:string_decoder";
 import {
   capMessageText,
   stripInjectedContext,
@@ -28,6 +29,39 @@ interface ClaudeHead {
  * so a message consisting only of one is dropped.
  */
 const INTERRUPTION_MARKER_RE = /^\s*\[Request interrupted by user(?: for tool use)?\]\s*$/u;
+
+const READ_CHUNK_BYTES = 64 * 1024;
+
+/**
+ * Yields lines from a file without holding the whole thing in memory: a
+ * chunk is read into a fixed buffer, decoded (`StringDecoder` carries a
+ * multi-byte character split across the chunk boundary), and split on `\n`,
+ * with the trailing partial line carried into the next chunk. At most one
+ * chunk plus one in-progress line is held at a time.
+ */
+function* readLinesSync(path: string): Generator<string> {
+  const fd = openSync(path, "r");
+  try {
+    const buffer = Buffer.alloc(READ_CHUNK_BYTES);
+    const decoder = new StringDecoder("utf8");
+    let remainder = "";
+    for (;;) {
+      const bytesRead = readSync(fd, buffer, 0, READ_CHUNK_BYTES, null);
+      if (bytesRead === 0) break;
+      remainder += decoder.write(buffer.subarray(0, bytesRead));
+      let newlineIndex = remainder.indexOf("\n");
+      while (newlineIndex !== -1) {
+        yield remainder.slice(0, newlineIndex);
+        remainder = remainder.slice(newlineIndex + 1);
+        newlineIndex = remainder.indexOf("\n");
+      }
+    }
+    remainder += decoder.end();
+    if (remainder.length > 0) yield remainder;
+  } finally {
+    closeSync(fd);
+  }
+}
 
 function parseLine(line: string): Record<string, unknown> | undefined {
   const trimmed = line.trim();
@@ -100,12 +134,11 @@ export function readClaudeSessionHead(path: string): ClaudeHead | undefined {
 }
 
 export function parseClaudeTranscript(path: string): ImportedTranscript {
-  const raw = readFileSync(path, "utf8");
   const transcript: ImportedTranscript = {
     providerSessionId: sessionIdFromFileName(path),
     messages: [],
   };
-  for (const line of raw.split(/\r?\n/u)) {
+  for (const line of readLinesSync(path)) {
     const entry = parseLine(line);
     if (!entry) continue;
     if (typeof entry["sessionId"] === "string") transcript.providerSessionId = entry["sessionId"];

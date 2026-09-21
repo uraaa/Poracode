@@ -158,4 +158,32 @@ describe("parseClaudeTranscript", () => {
     expect(only?.text.length).toBeLessThanOrEqual(MAX_IMPORTED_MESSAGE_CHARS);
     expect(only?.text.endsWith("[… truncated on import]")).toBe(true);
   });
+
+  it("handles CRLF line endings and a file with no trailing newline", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-claude-transcript-"));
+    const path = join(dir, "sess.jsonl");
+    const lines = [
+      JSON.stringify({ type: "user", message: { role: "user", content: "first" } }),
+      JSON.stringify({ type: "assistant", message: { role: "assistant", content: "second" } }),
+    ];
+    // Joined with CRLF, and no trailing newline after the last line.
+    writeFileSync(path, lines.join("\r\n"), "utf8");
+    expect(parseClaudeTranscript(path).messages.map((m) => m.text)).toEqual(["first", "second"]);
+  });
+
+  it("yields every message from a transcript of a few thousand lines, read across chunk boundaries", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-claude-transcript-"));
+    const path = join(dir, "sess.jsonl");
+    const lineCount = 4000;
+    const lines: string[] = [];
+    for (let i = 0; i < lineCount; i++) {
+      const role = i % 2 === 0 ? "user" : "assistant";
+      lines.push(JSON.stringify({ type: role, message: { role, content: `msg-${i}` } }));
+    }
+    writeFileSync(path, lines.join("\n"), "utf8");
+    const messages = parseClaudeTranscript(path).messages;
+    expect(messages).toHaveLength(lineCount);
+    expect(messages[0]?.text).toBe("msg-0");
+    expect(messages[lineCount - 1]?.text).toBe(`msg-${lineCount - 1}`);
+  });
 });
