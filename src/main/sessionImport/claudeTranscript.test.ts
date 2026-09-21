@@ -122,6 +122,21 @@ describe("parseClaudeTranscript", () => {
     expect(parseClaudeTranscript(path).messages.map((m) => m.text)).toEqual(["проверь ветку"]);
   });
 
+  it("leaves a task-notification-shaped string in assistant text verbatim", () => {
+    // stripInjectedContext only runs on the user role; assistant text is
+    // never stripped, even if it happens to contain a wrapper-shaped string.
+    const notification =
+      "<task-notification>\n<task-id>b6v1</task-id>\n<status>completed</status>\n</task-notification>";
+    const path = writeLog([
+      {
+        type: "assistant",
+        message: { role: "assistant", content: [{ type: "text", text: notification }] },
+      },
+    ]);
+
+    expect(parseClaudeTranscript(path).messages.map((m) => m.text)).toEqual([notification]);
+  });
+
   it("skips malformed lines and caps a runaway message", () => {
     const dir = mkdtempSync(join(tmpdir(), "poracode-claude-transcript-"));
     const path = join(dir, "sess.jsonl");
@@ -167,5 +182,40 @@ describe("parseClaudeTranscript", () => {
     expect(messages).toHaveLength(lineCount);
     expect(messages[0]?.text).toBe("msg-0");
     expect(messages[lineCount - 1]?.text).toBe(`msg-${lineCount - 1}`);
+  });
+
+  it("decodes a multi-byte character split exactly across the 64 KB read-chunk boundary", () => {
+    // readLinesSync reads the file through a fixed 64 KiB buffer and decodes
+    // it with StringDecoder specifically so a multi-byte UTF-8 character
+    // whose bytes land on either side of that boundary still decodes to one
+    // codepoint instead of being corrupted. Build a line whose single
+    // two-byte Cyrillic character ("б", 0xD0 0xB1) sits with its first byte
+    // as the very last byte of the first 64 KiB chunk and its second byte as
+    // the very first byte of the next chunk. NOTE: this test assumes the
+    // parser's internal read-chunk size is 64 KiB (65536 bytes); if that
+    // constant ever changes, the byte-offset arithmetic below must change
+    // with it.
+    const READ_CHUNK_BYTES = 64 * 1024;
+    const prefix = `{"type":"user","message":{"role":"user","content":"`;
+    const marker = "б"; // U+0431, 2-byte UTF-8 sequence
+    const suffix = 'END"}}';
+    // Everything in `prefix` and the padding is single-byte ASCII, so the
+    // character offset of `marker` in the raw file equals its byte offset.
+    const padLength = READ_CHUNK_BYTES - 1 - prefix.length;
+    expect(padLength).toBeGreaterThan(0);
+    const pad = "a".repeat(padLength);
+    const raw = prefix + pad + marker + suffix;
+    // Sanity-check the arithmetic: marker's first byte must be the last byte
+    // of chunk 1 (index READ_CHUNK_BYTES - 1), so its second byte is the
+    // first byte of chunk 2.
+    const markerByteOffset = Buffer.byteLength(prefix + pad, "utf8");
+    expect(markerByteOffset).toBe(READ_CHUNK_BYTES - 1);
+
+    const dir = mkdtempSync(join(tmpdir(), "poracode-claude-transcript-"));
+    const path = join(dir, "sess.jsonl");
+    writeFileSync(path, raw, "utf8");
+
+    const [only] = parseClaudeTranscript(path).messages;
+    expect(only?.text).toBe(pad + marker + "END");
   });
 });
