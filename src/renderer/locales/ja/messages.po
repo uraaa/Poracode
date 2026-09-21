@@ -11618,8 +11618,8 @@ msgid "Search branches..."
 msgstr "ブランチを検索..."
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
-msgid "Search by text or folder"
-msgstr "テキストまたはフォルダーで検索"
+#~ msgid "Search by text or folder"
+#~ msgstr "テキストまたはフォルダーで検索"
 
 #: src/mobile/views/FilesView.tsx
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
@@ -11735,6 +11735,10 @@ msgstr "スレッドを検索する"
 #: src/renderer/commands/registry.ts
 msgid "Search Threads"
 msgstr "スレッドの検索"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search title or folder everywhere, message text in what's shown"
+msgstr ""
 
 #: src/renderer/components/sessionImport/SearchableSelect.tsx
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx

@@ -71,6 +71,17 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
   // letting it quietly look complete.
   const [truncated, setTruncated] = useState(false);
 
+  // The query text the scan searches with, debounced so typing doesn't
+  // trigger a rescan (and the file reads that pay for it) on every keystroke.
+  // The panel's own `applyImportFilters` below still matches `filters.query`
+  // immediately against the returned page, so the visible list reacts at
+  // once even while the debounced scan is still catching up.
+  const [debouncedQuery, setDebouncedQuery] = useState(filters.query);
+  useEffect(() => {
+    const handle = setTimeout(() => setDebouncedQuery(filters.query), 200);
+    return () => clearTimeout(handle);
+  }, [filters.query]);
+
   // The scan applies these itself. Filtering client-side instead would only
   // ever see the newest page of sessions, so a folder whose conversations are
   // older than that page would look empty however far back its history goes.
@@ -80,8 +91,9 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
         ...(filters.provider === ALL ? {} : { provider: filters.provider }),
         ...(filters.account === ALL ? {} : { agentKind: filters.account }),
         ...(filters.folder === ALL ? {} : { cwd: filters.folder }),
+        ...(debouncedQuery ? { query: debouncedQuery } : {}),
       }),
-    [filters.account, filters.folder, filters.provider],
+    [filters.account, filters.folder, filters.provider, debouncedQuery],
   );
 
   useEffect(() => {
@@ -249,7 +261,7 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
         />
         <Input
           aria-label={t`Search sessions`}
-          placeholder={t`Search by text or folder`}
+          placeholder={t`Search title or folder everywhere, message text in what's shown`}
           className="min-w-40 flex-1 text-xs"
           value={filters.query}
           onChange={(event) => select({ query: event.target.value })}

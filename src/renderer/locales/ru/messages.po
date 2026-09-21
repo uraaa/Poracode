@@ -11620,8 +11620,8 @@ msgid "Search branches..."
 msgstr "Поиск веток..."
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
-msgid "Search by text or folder"
-msgstr "Поиск по тексту или папке"
+#~ msgid "Search by text or folder"
+#~ msgstr "Поиск по тексту или папке"
 
 #: src/mobile/views/FilesView.tsx
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
@@ -11737,6 +11737,10 @@ msgstr "Поиск тредов"
 #: src/renderer/commands/registry.ts
 msgid "Search Threads"
 msgstr "Поиск тредов"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search title or folder everywhere, message text in what's shown"
+msgstr "Поиск по названию или папке везде, по тексту сообщения — в показанном"
 
 #: src/renderer/components/sessionImport/SearchableSelect.tsx
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx

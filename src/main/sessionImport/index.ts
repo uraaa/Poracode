@@ -52,6 +52,7 @@ export function listImportableSessions(
     ...(payload.cwd ? { cwd: payload.cwd } : {}),
     ...(payload.provider ? { provider: payload.provider } : {}),
     ...(payload.agentKind ? { agentKind: payload.agentKind } : {}),
+    ...(payload.query ? { query: payload.query } : {}),
   });
   const { byPath, bySessionId } = importedThreads(deps.getThreads());
   return {

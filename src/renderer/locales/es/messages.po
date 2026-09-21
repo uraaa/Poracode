@@ -11620,8 +11620,8 @@ msgid "Search branches..."
 msgstr "Buscar ramas..."
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
-msgid "Search by text or folder"
-msgstr "Buscar por texto o carpeta"
+#~ msgid "Search by text or folder"
+#~ msgstr "Buscar por texto o carpeta"
 
 #: src/mobile/views/FilesView.tsx
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
@@ -11737,6 +11737,10 @@ msgstr "Buscar hilos"
 #: src/renderer/commands/registry.ts
 msgid "Search Threads"
 msgstr "Buscar hilos"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search title or folder everywhere, message text in what's shown"
+msgstr ""
 
 #: src/renderer/components/sessionImport/SearchableSelect.tsx
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx

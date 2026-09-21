@@ -1,6 +1,7 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import Database from "better-sqlite3";
 import { describe, expect, it } from "vitest";
 import { scanImportableSessions } from "./scan";
 import type { ImportHome } from "./homes";
@@ -316,6 +317,42 @@ describe("scanImportableSessions", () => {
     ];
 
     expect(scanImportableSessions({ homes, limit: 2 }).truncated).toBe(false);
+  });
+
+  it("matches the query against title and folder across every candidate, before the page is cut", () => {
+    const dir = codexHome([
+      { id: "cx-old", cwd: "F:\\repo", prompt: "first task" },
+      { id: "cx-new", cwd: "F:\\repo", prompt: "second task" },
+    ]);
+    const sessionsDir = join(dir, "sessions", "2026", "09", "20");
+    // The candidate pass sorts newest first; give "cx-new" the later mtime so
+    // a limit of 1 would return it unless the query predicate ran first.
+    utimesSync(
+      join(sessionsDir, "rollout-2026-09-20T04-43-18-cx-old.jsonl"),
+      new Date("2026-09-01T00:00:00.000Z"),
+      new Date("2026-09-01T00:00:00.000Z"),
+    );
+    utimesSync(
+      join(sessionsDir, "rollout-2026-09-20T04-43-18-cx-new.jsonl"),
+      new Date("2026-09-20T00:00:00.000Z"),
+      new Date("2026-09-20T00:00:00.000Z"),
+    );
+    // Only "cx-old" has a title containing "deploy"; "cx-new" does not match
+    // the query on title or folder.
+    const db = new Database(join(dir, "state_1.sqlite"));
+    db.exec("CREATE TABLE threads (id TEXT PRIMARY KEY, name TEXT, title TEXT)");
+    db.prepare("INSERT INTO threads (id, name, title) VALUES (?, ?, ?)").run(
+      "cx-old",
+      "Deploy the service",
+      null,
+    );
+    db.close();
+
+    const homes: ImportHome[] = [{ provider: "codex", agentKind: "codex", dir }];
+    const result = scanImportableSessions({ homes, query: "deploy", limit: 1 });
+
+    expect(result.sessions).toHaveLength(1);
+    expect(result.sessions[0]?.providerSessionId).toBe("cx-old");
   });
 
   it("lists a session whose first user text is beyond the preview window", () => {

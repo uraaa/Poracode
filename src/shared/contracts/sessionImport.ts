@@ -73,6 +73,8 @@ export const listImportableSessionsPayloadSchema = z.object({
   provider: importedSessionProviderSchema.optional(),
   /** Keep only sessions belonging to this agent kind (account or profile). */
   agentKind: z.string().min(1).optional(),
+  /** Matched case-insensitively against the session's title and folder. */
+  query: z.string().min(1).optional(),
 });
 export type ListImportableSessionsPayload = z.infer<typeof listImportableSessionsPayloadSchema>;
 

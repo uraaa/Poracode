@@ -11619,8 +11619,8 @@ msgid "Search branches..."
 msgstr "搜索分支..."
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
-msgid "Search by text or folder"
-msgstr "按文本或文件夹搜索"
+#~ msgid "Search by text or folder"
+#~ msgstr "按文本或文件夹搜索"
 
 #: src/mobile/views/FilesView.tsx
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
@@ -11736,6 +11736,10 @@ msgstr "搜索线程"
 #: src/renderer/commands/registry.ts
 msgid "Search Threads"
 msgstr "搜索线程"
+
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "Search title or folder everywhere, message text in what's shown"
+msgstr ""
 
 #: src/renderer/components/sessionImport/SearchableSelect.tsx
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx

@@ -373,6 +373,13 @@ export function scanImportableSessions(input: {
   cwd?: string;
   provider?: ImportedSessionProvider;
   agentKind?: string;
+  /**
+   * Matched case-insensitively against the title (the provider's own index,
+   * already cheap) and the folder — never the preview, which would cost a
+   * 512 KB read per candidate. Applied before the page is cut so it searches
+   * every session the filters allow, not just the returned page.
+   */
+  query?: string;
   limit?: number;
   /** Injectable so a scan can memoise or fake folder checks. Defaults to `existsSync`. */
   exists?: (path: string) => boolean;
@@ -404,6 +411,16 @@ export function scanImportableSessions(input: {
       codexTitlesByHome.set(file.home.dir, titles);
     }
     return titles.get(providerSessionId);
+  };
+  // The query predicate and the page-building loop below both want a
+  // candidate's title; memoised per candidate so a Claude session (whose
+  // title read is a small file read, not an indexed lookup) isn't read twice.
+  const titleCache = new Map<string, string | undefined>();
+  const cachedTitleFor = (candidate: SessionCandidate): string | undefined => {
+    if (!titleCache.has(candidate.id)) {
+      titleCache.set(candidate.id, titleFor(candidate.file, candidate.head.providerSessionId));
+    }
+    return titleCache.get(candidate.id);
   };
   const files: DiscoveredFile[] = [];
   for (const home of input.homes) {
@@ -443,6 +460,11 @@ export function scanImportableSessions(input: {
     !input.agentKind || candidate.agentKind === input.agentKind;
   const matchesCwd = (candidate: SessionCandidate) =>
     !input.cwd || samePath(candidate.head.cwd, input.cwd, platform);
+  const query = input.query?.trim().toLowerCase();
+  const matchesQuery = (candidate: SessionCandidate) =>
+    !query ||
+    (cachedTitleFor(candidate) ?? "").toLowerCase().includes(query) ||
+    (candidate.head.cwd ?? "").toLowerCase().includes(query);
 
   // Each facet offers the values that still have sessions under the *other*
   // filters, so picking a provider never leaves an unreachable folder listed.
@@ -463,13 +485,13 @@ export function scanImportableSessions(input: {
   };
 
   const limit = input.limit ?? DEFAULT_LIMIT;
-  const survivors = under(matchesProvider, matchesAccount, matchesCwd);
+  const survivors = under(matchesProvider, matchesAccount, matchesCwd, matchesQuery);
   const truncated = survivors.length > limit;
   const sessions: ImportableSession[] = [];
   for (const candidate of survivors.slice(0, limit)) {
     const { file, head } = candidate;
     const preview = readPreview(file);
-    const title = titleFor(file, head.providerSessionId);
+    const title = cachedTitleFor(candidate);
     sessions.push({
       id: candidate.id,
       provider: file.home.provider,
