@@ -195,7 +195,18 @@ export function ImportSessionsPanel(props: { initialFolder?: string; initialProj
     );
   }
 
-  if (sessions.length === 0) {
+  // "Nothing on this computer" is only true when nothing was asked for. Once
+  // a filter or a query is active an empty scan means "nothing matched", and
+  // replacing the panel would take the filter bar — and the input still
+  // holding the typed query — away with it, leaving no way back short of
+  // reopening the dialog. The list body already says "no matches" on its own.
+  const narrowed =
+    filters.provider !== ALL ||
+    filters.account !== ALL ||
+    filters.folder !== ALL ||
+    filters.query.trim().length > 0;
+
+  if (sessions.length === 0 && !narrowed) {
     return (
       <p className="py-6 text-center text-xs text-muted">
         <Trans>No Codex or Claude Code sessions found on this computer.</Trans>

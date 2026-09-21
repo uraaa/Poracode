@@ -561,6 +561,32 @@ describe("ImportSessionsPanel", () => {
     }
   });
 
+  it("keeps the filter bar and the search box when a query scans to nothing", async () => {
+    // Task 8 moved the query into the scan, so one keystroke can empty
+    // `sessions`. If that unmounts the panel, the input still holding the
+    // typed text goes with it and the only way back is to close the dialog.
+    render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
+    await screen.findByText("fix the race condition");
+
+    listImportableSessionsMock.mockResolvedValue([]);
+    fireEvent.change(screen.getByLabelText("Search sessions"), { target: { value: "zzz" } });
+    // Real timers: wait out the 400ms debounce and let the empty result land.
+    // Until it does, `sessions` still holds the mount's page and only the
+    // client-side filter has emptied the list body.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+    });
+    expect(listImportableSessionsMock).toHaveBeenCalledWith({ cwd: "F:\\repo", query: "zzz" });
+
+    expect(
+      screen.queryByText("No Codex or Claude Code sessions found on this computer."),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("No sessions match the current filters.")).toBeInTheDocument();
+    // The text is still there to clear, in the input that still holds it.
+    expect(screen.getByLabelText("Search sessions")).toHaveValue("zzz");
+    expect(screen.getByLabelText("Provider")).toBeInTheDocument();
+  });
+
   it("reports a failed import without blocking the rest", async () => {
     listImportableSessionsMock.mockResolvedValue([
       session(),
