@@ -13,6 +13,7 @@ import type { UsageSnapshot } from "@poracode/agents-usage/types";
 import { openUsagePanel } from "@/renderer/actions/panelActions";
 import { readBridge } from "@/renderer/bridge";
 import { ContextMenu, type ContextMenuEntry } from "@/renderer/components/common/ContextMenu";
+import { useAppStore } from "@/renderer/state/appStore";
 import { useProviderUsage, useProviderUsageStore } from "@/renderer/state/providerUsageStore";
 import { useSharedSettings } from "@/renderer/state/sharedSettingsStore";
 import { ProviderUsageCircle } from "./ProviderUsageCircle";
@@ -29,6 +30,7 @@ import {
   hasRailUsage,
   isClaudeUsageProvider,
   resolveDisplayedProviders,
+  resolveThreadUsageProviderId,
   usageRingGroups,
   usesSharedWindowReset,
   type UsageProvider,
@@ -60,6 +62,12 @@ const STRIP = {
     gap: RAIL_COLUMN_GAP,
   },
 } as const;
+
+// The ring of the provider the open thread runs on: a soft accent halo plus a
+// hairline so it reads at a glance without competing with the usage tones the
+// rings themselves carry. `ring-offset` keeps the halo clear of the outer ring.
+const CURRENT_RING_CLASS =
+  "bg-[color-mix(in_oklab,var(--accent)_16%,transparent)] ring-1 ring-[color-mix(in_oklab,var(--accent)_60%,transparent)] ring-offset-1 ring-offset-[var(--background)]";
 
 function statusText(
   providerId: string,
@@ -152,8 +160,14 @@ function UsageTooltipBody(props: {
   );
 }
 
-function ProviderUsageRailItem(props: { id: string; label: string; index: number; group: string }) {
-  const { id, label, index, group } = props;
+function ProviderUsageRailItem(props: {
+  id: string;
+  label: string;
+  index: number;
+  group: string;
+  current?: boolean;
+}) {
+  const { id, label, index, group, current } = props;
   const { t } = useLingui();
   const snapshot = useProviderUsage(id);
   const selectedRingGroups = useSharedSettings((s) => s.usage.selectedRingGroups);
@@ -180,7 +194,9 @@ function ProviderUsageRailItem(props: { id: string; label: string; index: number
             type="button"
             aria-label={t`${label} usage — open usage panel`}
             onClick={openUsagePanel}
-            className="cursor-grab rounded-full outline-none focus-visible:focus-ring active:cursor-grabbing"
+            className={`cursor-grab rounded-full outline-none focus-visible:focus-ring active:cursor-grabbing${
+              current ? ` ${CURRENT_RING_CLASS}` : ""
+            }`}
           >
             <ProviderUsageCircle
               kind={id}
@@ -221,6 +237,26 @@ function ProviderUsageRailItem(props: { id: string; label: string; index: number
   );
 }
 
+/**
+ * Provider id of the thread currently in view, resolved against the ids the rail
+ * actually renders — so the marker lands on a circle that exists. Mirrors the
+ * sidebar's optimistic highlight: a pending `openThread` switch wins over the
+ * committed pane so the ring moves on the same frame as the thread row.
+ */
+function useCurrentThreadProviderId(availableIds: readonly string[]): string | undefined {
+  const thread = useAppStore(
+    useShallow((s) => {
+      const id =
+        s.pendingActiveThreadId ?? (s.view.kind === "thread" ? s.view.panes[0] : undefined);
+      const found = id ? s.threads.find((t) => t.id === id) : undefined;
+      if (!found) return undefined;
+      return { agentKind: found.agentKind, agentInstanceId: found.agentInstanceId };
+    }),
+  );
+  if (!thread) return undefined;
+  return resolveThreadUsageProviderId(thread, availableIds);
+}
+
 type ReorderHandler = (orderedRenderedIds: readonly string[]) => void;
 
 /**
@@ -233,8 +269,9 @@ function UsageRailStrip(props: {
   shownCount: number;
   orientation: "row" | "column";
   onReorder: ReorderHandler;
+  currentProviderId?: string | undefined;
 }) {
-  const { providers, shownCount, orientation, onReorder } = props;
+  const { providers, shownCount, orientation, onReorder, currentProviderId } = props;
   const shown = providers.slice(0, shownCount);
   // Namespace the sortable group per orientation so the row + column instances
   // (one of which may be mounted but hidden) never share registrations.
@@ -258,7 +295,14 @@ function UsageRailStrip(props: {
     <DragDropProvider sensors={RAIL_SENSORS} onDragEnd={handleDragEnd}>
       <div className={STRIP[orientation].className} style={{ gap: STRIP[orientation].gap }}>
         {shown.map((p, index) => (
-          <ProviderUsageRailItem key={p.id} id={p.id} label={p.label} index={index} group={group} />
+          <ProviderUsageRailItem
+            key={p.id}
+            id={p.id}
+            label={p.label}
+            index={index}
+            group={group}
+            current={p.id === currentProviderId}
+          />
         ))}
         <UsageOverflowChip providers={providers.slice(shownCount)} />
       </div>
@@ -271,8 +315,12 @@ function UsageRailStrip(props: {
  * tooltip carries the rest. The row is measured rather than wrapped so the rail
  * keeps a fixed height as the sidebar is resized.
  */
-function UsageRailRow(props: { providers: readonly UsageProvider[]; onReorder: ReorderHandler }) {
-  const { providers, onReorder } = props;
+function UsageRailRow(props: {
+  providers: readonly UsageProvider[];
+  onReorder: ReorderHandler;
+  currentProviderId?: string | undefined;
+}) {
+  const { providers, onReorder, currentProviderId } = props;
   const rowRef = useRef<HTMLDivElement | null>(null);
   const [slots, setSlots] = useState(0);
 
@@ -309,6 +357,7 @@ function UsageRailRow(props: { providers: readonly UsageProvider[]; onReorder: R
           shownCount={fitUsageRail(slots, providers.length)}
           orientation="row"
           onReorder={onReorder}
+          currentProviderId={currentProviderId}
         />
       </div>
     </div>
@@ -361,6 +410,7 @@ export function ProviderUsageRail(props: { orientation?: "row" | "column" }) {
   const providers = allProviders.filter(
     (p, i) => !sidebarHiddenProviders.includes(p.id) && eligible[i],
   );
+  const currentProviderId = useCurrentThreadProviderId(providers.map((p) => p.id));
 
   if (!showInSidebar || providers.length === 0) return null;
 
@@ -382,8 +432,15 @@ export function ProviderUsageRail(props: { orientation?: "row" | "column" }) {
         shownCount={RAIL_COLUMN_MAX}
         orientation="column"
         onReorder={handleReorder}
+        currentProviderId={currentProviderId}
       />
     );
   }
-  return <UsageRailRow providers={providers} onReorder={handleReorder} />;
+  return (
+    <UsageRailRow
+      providers={providers}
+      onReorder={handleReorder}
+      currentProviderId={currentProviderId}
+    />
+  );
 }
