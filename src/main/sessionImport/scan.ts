@@ -127,6 +127,8 @@ interface SessionHead {
   readonly originator?: string;
   readonly source?: string;
   readonly threadSource?: string;
+  /** Claude: account the conversation belongs to (`ownerAccountUuid`). */
+  readonly accountId?: string;
 }
 
 function readHead(file: DiscoveredFile): SessionHead | undefined {
@@ -144,6 +146,8 @@ function readHead(file: DiscoveredFile): SessionHead | undefined {
   const originator = rawField(prefix, "originator");
   const source = rawField(prefix, "source");
   const threadSource = rawField(prefix, "thread_source");
+  const accountId =
+    file.home.provider === "claude" ? rawField(prefix, "ownerAccountUuid") : undefined;
   return {
     providerSessionId: id,
     ...(cwd ? { cwd } : {}),
@@ -151,7 +155,29 @@ function readHead(file: DiscoveredFile): SessionHead | undefined {
     ...(originator ? { originator } : {}),
     ...(source ? { source } : {}),
     ...(threadSource ? { threadSource } : {}),
+    ...(accountId ? { accountId } : {}),
   };
+}
+
+/**
+ * The account a session belongs to. Normally the home it was found in — but a
+ * Claude transcript names its owner, and Claude Desktop writes every
+ * conversation to the base home whatever login it holds. When that owner is a
+ * configured profile, the session is that profile's: it is listed under it and
+ * imports there (the transcript gets copied into the profile's home). The home
+ * the file sits in wins a tie, so a base-home session whose login also has a
+ * profile stays with the base home.
+ */
+function ownerAgentKind(
+  file: DiscoveredFile,
+  head: SessionHead,
+  homes: readonly ImportHome[],
+): string {
+  if (!head.accountId || file.home.accountId === head.accountId) return file.home.agentKind;
+  const owner = homes.find(
+    (home) => home.provider === file.home.provider && home.accountId === head.accountId,
+  );
+  return owner?.agentKind ?? file.home.agentKind;
 }
 
 /**
@@ -270,7 +296,7 @@ export function scanImportableSessions(input: {
     sessions.push({
       id,
       provider: file.home.provider,
-      agentKind: file.home.agentKind,
+      agentKind: ownerAgentKind(file, head, input.homes),
       providerSessionId: head.providerSessionId,
       path: file.path,
       ...(head.cwd ? { cwd: head.cwd } : {}),

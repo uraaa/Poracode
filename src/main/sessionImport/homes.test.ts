@@ -1,15 +1,47 @@
-import { homedir } from "node:os";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { defaultSharedSettings } from "@/shared/settings";
-import { resolveImportHomes } from "./homes";
+import { readClaudeAccountId, resolveImportHomes } from "./homes";
 
 describe("resolveImportHomes", () => {
   it("always includes the base Codex and Claude homes", () => {
     expect(resolveImportHomes(defaultSharedSettings)).toEqual([
       { provider: "codex", agentKind: "codex", dir: join(homedir(), ".codex") },
-      { provider: "claude", agentKind: "claude", dir: join(homedir(), ".claude") },
+      expect.objectContaining({
+        provider: "claude",
+        agentKind: "claude",
+        dir: join(homedir(), ".claude"),
+      }),
     ]);
+  });
+
+  it("reads a profile's Claude login from its config dir", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-claude-home-"));
+    writeFileSync(
+      join(dir, ".claude.json"),
+      JSON.stringify({ oauthAccount: { accountUuid: "acct-1", emailAddress: "a@b.c" } }),
+      "utf8",
+    );
+    expect(readClaudeAccountId(dir)).toBe("acct-1");
+
+    const empty = mkdtempSync(join(tmpdir(), "poracode-claude-empty-"));
+    mkdirSync(empty, { recursive: true });
+    expect(readClaudeAccountId(empty)).toBeUndefined();
+
+    const homes = resolveImportHomes({
+      ...defaultSharedSettings,
+      agentInstances: {
+        work: { id: "work", driver: "claude", displayName: "Work", config: { configDir: dir } },
+      },
+    });
+    expect(homes).toContainEqual({
+      provider: "claude",
+      agentKind: "claude:work",
+      dir,
+      accountId: "acct-1",
+    });
   });
 
   it("adds a home per enabled Codex and Claude profile, expanding ~/", () => {
@@ -35,11 +67,13 @@ describe("resolveImportHomes", () => {
       agentKind: "codex:work",
       dir: join(homedir(), ".poracode/codex-profiles/work"),
     });
-    expect(homes).toContainEqual({
-      provider: "claude",
-      agentKind: "claude:glm",
-      dir: "/abs/claude-glm",
-    });
+    expect(homes).toContainEqual(
+      expect.objectContaining({
+        provider: "claude",
+        agentKind: "claude:glm",
+        dir: "/abs/claude-glm",
+      }),
+    );
   });
 
   it("skips disabled profiles, other drivers, and malformed configs", () => {

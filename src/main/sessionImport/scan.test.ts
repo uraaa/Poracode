@@ -36,13 +36,23 @@ function codexHome(sessions: Array<{ id: string; cwd: string; prompt: string }>)
   return dir;
 }
 
-function claudeHome(sessions: Array<{ id: string; cwd: string; prompt: string }>): string {
+function claudeHome(
+  sessions: Array<{ id: string; cwd: string; prompt: string; owner?: string }>,
+): string {
   const dir = mkdtempSync(join(tmpdir(), "poracode-scan-claude-"));
   for (const session of sessions) {
     const projectDir = join(dir, "projects", session.cwd.replace(/[:\\/]/gu, "-"));
     mkdirSync(projectDir, { recursive: true });
-    writeFileSync(
-      join(projectDir, `${session.id}.jsonl`),
+    const lines = [
+      ...(session.owner
+        ? [
+            JSON.stringify({
+              type: "bridge-session",
+              sessionId: session.id,
+              ownerAccountUuid: session.owner,
+            }),
+          ]
+        : []),
       JSON.stringify({
         type: "user",
         sessionId: session.id,
@@ -50,8 +60,8 @@ function claudeHome(sessions: Array<{ id: string; cwd: string; prompt: string }>
         timestamp: "2026-09-20T05:00:00.000Z",
         message: { role: "user", content: session.prompt },
       }),
-      "utf8",
-    );
+    ];
+    writeFileSync(join(projectDir, `${session.id}.jsonl`), lines.join("\n"), "utf8");
   }
   return dir;
 }
@@ -137,6 +147,36 @@ describe("scanImportableSessions", () => {
     expect(
       scanImportableSessions({ homes, provider: "codex" }).every((s) => s.provider === "codex"),
     ).toBe(true);
+  });
+
+  it("lists a Claude session under the profile whose login owns it", () => {
+    const base = claudeHome([
+      { id: "cl-work", cwd: "F:\\repo", prompt: "work chat", owner: "acct-work" },
+      { id: "cl-mine", cwd: "F:\\repo", prompt: "my chat", owner: "acct-base" },
+      { id: "cl-other", cwd: "F:\\repo", prompt: "unknown owner", owner: "acct-nobody" },
+    ]);
+    const sessions = scanImportableSessions({
+      homes: [
+        { provider: "claude", agentKind: "claude", dir: base, accountId: "acct-base" },
+        {
+          provider: "claude",
+          agentKind: "claude:work",
+          dir: claudeHome([]),
+          accountId: "acct-work",
+        },
+        // A second profile on the base login must not steal the base home's own sessions.
+        {
+          provider: "claude",
+          agentKind: "claude:mine",
+          dir: claudeHome([]),
+          accountId: "acct-base",
+        },
+      ],
+    });
+    const kinds = Object.fromEntries(sessions.map((s) => [s.providerSessionId, s.agentKind]));
+    expect(kinds).toEqual({ "cl-work": "claude:work", "cl-mine": "claude", "cl-other": "claude" });
+    // The file stays where it is; the import copies it into the profile's home.
+    expect(sessions.find((s) => s.providerSessionId === "cl-work")?.path).toContain(base);
   });
 
   it("dedupes a session visible in two homes and skips missing directories", () => {

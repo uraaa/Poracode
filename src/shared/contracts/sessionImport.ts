@@ -41,7 +41,11 @@ export const importableSessionSchema = z.object({
    */
   id: z.string().min(1),
   provider: importedSessionProviderSchema,
-  /** Agent kind owning the home this was found in (`codex`, `codex:work`, …). */
+  /**
+   * Account the session belongs to (`codex`, `codex:work`, `claude:work`, …):
+   * the home it was found in, or for Claude the profile whose login owns it
+   * even when the transcript sits in another home.
+   */
   agentKind: z.string().min(1),
   providerSessionId: z.string().min(1),
   path: z.string().min(1),
@@ -74,9 +78,8 @@ export const importSessionTranscriptPayloadSchema = z.object({
   provider: importedSessionProviderSchema,
   path: z.string().min(1),
   /**
-   * Agent kind the thread runs under when it differs from the home the
-   * transcript was found in. The transcript is copied into that kind's home
-   * first so the provider can resume it there.
+   * Agent kind the thread runs under. When the transcript lives outside that
+   * kind's home it is copied there first, so the provider can resume it.
    */
   targetAgentKind: z.string().min(1).optional(),
 });

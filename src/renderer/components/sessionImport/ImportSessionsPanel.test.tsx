@@ -243,6 +243,7 @@ describe("ImportSessionsPanel", () => {
       threadId: "new-thread",
       provider: "codex",
       path: "F:\\home\\.codex\\sessions\\rollout-cx-1.jsonl",
+      targetAgentKind: "codex",
     });
     await vi.waitFor(() => expect(toastMock.success).toHaveBeenCalled());
     // A pane opened mid-import must re-read the replayed transcript.
@@ -297,6 +298,7 @@ describe("ImportSessionsPanel", () => {
       threadId: "claude-thread",
       provider: "claude",
       path: "F:\\home\\.claude\\projects\\F--repo\\cl-1.jsonl",
+      targetAgentKind: "claude",
     });
   });
 

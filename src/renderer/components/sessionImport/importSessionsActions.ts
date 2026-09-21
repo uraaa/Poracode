@@ -163,9 +163,9 @@ export async function importSessions(input: {
         threadId: thread.id,
         provider: session.provider,
         path: session.path,
-        // Another account's home needs its own copy of the transcript before
-        // that account can resume the session.
-        ...(agentKind !== session.agentKind ? { targetAgentKind: agentKind } : {}),
+        // The account's home needs its own copy of the transcript before it
+        // can resume the session; main skips the copy when it already has it.
+        targetAgentKind: agentKind,
       });
       // The replay wrote straight to SQLite; a pane opened meanwhile hydrated
       // an empty transcript and has to read it again.
