@@ -175,11 +175,18 @@ export async function importSessions(input: {
       });
       // Importing under another account can copy the transcript into that
       // account's home; the thread must resume the copy it actually holds,
-      // not the original it was imported from.
+      // not the original it was imported from. Replaying a large transcript
+      // takes time, and the user could open this thread and change its
+      // config (e.g. the model) during the await above; `updateThreadConfig`
+      // replaces the whole config, so merge onto the *live* config read right
+      // now, not the snapshot captured before the await, or a concurrent edit
+      // would be silently discarded.
       if (resumePath !== session.path) {
+        const liveConfig =
+          useAppStore.getState().threads.find((entry) => entry.id === thread.id)?.config ?? config;
         store.updateThreadConfig(thread.id, {
-          ...config,
-          importedFrom: { ...config.importedFrom, path: resumePath },
+          ...liveConfig,
+          importedFrom: { ...(liveConfig.importedFrom ?? config.importedFrom), path: resumePath },
         });
       }
       // The replay wrote straight to SQLite; a pane opened meanwhile hydrated

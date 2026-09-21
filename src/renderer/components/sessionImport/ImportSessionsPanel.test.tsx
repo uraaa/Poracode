@@ -118,6 +118,9 @@ const addProjectWithResultMock = vi.hoisted(() =>
 );
 const storeState = {
   projects: [{ id: "p1", name: "repo", location: { kind: "windows", path: "F:\\repo" } }],
+  // Read directly by the write-back path to merge onto the *live* config
+  // rather than a pre-await snapshot; tests that care about it populate this.
+  threads: [] as Thread[],
   createThread: createThreadMock,
   updateThreadRuntime: updateThreadRuntimeMock,
   updateThreadConfig: updateThreadConfigMock,
@@ -195,14 +198,18 @@ function session(overrides: Partial<ImportableSession> = {}): ImportableSession 
 
 beforeEach(() => {
   listImportableSessionsMock.mockReset().mockResolvedValue([session()]);
-  importSessionTranscriptMock
-    .mockReset()
-    .mockResolvedValue({ messageCount: 4, path: "F:\\home\\.codex\\sessions\\rollout.jsonl" });
+  importSessionTranscriptMock.mockReset().mockResolvedValue({
+    messageCount: 4,
+    // Matches the default session()'s own path: the write-back only fires on
+    // a mismatch, so tests that don't mean to exercise it shouldn't trip it.
+    path: "F:\\home\\.codex\\sessions\\rollout-cx-1.jsonl",
+  });
   createThreadMock.mockReset().mockReturnValue({ id: "new-thread" } as Thread);
   updateThreadRuntimeMock.mockReset();
   updateThreadConfigMock.mockReset();
   deleteThreadMock.mockReset();
   deleteProjectMock.mockReset();
+  storeState.threads = [];
   addProjectWithResultMock
     .mockReset()
     .mockImplementation(() => ({ project: { id: "p-new" }, created: true }));
@@ -312,6 +319,40 @@ describe("ImportSessionsPanel", () => {
     await vi.waitFor(() => expect(toastMock.success).toHaveBeenCalled());
     // A pane opened mid-import must re-read the replayed transcript.
     expect(rehydrateThreadRuntimeItemsMock).toHaveBeenCalledWith("new-thread");
+  });
+
+  it("keeps a config change made while the transcript replay was in flight", async () => {
+    // Replaying a large transcript takes time; the user can open the new
+    // thread and change its config (e.g. the model) before the write-back of
+    // the resumed path lands. `updateThreadConfig` replaces the whole config,
+    // so the write-back must merge onto the *live* config, not a snapshot
+    // taken before the await — or the concurrent edit is silently discarded.
+    importSessionTranscriptMock.mockImplementation(async () => {
+      // Simulate the user editing the thread's config mid-replay.
+      storeState.threads = [
+        {
+          id: "new-thread",
+          config: { model: "user-picked-model", mode: "plan" },
+        } as unknown as Thread,
+      ];
+      return { messageCount: 4, path: "F:\\home\\.codex\\work\\sessions\\rollout-cx-1.jsonl" };
+    });
+    render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
+    fireEvent.click(await screen.findByRole("checkbox", { name: /fix the race condition/iu }));
+    fireEvent.click(screen.getByRole("button", { name: /import 1 session/iu }));
+
+    await vi.waitFor(() => expect(updateThreadConfigMock).toHaveBeenCalled());
+    expect(updateThreadConfigMock).toHaveBeenCalledExactlyOnceWith(
+      "new-thread",
+      expect.objectContaining({
+        // The concurrent edit survives the write-back.
+        model: "user-picked-model",
+        mode: "plan",
+        importedFrom: expect.objectContaining({
+          path: "F:\\home\\.codex\\work\\sessions\\rollout-cx-1.jsonl",
+        }),
+      }),
+    );
   });
 
   it("imports under another account of the same provider and copies the transcript", async () => {

@@ -156,6 +156,37 @@ describe("importSessionTranscript", () => {
     ).toThrow(/already imported/iu);
   });
 
+  it("does not match the target thread against its own just-stamped path and session id", () => {
+    // The renderer sets `config.importedFrom.path` and
+    // `sessionRef.providerSessionId` on the target thread *before* calling
+    // in, so by the time the duplicate check runs, the thread being imported
+    // into already carries the very path and session id it is about to
+    // import. Excluding it from the check is what makes this succeed.
+    const { path } = codexHomeWith("cx-self", "F:\\repo", "hello");
+    const applied: RuntimeEvent[] = [];
+    const flushRuntimeWrites = vi.fn<(threadId: string) => void>();
+    const selfStamped = thread({
+      id: "t1",
+      config: {
+        model: "gpt-5.5",
+        importedFrom: { provider: "codex", path, importedAt: "2026-09-20T06:00:00.000Z" },
+      },
+      sessionRef: { providerSessionId: "cx-self", discoveredAt: "2026-09-20T06:00:00.000Z" },
+    });
+
+    const result = importSessionTranscript(
+      { threadId: "t1", provider: "codex", path },
+      {
+        readSharedSettings: () => defaultSharedSettings,
+        getThreads: () => [selfStamped],
+        applyRuntimeEvents: (_threadId, events) => applied.push(...events),
+        flushRuntimeWrites,
+      },
+    );
+
+    expect(result).toEqual({ messageCount: 2, path });
+  });
+
   it("replays the transcript into the thread and reports the message count", () => {
     const { path } = codexHomeWith("cx-2", "F:\\repo", "hello");
     const applied: RuntimeEvent[] = [];
