@@ -134,17 +134,18 @@ export async function importSessions(input: {
         continue;
       }
       const agentKind = resolveImportAgentKind(session, input.targetAgentKind);
+      const config = {
+        model: resolveImportModel(session, projectId, agentKind),
+        importedFrom: {
+          provider: session.provider,
+          path: session.path,
+          importedAt: new Date().toISOString(),
+        },
+      };
       const thread = store.createThread({
         projectId,
         agentKind,
-        config: {
-          model: resolveImportModel(session, projectId, agentKind),
-          importedFrom: {
-            provider: session.provider,
-            path: session.path,
-            importedAt: new Date().toISOString(),
-          },
-        },
+        config,
         prompt: "",
         title: titleFor(session),
         // The replayed transcript lives in runtime items, which only the chat
@@ -164,7 +165,7 @@ export async function importSessions(input: {
           discoveredAt: new Date().toISOString(),
         },
       });
-      await readBridge().importSessionTranscript({
+      const { path: resumePath } = await readBridge().importSessionTranscript({
         threadId: thread.id,
         provider: session.provider,
         path: session.path,
@@ -172,6 +173,15 @@ export async function importSessions(input: {
         // can resume the session; main skips the copy when it already has it.
         targetAgentKind: agentKind,
       });
+      // Importing under another account can copy the transcript into that
+      // account's home; the thread must resume the copy it actually holds,
+      // not the original it was imported from.
+      if (resumePath !== session.path) {
+        store.updateThreadConfig(thread.id, {
+          ...config,
+          importedFrom: { ...config.importedFrom, path: resumePath },
+        });
+      }
       // The replay wrote straight to SQLite; a pane opened meanwhile hydrated
       // an empty transcript and has to read it again.
       await rehydrateThreadRuntimeItems(thread.id);

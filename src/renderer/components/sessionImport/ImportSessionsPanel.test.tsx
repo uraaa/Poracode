@@ -104,6 +104,7 @@ vi.mock("@/renderer/bridge", () => ({
 
 const createThreadMock = vi.hoisted(() => vi.fn<(input: unknown) => Thread>());
 const updateThreadRuntimeMock = vi.hoisted(() => vi.fn<(id: string, input: unknown) => void>());
+const updateThreadConfigMock = vi.hoisted(() => vi.fn<(id: string, config: unknown) => void>());
 const deleteThreadMock = vi.hoisted(() => vi.fn<(id: string) => void>());
 const deleteProjectMock = vi.hoisted(() => vi.fn<(id: string) => void>());
 const addProjectWithResultMock = vi.hoisted(() =>
@@ -119,6 +120,7 @@ const storeState = {
   projects: [{ id: "p1", name: "repo", location: { kind: "windows", path: "F:\\repo" } }],
   createThread: createThreadMock,
   updateThreadRuntime: updateThreadRuntimeMock,
+  updateThreadConfig: updateThreadConfigMock,
   addProjectWithResult: addProjectWithResultMock,
   deleteThread: deleteThreadMock,
   deleteProject: deleteProjectMock,
@@ -198,6 +200,7 @@ beforeEach(() => {
     .mockResolvedValue({ messageCount: 4, path: "F:\\home\\.codex\\sessions\\rollout.jsonl" });
   createThreadMock.mockReset().mockReturnValue({ id: "new-thread" } as Thread);
   updateThreadRuntimeMock.mockReset();
+  updateThreadConfigMock.mockReset();
   deleteThreadMock.mockReset();
   deleteProjectMock.mockReset();
   addProjectWithResultMock
@@ -326,6 +329,14 @@ describe("ImportSessionsPanel", () => {
     createThreadMock
       .mockReturnValueOnce({ id: "codex-thread" } as Thread)
       .mockReturnValueOnce({ id: "claude-thread" } as Thread);
+    // The copy into the work account's home lands at a different path than
+    // the one sent; the claude session isn't copied, so its path is unchanged.
+    importSessionTranscriptMock.mockImplementation(async (payload) => {
+      const { path, targetAgentKind } = payload as { path: string; targetAgentKind: string };
+      return targetAgentKind === "codex:work"
+        ? { messageCount: 4, path: "F:\\home\\.codex\\work\\sessions\\rollout-cx-1.jsonl" }
+        : { messageCount: 4, path };
+    });
     render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
 
     const target = await screen.findByLabelText("Target account");
@@ -361,6 +372,18 @@ describe("ImportSessionsPanel", () => {
       path: "F:\\home\\.claude\\projects\\F--repo\\cl-1.jsonl",
       targetAgentKind: "claude",
     });
+    // The thread must resume the copy it actually holds, not the original
+    // it was imported from. The claude session wasn't copied, so its config
+    // is left untouched.
+    expect(updateThreadConfigMock).toHaveBeenCalledExactlyOnceWith(
+      "codex-thread",
+      expect.objectContaining({
+        importedFrom: expect.objectContaining({
+          provider: "codex",
+          path: "F:\\home\\.codex\\work\\sessions\\rollout-cx-1.jsonl",
+        }),
+      }),
+    );
   });
 
   it("creates a project for an unknown folder and files it into the active workspace", async () => {
