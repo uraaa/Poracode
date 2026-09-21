@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ImportableSession, ImportedSessionProvider } from "@/shared/contracts";
+
+// The folder comparison follows the host's rule, exactly as the scan's does.
+const host = vi.hoisted(() => ({ windows: true }));
+vi.mock("@/renderer/bridge", () => ({ isWindows: () => host.windows }));
+
 import {
   ALL,
   applyImportFilters,
@@ -93,6 +98,53 @@ describe("reconcileFilters", () => {
     expect(
       reconcileFilters({ provider: "codex", account: "claude", folder: ALL, query: "bet" }, facets),
     ).toEqual({ provider: "codex", account: "claude", folder: ALL, query: "bet" });
+  });
+});
+
+describe("folder comparison", () => {
+  // `ImportSessionsDialog` seeds the folder filter from a *project* path,
+  // which routinely differs from the transcript's recorded `cwd` by
+  // drive-letter case or a trailing separator. The scan already treats those
+  // as the same folder; comparing exactly here hid every session the scan
+  // had just returned for that project.
+  it("keeps a session whose cwd differs only by case or a trailing separator", () => {
+    const here = session({ id: "here", cwd: "F:\\repo" });
+    expect(
+      applyImportFilters([here], { ...EMPTY_FILTERS, folder: "f:\\repo\\" }).map((s) => s.id),
+    ).toEqual(["here"]);
+    expect(
+      applyImportFilters([here], { ...EMPTY_FILTERS, folder: "F:/repo" }).map((s) => s.id),
+    ).toEqual(["here"]);
+  });
+
+  it("still tells two different folders apart", () => {
+    const here = session({ id: "here", cwd: "F:\\repo" });
+    expect(applyImportFilters([here], { ...EMPTY_FILTERS, folder: "F:\\other" })).toEqual([]);
+  });
+
+  it("is case-sensitive off win32, where two folders can differ only by case", () => {
+    host.windows = false;
+    try {
+      const upper = session({ id: "upper", cwd: "/home/u/Repo" });
+      expect(applyImportFilters([upper], { ...EMPTY_FILTERS, folder: "/home/u/repo" })).toEqual([]);
+      expect(
+        applyImportFilters([upper], { ...EMPTY_FILTERS, folder: "/home/u/Repo/" }).map((s) => s.id),
+      ).toEqual(["upper"]);
+    } finally {
+      host.windows = true;
+    }
+  });
+
+  it("adopts the scan's spelling of a folder rather than dropping the selection", () => {
+    // Reconciling by exact membership reset the folder to "All projects",
+    // so a dialog opened for one project silently listed every session on
+    // the machine.
+    expect(
+      reconcileFilters(
+        { ...EMPTY_FILTERS, folder: "f:\\repo\\" },
+        { providers: [], accounts: [], folders: ["F:\\repo"] },
+      ).folder,
+    ).toBe("F:\\repo");
   });
 });
 

@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { basename, join } from "node:path";
 import type { ImportableSession, ImportedSessionProvider } from "@/shared/contracts";
+import { isSameFolderPath } from "@/shared/pathUtils";
 import type { ImportHome } from "./homes";
 import { readClaudeTitle, readCodexTitles } from "./titles";
 import { stripInjectedContext } from "./transcript";
@@ -423,26 +424,6 @@ function readPreview(file: DiscoveredFile): string {
 }
 
 /**
- * Windows folder paths are case-insensitive; POSIX ones are not — a
- * case-sensitive volume genuinely has `/home/u/Repo` and `/home/u/repo` as two
- * different folders. `platform` is injectable so both branches are testable
- * on any machine.
- */
-function samePath(
-  left: string | undefined,
-  right: string | undefined,
-  platform: NodeJS.Platform,
-): boolean {
-  if (!left || !right) return false;
-  const normalize = (value: string) => value.replace(/[\\/]+$/u, "").replace(/\\/gu, "/");
-  const normalizedLeft = normalize(left);
-  const normalizedRight = normalize(right);
-  return platform === "win32"
-    ? normalizedLeft.localeCompare(normalizedRight, undefined, { sensitivity: "accent" }) === 0
-    : normalizedLeft === normalizedRight;
-}
-
-/**
  * Discover importable transcripts across the given homes, newest first. Never
  * throws: an unreadable file or a missing home is skipped so one bad session
  * cannot hide the rest of a user's history.
@@ -566,7 +547,7 @@ export function scanImportableSessions(input: {
   const matchesAccount = (candidate: SessionCandidate) =>
     !input.agentKind || candidate.agentKind === input.agentKind;
   const matchesCwd = (candidate: SessionCandidate) =>
-    !input.cwd || samePath(candidate.head.cwd, input.cwd, platform);
+    !input.cwd || isSameFolderPath(candidate.head.cwd, input.cwd, platform === "win32");
   const query = input.query?.trim().toLowerCase();
   // The folder is already in memory — free to test. Only fall through to the
   // title, a real file read for Claude, when the folder didn't already match.

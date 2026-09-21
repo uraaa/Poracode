@@ -235,6 +235,18 @@ describe("ImportSessionsPanel", () => {
     expect(screen.getByLabelText("Target project")).toHaveValue("p1");
   });
 
+  it("lists the project's sessions when the seeded folder is spelled differently", async () => {
+    // The dialog seeds `initialFolder` from a *project* path; the transcript
+    // records its own `cwd`. The two routinely differ by drive-letter case or
+    // a trailing separator, and the scan already treats them as one folder.
+    render(<ImportSessionsPanel initialFolder={"f:\\repo\\"} initialProjectId="p1" />);
+
+    expect(await screen.findByText("fix the race condition")).toBeInTheDocument();
+    // …and the selection survives as the folder the scan reported it as,
+    // instead of falling back to "All projects".
+    expect(screen.getByLabelText("Project")).toHaveValue("F:\\repo");
+  });
+
   it("scans for the folder it is filtered to, not for everything", async () => {
     render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
 

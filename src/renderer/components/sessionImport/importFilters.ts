@@ -3,6 +3,8 @@ import type {
   ImportableSession,
   ImportedSessionProvider,
 } from "@/shared/contracts";
+import { isSameFolderPath } from "@/shared/pathUtils";
+import { isWindows } from "@/renderer/bridge";
 
 /**
  * Faceted filtering over discovered sessions. Each dropdown offers only the
@@ -30,7 +32,11 @@ function matches(session: ImportableSession, filters: ImportFilters, skip?: Face
   if (skip !== "account" && filters.account !== ALL && session.agentKind !== filters.account) {
     return false;
   }
-  if (skip !== "folder" && filters.folder !== ALL && session.cwd !== filters.folder) {
+  if (
+    skip !== "folder" &&
+    filters.folder !== ALL &&
+    !isSameFolderPath(session.cwd, filters.folder, isWindows())
+  ) {
     return false;
   }
   const needle = filters.query.trim().toLowerCase();
@@ -84,11 +90,19 @@ export function reconcileFilters(
 ): ImportFilters {
   const keep = <T extends string>(value: T, valid: readonly string[]): T | typeof ALL =>
     value === ALL || valid.includes(value) ? value : ALL;
+  // The folder can arrive spelled differently from the way the transcripts
+  // record it — the dialog seeds it from a project path — so it is matched
+  // the way the scan matches it, and the scan's own spelling is adopted so
+  // the dropdown can show the selection as one of its options.
+  const keepFolder = (value: string): string =>
+    value === ALL
+      ? value
+      : (facets.folders.find((folder) => isSameFolderPath(folder, value, isWindows())) ?? ALL);
   return {
     ...filters,
     provider: keep(filters.provider, facets.providers),
     account: keep(filters.account, facets.accounts),
-    folder: keep(filters.folder, facets.folders),
+    folder: keepFolder(filters.folder),
   };
 }
 
