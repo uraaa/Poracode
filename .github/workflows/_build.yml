@@ -189,8 +189,27 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
-      - name: Package macOS
+      # A checkout without Apple credentials cannot produce a macOS build worth
+      # shipping: electron-builder reads an empty CSC_LINK as a certificate path
+      # and dies with "not a file", and the verification below requires a
+      # Developer ID signature outright. Detect that once and skip the macOS
+      # package instead, so a fork still gets its Windows and Linux installers.
+      - name: Detect macOS signing credentials
         if: matrix.platform == 'mac'
+        run: |
+          if [ -n "${MAC_CSC_LINK:-}" ] && [ -n "${APPLE_TEAM_ID:-}" ]; then
+            echo "MAC_SIGNING=yes" >> "$GITHUB_ENV"
+          else
+            echo "MAC_SIGNING=no" >> "$GITHUB_ENV"
+            echo "::notice::No macOS signing credentials configured; skipping the macOS package."
+          fi
+        shell: bash
+        env:
+          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Package macOS
+        if: matrix.platform == 'mac' && env.MAC_SIGNING == 'yes'
         run: |
           pnpm run prepare:package-assets
           node scripts/build-desktop-artifact.mjs --platform mac --skip-build
@@ -207,7 +226,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Verify macOS app bundles and updater ZIPs
-        if: matrix.platform == 'mac'
+        if: matrix.platform == 'mac' && env.MAC_SIGNING == 'yes'
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -292,6 +311,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Upload built artifacts
+        if: matrix.platform != 'mac' || env.MAC_SIGNING == 'yes'
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
