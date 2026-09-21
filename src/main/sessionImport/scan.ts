@@ -366,7 +366,6 @@ export function scanImportableSessions(input: {
     if (sessions.length >= limit) break;
     const { file, head } = candidate;
     const preview = readPreview(file);
-    if (preview.length === 0) continue;
     const title = titleFor(file, head.providerSessionId);
     sessions.push({
       id: candidate.id,

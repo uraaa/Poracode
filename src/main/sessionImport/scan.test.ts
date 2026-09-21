@@ -195,7 +195,10 @@ describe("scanImportableSessions", () => {
     const dir = mkdtempSync(join(tmpdir(), "poracode-scan-bad-"));
     const sessionsDir = join(dir, "sessions");
     mkdirSync(sessionsDir, { recursive: true });
-    writeFileSync(join(sessionsDir, "rollout-broken.jsonl"), "{ not json", "utf8");
+    // Empty on disk (e.g. a crash mid-write): no head can be recovered at all,
+    // unlike a session whose preview alone is out of reach (see the "beyond the
+    // preview window" case above), so this one is dropped rather than listed.
+    writeFileSync(join(sessionsDir, "rollout-broken.jsonl"), "", "utf8");
     expect(
       scanImportableSessions({ homes: [{ provider: "codex", agentKind: "codex", dir }] }).sessions,
     ).toEqual([]);
@@ -267,5 +270,43 @@ describe("scanImportableSessions", () => {
 
     expect(result.sessions).toHaveLength(2);
     expect(result.facets.folders).toEqual(expect.arrayContaining(["F:\\busy", "F:\\quiet"]));
+  });
+
+  it("lists a session whose first user text is beyond the preview window", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-scan-nopreview-"));
+    const sessionsDir = join(dir, "sessions");
+    mkdirSync(sessionsDir, { recursive: true });
+    writeFileSync(
+      join(sessionsDir, "rollout-cx-quiet.jsonl"),
+      [
+        JSON.stringify({
+          type: "session_meta",
+          payload: {
+            session_id: "cx-quiet",
+            cwd: "F:\\repo",
+            timestamp: "2026-09-20T04:43:18.000Z",
+          },
+        }),
+        // A turn of pure injected context: stripping leaves nothing.
+        JSON.stringify({
+          type: "response_item",
+          payload: {
+            type: "message",
+            role: "user",
+            content: [
+              { type: "input_text", text: "<recommended_plugins>catalogue</recommended_plugins>" },
+            ],
+          },
+        }),
+      ].join("\n"),
+      "utf8",
+    );
+
+    const { sessions } = scanImportableSessions({
+      homes: [{ provider: "codex", agentKind: "codex", dir }],
+    });
+
+    expect(sessions.map((s) => s.providerSessionId)).toEqual(["cx-quiet"]);
+    expect(sessions[0]?.preview).toBe("");
   });
 });
