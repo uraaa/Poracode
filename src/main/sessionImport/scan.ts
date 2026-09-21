@@ -183,13 +183,39 @@ function unescapeJsonString(raw: string): string | undefined {
 }
 
 /**
- * Pull a JSON string field out of raw text. Regex rather than `JSON.parse`
- * because a head chunk can cut a line in half — Codex's `session_meta` carries
- * the whole system prompt and runs past any sane chunk size.
+ * Pull a JSON string field out of raw text with a regex rather than
+ * `JSON.parse`. Used only as the fallback for a head chunk's final line when
+ * that line fails to parse — either because the chunk boundary cut it in
+ * half (Codex's `session_meta` carries the whole system prompt and can run
+ * past any sane chunk size) or because the file itself ends mid-write. The
+ * closing-quote requirement means a value cut mid-string comes back
+ * `undefined` rather than a partial value either way.
  */
 function rawField(text: string, field: string): string | undefined {
   const match = new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`, "u").exec(text);
   return match?.[1] === undefined ? undefined : unescapeJsonString(match[1]);
+}
+
+/** A line's parsed JSON, only when it's a non-null, non-array object. */
+function parseJsonRecord(line: string): Record<string, unknown> | undefined {
+  try {
+    const parsed: unknown = JSON.parse(line);
+    return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function stringField(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function objectField(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
 }
 
 interface SessionHead {
@@ -223,52 +249,109 @@ interface RawHeadFields {
 /**
  * Codex's `session_meta` is always the first line of a rollout and is the
  * only record carrying `session_id` / `cwd` / `timestamp` / `originator` /
- * `source` / `thread_source`. Scanning only that line — rather than the whole
- * head chunk — means nothing a user typed in a later message (which can
- * itself look like JSON) can be mistaken for one of these fields.
+ * `source` / `thread_source`. Each complete line is `JSON.parse`d and fields
+ * are read by key path off the record's own `type` — structural access means
+ * nothing a user typed in a later message (which can itself look like JSON)
+ * can be mistaken for one of these fields purely by appearing first in the
+ * text, the way a plain text search could be fooled.
  *
- * The model is the exception: `session_meta` never carries it. Codex writes
- * it to `turn_context` records instead, and always within the first few lines
- * of the file, so the first `turn_context` inside the head chunk is scanned
- * for it the same way — gated on `type` before the field is trusted, never
- * `JSON.parse`d in case the head chunk cut the line short.
+ * The model can live on any of three record kinds, and the first one found
+ * (in file order) wins, since the earliest record reflects how the session
+ * started: `session_meta.payload.model`, `turn_context.payload.model`, or
+ * `event_msg.payload.thread_settings.model` on the `event_msg` whose
+ * `payload.type` is `thread_settings_applied`. All are always within the
+ * first few lines of the file, so scanning stops as soon as every field this
+ * function returns is known rather than scanning the whole chunk.
+ *
+ * The head chunk can still cut a line in half — a `session_meta` line can
+ * carry the whole system prompt and run past `HEAD_CHUNK_BYTES` on its own —
+ * so a line that fails to parse only gets the old regex-based extraction
+ * when it is the final line of the chunk. Every other unparseable line (real
+ * corruption, not a boundary cut) is simply skipped.
  */
 function codexHeadFields(prefix: string): RawHeadFields {
-  const lines = prefix.split(/\r?\n/u);
-  const metaLine = lines[0] ?? "";
+  const lines = prefix.split(/\r?\n/u).filter((line) => line.length > 0);
+  let id: string | undefined;
+  let cwd: string | undefined;
+  let startedAt: string | undefined;
+  let originator: string | undefined;
+  let source: string | undefined;
+  let threadSource: string | undefined;
   let model: string | undefined;
-  for (const line of lines) {
-    if (line.length === 0) continue;
-    if (rawField(line, "type") !== "turn_context") continue;
-    model = rawField(line, "model");
-    if (model !== undefined) break;
+
+  for (let index = 0; index < lines.length; index++) {
+    if (
+      id !== undefined &&
+      cwd !== undefined &&
+      startedAt !== undefined &&
+      originator !== undefined &&
+      source !== undefined &&
+      threadSource !== undefined &&
+      model !== undefined
+    ) {
+      break;
+    }
+    const line = lines[index] as string;
+    const record = parseJsonRecord(line);
+    if (record) {
+      const type = record["type"];
+      if (type === "session_meta") {
+        const payload = objectField(record["payload"]);
+        if (payload) {
+          id ??= stringField(payload["session_id"]);
+          cwd ??= stringField(payload["cwd"]);
+          startedAt ??= stringField(payload["timestamp"]);
+          originator ??= stringField(payload["originator"]);
+          source ??= stringField(payload["source"]);
+          threadSource ??= stringField(payload["thread_source"]);
+          model ??= stringField(payload["model"]);
+        }
+      } else if (type === "turn_context") {
+        const payload = objectField(record["payload"]);
+        if (payload) model ??= stringField(payload["model"]);
+      } else if (type === "event_msg") {
+        const payload = objectField(record["payload"]);
+        if (payload?.["type"] === "thread_settings_applied") {
+          const settings = objectField(payload["thread_settings"]);
+          if (settings) model ??= stringField(settings["model"]);
+        }
+      }
+      continue;
+    }
+    if (index !== lines.length - 1) continue;
+    // Final line only, and only because it failed to parse.
+    const fallbackType = rawField(line, "type");
+    if (fallbackType === "session_meta") {
+      id ??= rawField(line, "session_id");
+      cwd ??= rawField(line, "cwd");
+      startedAt ??= rawField(line, "timestamp");
+      originator ??= rawField(line, "originator");
+      source ??= rawField(line, "source");
+      threadSource ??= rawField(line, "thread_source");
+      model ??= rawField(line, "model");
+    } else if (fallbackType === "turn_context") {
+      model ??= rawField(line, "model");
+    }
   }
-  return {
-    id: rawField(metaLine, "session_id"),
-    cwd: rawField(metaLine, "cwd"),
-    startedAt: rawField(metaLine, "timestamp"),
-    originator: rawField(metaLine, "originator"),
-    source: rawField(metaLine, "source"),
-    threadSource: rawField(metaLine, "thread_source"),
-    model,
-  };
+
+  return { id, cwd, startedAt, originator, source, threadSource, model };
 }
 
 /**
- * `message.model` scoped to the `message` object's own keys, the same way
- * `codexHeadFields` scopes to `metaLine` rather than the whole head chunk.
- * The `type === "assistant"` gate alone is not enough: an assistant's own
- * `content` can carry a tool call whose arguments are real, unescaped JSON —
- * a call to a completion tool with a `model` argument, say — and a bare
- * `rawField(line, "model")` over the whole line would happily match that
- * instead of the record's real `message.model`, or instead of nothing at all
- * when the record has no model of its own. Slicing from `"message":{` to the
- * `content` key excludes `content` (and everything nested inside it)
- * entirely, so only the message's own sibling fields — `id` / `type` /
- * `role` / `model`, always serialised ahead of `content` — are ever in play.
- * A record cut short before reaching `content` searches to the end of what
- * was read instead, which is still safe: everything up to that point is
- * still the message's own fields, never `content`'s.
+ * `message.model` scoped to the `message` object's own keys, used only by
+ * `claudeHeadFields`'s truncated-final-line fallback (structural access
+ * handles every complete line via `record["message"]` directly). The
+ * `type === "assistant"` gate alone is not enough even there: an assistant's
+ * own `content` can carry a tool call whose arguments are real, unescaped
+ * JSON — a call to a completion tool with a `model` argument, say — and a
+ * bare `rawField(line, "model")` over the whole line would happily match
+ * that instead of the record's real `message.model`. Slicing from
+ * `"message":{` to the `content` key excludes `content` (and everything
+ * nested inside it) entirely, so only the message's own sibling fields —
+ * `id` / `type` / `role` / `model`, always serialised ahead of `content` —
+ * are ever in play. A record cut short before reaching `content` searches to
+ * the end of what was read instead, which is still safe: everything up to
+ * that point is still the message's own fields, never `content`'s.
  */
 function claudeAssistantModel(line: string): string | undefined {
   const messageStart = line.indexOf('"message":{');
@@ -281,41 +364,68 @@ function claudeAssistantModel(line: string): string | undefined {
 
 /**
  * Claude has no single meta line — `sessionId` / `cwd` / `timestamp` /
- * `ownerAccountUuid` are spread across ordinary conversation records. Scan
- * line by line, skipping any record whose `type` isn't one of the ones that
- * legitimately carries them (a `user` record's own message text can't fool
- * this: it's read from the same line, but only after that line's `type` is
- * confirmed to be one of the safe kinds).
+ * `ownerAccountUuid` are spread across ordinary conversation records. Each
+ * complete line is `JSON.parse`d and gated on the record's own `type` key,
+ * read structurally rather than by text search: real Claude records order
+ * their keys `parentUuid, isSidechain, message, …, type, uuid, timestamp, …`,
+ * so on an `assistant` record a plain first-`"type"`-in-the-line search finds
+ * `message.type` ("message") before the record's own `type` — which isn't in
+ * `CLAUDE_METADATA_RECORD_TYPES` — and silently skips the whole line. Reading
+ * `record["type"]` off the parsed object can't be fooled by key order.
  *
  * `message.model` is narrower still: it only ever appears on an `assistant`
- * record, so it is read only there even though `assistant` is otherwise
- * treated the same as `user` above — see `claudeAssistantModel` for why the
- * search is further scoped to the `message` object itself. Keep scanning
- * until every field — including the model — is known or the head chunk runs
- * out; a session whose first assistant reply sits later in the file (a long
- * opening user turn) still finds it as long as it's inside the chunk already
- * read. The cost of that is bounded: at most the {@link HEAD_CHUNK_BYTES}
- * already in memory, on a scan that already runs synchronously on the main
- * thread once per candidate file, so a chunk with no assistant record simply
- * gets scanned in full instead of stopping at `cwd`/`startedAt` — no new I/O.
+ * record, read structurally off `record["message"]`. Keep scanning until
+ * every field — including the model — is known or the head chunk runs out; a
+ * session whose first assistant reply sits later in the file (a long opening
+ * user turn) still finds it as long as it's inside the chunk already read.
+ * The cost of that is bounded: at most the {@link HEAD_CHUNK_BYTES} already
+ * in memory, on a scan that already runs synchronously on the main thread
+ * once per candidate file, so a chunk with no assistant record simply gets
+ * scanned in full instead of stopping at `cwd`/`startedAt` — no new I/O.
+ *
+ * The head chunk can still cut the final line in half (or the file itself
+ * can end mid-write); only that line, and only when it fails to parse, falls
+ * back to the old regex-based extraction, still gated on the same type set —
+ * read via regex here since there is no parsed object to read a key off.
  */
 function claudeHeadFields(prefix: string): RawHeadFields {
+  const lines = prefix.split(/\r?\n/u).filter((line) => line.length > 0);
   let id: string | undefined;
   let cwd: string | undefined;
   let startedAt: string | undefined;
   let accountId: string | undefined;
   let model: string | undefined;
-  for (const line of prefix.split(/\r?\n/u)) {
-    if (line.length === 0) continue;
-    const type = rawField(line, "type");
-    if (!type || !CLAUDE_METADATA_RECORD_TYPES.has(type)) continue;
-    id ??= rawField(line, "sessionId");
-    cwd ??= rawField(line, "cwd");
-    startedAt ??= rawField(line, "timestamp");
-    accountId ??= rawField(line, "ownerAccountUuid");
-    if (type === "assistant") model ??= claudeAssistantModel(line);
+
+  for (let index = 0; index < lines.length; index++) {
     if (cwd !== undefined && startedAt !== undefined && model !== undefined) break;
+    const line = lines[index] as string;
+    const record = parseJsonRecord(line);
+    if (record) {
+      const type = record["type"];
+      if (typeof type === "string" && CLAUDE_METADATA_RECORD_TYPES.has(type)) {
+        id ??= stringField(record["sessionId"]);
+        cwd ??= stringField(record["cwd"]);
+        startedAt ??= stringField(record["timestamp"]);
+        accountId ??= stringField(record["ownerAccountUuid"]);
+        if (type === "assistant") {
+          const message = objectField(record["message"]);
+          if (message) model ??= stringField(message["model"]);
+        }
+      }
+      continue;
+    }
+    if (index !== lines.length - 1) continue;
+    // Final line only, and only because it failed to parse.
+    const fallbackType = rawField(line, "type");
+    if (fallbackType && CLAUDE_METADATA_RECORD_TYPES.has(fallbackType)) {
+      id ??= rawField(line, "sessionId");
+      cwd ??= rawField(line, "cwd");
+      startedAt ??= rawField(line, "timestamp");
+      accountId ??= rawField(line, "ownerAccountUuid");
+      if (fallbackType === "assistant") model ??= claudeAssistantModel(line);
+    }
   }
+
   return { id, cwd, startedAt, accountId, model };
 }
 

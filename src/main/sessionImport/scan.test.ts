@@ -590,6 +590,88 @@ describe("scanImportableSessions", () => {
     expect(sessions[0]?.model).toBe("gpt-6-astra");
   });
 
+  // Old code only ever scanned lines whose `type` (found by first-match
+  // regex) was `turn_context` — `session_meta`'s own `model` field was never
+  // looked at, even though a real rollout can carry it there too.
+  it("reads the model off a Codex session's session_meta record", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-scan-codex-metamodel-"));
+    const sessionsDir = join(dir, "sessions");
+    mkdirSync(sessionsDir, { recursive: true });
+    writeFileSync(
+      join(sessionsDir, "rollout-cx-metamodel.jsonl"),
+      [
+        JSON.stringify({
+          type: "session_meta",
+          payload: {
+            session_id: "cx-metamodel",
+            cwd: "F:\\repo",
+            timestamp: "2026-09-20T04:43:18.000Z",
+            model: "gpt-meta",
+          },
+        }),
+        JSON.stringify({
+          type: "response_item",
+          payload: {
+            type: "message",
+            role: "user",
+            content: [{ type: "input_text", text: "hello" }],
+          },
+        }),
+      ].join("\n"),
+      "utf8",
+    );
+
+    const { sessions } = scanImportableSessions({
+      homes: [{ provider: "codex", agentKind: "codex", dir }],
+    });
+
+    expect(sessions[0]?.model).toBe("gpt-meta");
+  });
+
+  // Real rollouts also carry the model on an `event_msg` whose
+  // `payload.type` is `thread_settings_applied`, nested under
+  // `payload.thread_settings.model` — a record type old code never looked at.
+  it("reads the model off a Codex event_msg with payload.type thread_settings_applied", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-scan-codex-settingsmodel-"));
+    const sessionsDir = join(dir, "sessions");
+    mkdirSync(sessionsDir, { recursive: true });
+    writeFileSync(
+      join(sessionsDir, "rollout-cx-settingsmodel.jsonl"),
+      [
+        JSON.stringify({
+          type: "session_meta",
+          payload: {
+            session_id: "cx-settingsmodel",
+            cwd: "F:\\repo",
+            timestamp: "2026-09-20T04:43:18.000Z",
+          },
+        }),
+        JSON.stringify({
+          type: "event_msg",
+          payload: {
+            type: "thread_settings_applied",
+            thread_settings: { model: "gpt-settings" },
+          },
+        }),
+        JSON.stringify({
+          type: "response_item",
+          payload: {
+            type: "message",
+            role: "user",
+            content: [{ type: "input_text", text: "hello" }],
+          },
+        }),
+      ].join("\n"),
+      "utf8",
+    );
+
+    const { sessions } = scanImportableSessions({
+      homes: [{ provider: "codex", agentKind: "codex", dir }],
+    });
+
+    expect(sessions[0]?.model).toBe("gpt-settings");
+  });
+
   // Claude has no meta line either — the model rides `message.model` on
   // `assistant` records only, the same record type the parser already trusts
   // for other fields (Task 4). A `user` record's own text can't fool this: it
@@ -673,6 +755,56 @@ describe("scanImportableSessions", () => {
     });
 
     expect(sessions[0]).not.toHaveProperty("model");
+  });
+
+  // The regression guard for this task. Real Claude records order their keys
+  // `parentUuid, isSidechain, message, …, type, uuid, timestamp, …` — the
+  // `message` object comes *before* the record's own `type`, and `message`
+  // itself carries a `"type":"message"` field. A regex hunting the line for
+  // the first `"type"` anywhere finds `message.type` ("message") instead of
+  // the record's own `type` ("assistant"), which isn't in
+  // `CLAUDE_METADATA_RECORD_TYPES` — so the whole line, including
+  // `message.model`, was silently skipped. Structural access reads the
+  // record's own `type` key directly, so key order can't fool it.
+  it("reads the model off a Claude assistant record ordered the way the real CLI orders it", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-scan-claude-realorder-"));
+    const projectDir = join(dir, "projects", "F--repo");
+    mkdirSync(projectDir, { recursive: true });
+    const lines = [
+      JSON.stringify({
+        parentUuid: null,
+        isSidechain: false,
+        message: { role: "user", content: "hello" },
+        type: "user",
+        uuid: "u-0",
+        timestamp: "2026-09-20T05:00:00.000Z",
+        sessionId: "cl-realorder",
+        cwd: "F:\\repo",
+      }),
+      JSON.stringify({
+        parentUuid: "u-0",
+        isSidechain: false,
+        message: {
+          id: "msg_01",
+          type: "message",
+          role: "assistant",
+          model: "claude-opus-5",
+          content: [{ type: "text", text: "hi" }],
+        },
+        type: "assistant",
+        uuid: "u-1",
+        timestamp: "2026-09-20T05:00:01.000Z",
+        sessionId: "cl-realorder",
+        cwd: "F:\\repo",
+      }),
+    ];
+    writeFileSync(join(projectDir, "cl-realorder.jsonl"), lines.join("\n"), "utf8");
+
+    const { sessions } = scanImportableSessions({
+      homes: [{ provider: "claude", agentKind: "claude", dir }],
+    });
+
+    expect(sessions[0]?.model).toBe("claude-opus-5");
   });
 
   it("leaves model absent, not an empty string, when the head carries none", () => {
@@ -870,5 +1002,39 @@ describe("scanImportableSessions", () => {
 
     expect(sessions.map((s) => s.providerSessionId)).toEqual(["cx-cut"]);
     expect(sessions[0]?.cwd).toBeUndefined();
+  });
+
+  it("keeps fields from complete head lines when only the last line is cut mid-value", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-scan-headcut-"));
+    const sessionsDir = join(dir, "sessions");
+    mkdirSync(sessionsDir, { recursive: true });
+    // The first line is complete, valid JSON and yields a real cwd. The
+    // second (final) line's own `type` is complete but its `model` value
+    // never reaches a closing quote — as if the head chunk had sliced
+    // through a `turn_context` record mid-field. The complete line's fields
+    // must survive; the cut line must not contribute a partial model.
+    writeFileSync(
+      join(sessionsDir, "rollout-cx-headcut.jsonl"),
+      [
+        JSON.stringify({
+          type: "session_meta",
+          payload: {
+            session_id: "cx-headcut",
+            cwd: "F:\\repo",
+            timestamp: "2026-09-20T04:43:18.000Z",
+          },
+        }),
+        '{"type":"turn_context","payload":{"cwd":"F:\\\\repo","model":"gpt-cut',
+      ].join("\n"),
+      "utf8",
+    );
+
+    const { sessions } = scanImportableSessions({
+      homes: [{ provider: "codex", agentKind: "codex", dir }],
+    });
+
+    expect(sessions.map((s) => s.providerSessionId)).toEqual(["cx-headcut"]);
+    expect(sessions[0]?.cwd).toBe("F:\\repo");
+    expect(sessions[0]).not.toHaveProperty("model");
   });
 });
