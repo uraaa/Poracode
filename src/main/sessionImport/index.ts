@@ -66,20 +66,46 @@ export function listImportableSessions(
 }
 
 /**
- * Every session this process has imported, and the thread that holds it,
- * keyed by transcript path and by provider session id.
+ * Every session an import in this process is holding, and the thread holding
+ * it, keyed by transcript path and by provider session id.
  *
  * `deps.getThreads()` is the database's view of that question, and the
- * renderer persists a newly stamped thread asynchronously — so two windows
- * importing the same session within the same moment can both look at that
- * view and both see the session free, and end up with two threads resuming
- * one provider session. Main sees every import, in order, so it can answer
- * what the database cannot yet. The claim is taken before the replay and
- * released in a `finally` if the replay threw: a session whose import failed
- * is held by nothing, and must not stay unimportable for the life of the
- * process.
+ * renderer stamps a newly created thread with the path and session id
+ * asynchronously — so two windows importing the same session within the same
+ * moment can both look at that view and both see the session free, and end up
+ * with two threads resuming one provider session. Main sees every import, in
+ * order, so it can answer what the database cannot yet.
+ *
+ * A claim is never more than a stand-in for a stamp that has not landed. It
+ * lasts exactly as long as the thread that took it: released in a `finally`
+ * when the import threw, and dropped once that thread is no longer in the
+ * database. Held any longer, importing a session, deleting its thread and
+ * importing again would be refused for the life of the main process, in the
+ * name of a thread the user cannot open — and the map would grow by two
+ * entries per import and never shrink.
  */
 const claimedSessions = new Map<string, string>();
+
+/**
+ * Forget every claim whose thread is gone. A deleted thread releases the
+ * session it held; a thread that is merely unstamped is still in the
+ * database, so the claim that speaks for it survives.
+ */
+function dropClaimsOfDeletedThreads(threads: readonly Thread[]): void {
+  if (claimedSessions.size === 0) return;
+  const live = new Set(threads.map((thread) => thread.id));
+  for (const [claim, holder] of claimedSessions) {
+    if (!live.has(holder)) claimedSessions.delete(claim);
+  }
+}
+
+/**
+ * Test seam. The map above is module state shared by every test in a file, so
+ * a test that leaves a claim behind would change what a later one sees.
+ */
+export function resetImportClaims(): void {
+  claimedSessions.clear();
+}
 
 function sessionClaimKeys(path: string, providerSessionId?: string): string[] {
   return [`path:${path}`, ...(providerSessionId ? [`session:${providerSessionId}`] : [])];
@@ -100,6 +126,7 @@ export function importSessionTranscript(
   const { byPath, bySessionId } = importedThreads(
     threads.filter((thread) => thread.id !== payload.threadId),
   );
+  dropClaimsOfDeletedThreads(threads);
   const sessionId = currentThread.sessionRef?.providerSessionId;
   const claims = sessionClaimKeys(payload.path, sessionId);
   const claimedBy = claims

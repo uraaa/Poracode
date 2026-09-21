@@ -1,10 +1,16 @@
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RuntimeEvent, Thread } from "@/shared/contracts";
 import { defaultSharedSettings } from "@/shared/settings";
-import { importSessionTranscript, listImportableSessions } from "./index";
+import { importSessionTranscript, listImportableSessions, resetImportClaims } from "./index";
+
+// The claim map is module state: a test that leaves a claim behind would
+// otherwise change what a later test in this file sees.
+beforeEach(() => {
+  resetImportClaims();
+});
 
 function codexHomeWith(id: string, cwd: string, prompt: string): { dir: string; path: string } {
   const dir = mkdtempSync(join(tmpdir(), "poracode-import-home-"));
@@ -179,6 +185,33 @@ describe("importSessionTranscript", () => {
 
     const second = importSessionTranscript({ threadId: "t2", provider: "codex", path }, deps);
     expect(second).toEqual({ messageCount: 0, path, existingThreadId: "t1" });
+  });
+
+  it("lets a session be imported again once the thread that held it is gone", () => {
+    const { dir, path } = codexHomeWith("cx-gone", "F:\\repo", "hello");
+    let threads = [thread({ id: "t1" }), thread({ id: "t2" })];
+    const deps = {
+      readSharedSettings: () => settingsWithHome(dir),
+      getThreads: () => threads,
+      applyRuntimeEvents: vi.fn<(threadId: string, events: readonly RuntimeEvent[]) => void>(),
+      flushRuntimeWrites: vi.fn<(threadId: string) => void>(),
+    };
+
+    expect(importSessionTranscript({ threadId: "t1", provider: "codex", path }, deps)).toEqual({
+      messageCount: 2,
+      path,
+    });
+
+    // The user deletes the imported thread and imports the session again. A
+    // claim only ever stands in for a stamp that has not landed yet; held
+    // past the life of its own thread it refuses the import for the life of
+    // the main process, in the name of a thread the user cannot open.
+    threads = [thread({ id: "t2" })];
+
+    expect(importSessionTranscript({ threadId: "t2", provider: "codex", path }, deps)).toEqual({
+      messageCount: 2,
+      path,
+    });
   });
 
   it("releases its claim when the import fails, so the session can be imported after", () => {
