@@ -195,10 +195,24 @@ describe("scanImportableSessions", () => {
     const dir = mkdtempSync(join(tmpdir(), "poracode-scan-bad-"));
     const sessionsDir = join(dir, "sessions");
     mkdirSync(sessionsDir, { recursive: true });
-    // Empty on disk (e.g. a crash mid-write): no head can be recovered at all,
-    // unlike a session whose preview alone is out of reach (see the "beyond the
-    // preview window" case above), so this one is dropped rather than listed.
-    writeFileSync(join(sessionsDir, "rollout-broken.jsonl"), "", "utf8");
+    // Content that isn't even JSON: no field regex can match anything in it,
+    // so — unlike a session whose preview alone is out of reach (see the
+    // "beyond the preview window" case above) — nothing was ever read out of
+    // this file's head. The filename alone ("rollout-broken.jsonl") must not
+    // be enough to manufacture a session out of that.
+    writeFileSync(join(sessionsDir, "rollout-broken.jsonl"), "{ not json", "utf8");
+    expect(
+      scanImportableSessions({ homes: [{ provider: "codex", agentKind: "codex", dir }] }).sessions,
+    ).toEqual([]);
+  });
+
+  it("returns an empty list for a file that is empty on disk", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-scan-empty-"));
+    const sessionsDir = join(dir, "sessions");
+    mkdirSync(sessionsDir, { recursive: true });
+    // Empty on disk (e.g. a crash mid-write): `readPrefix` returns "" and
+    // `readHead` bails before any field regex even runs.
+    writeFileSync(join(sessionsDir, "rollout-empty.jsonl"), "", "utf8");
     expect(
       scanImportableSessions({ homes: [{ provider: "codex", agentKind: "codex", dir }] }).sessions,
     ).toEqual([]);
@@ -335,6 +349,14 @@ describe("scanImportableSessions", () => {
     expect(calls.toSorted()).toEqual(["F:\\other", "F:\\repo"]);
   });
 
+  // Companion assertion, not the regression guard: this fixture passes even
+  // without the Task 4 fix, because `JSON.stringify` escapes the quotes
+  // inside `content[].text`, so a pasted `"cwd"` can never appear unescaped
+  // in the file and a plain regex can't match it either way. It's kept as a
+  // pinned, brief-specified case. The test below ("claude: a non-conversation
+  // record's cwd must not win by appearing first") is the one that actually
+  // fails before the fix and passes after — that's the real regression guard
+  // for this task.
   it("ignores a cwd pasted inside a user message", () => {
     const dir = mkdtempSync(join(tmpdir(), "poracode-scan-paste-"));
     const sessionsDir = join(dir, "sessions");
@@ -426,5 +448,27 @@ describe("scanImportableSessions", () => {
 
     const onLinux = scanImportableSessions({ homes, cwd: "/home/u/repo", platform: "linux" });
     expect(onLinux.sessions.map((s) => s.providerSessionId)).toEqual(["cx-lower"]);
+  });
+
+  it("degrades to undefined, not a partial match, when a field is cut off mid-value", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-scan-cut-"));
+    const sessionsDir = join(dir, "sessions");
+    mkdirSync(sessionsDir, { recursive: true });
+    // session_id is complete and unescaped before the cut; cwd's value never
+    // reaches a closing quote — simulating a head chunk that sliced through
+    // session_meta mid-field. rawField requires a closing quote, so cwd must
+    // come back undefined rather than matching a prefix of the file path.
+    writeFileSync(
+      join(sessionsDir, "rollout-cx-cut.jsonl"),
+      '{"type":"session_meta","payload":{"session_id":"cx-cut","cwd":"F:\\\\re',
+      "utf8",
+    );
+
+    const { sessions } = scanImportableSessions({
+      homes: [{ provider: "codex", agentKind: "codex", dir }],
+    });
+
+    expect(sessions.map((s) => s.providerSessionId)).toEqual(["cx-cut"]);
+    expect(sessions[0]?.cwd).toBeUndefined();
   });
 });

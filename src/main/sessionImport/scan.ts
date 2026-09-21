@@ -196,9 +196,25 @@ function readHead(file: DiscoveredFile): SessionHead | undefined {
   if (prefix.length === 0) return undefined;
   const fields =
     file.home.provider === "codex" ? codexHeadFields(prefix) : claudeHeadFields(prefix);
+  // The filename fallback below exists for a real transcript whose id simply
+  // isn't repeated inside the head (Claude names the file after the session;
+  // Codex embeds the id in the name too). It must not be the ONLY thing that
+  // makes a file look like a session: a file whose head is outright garbage —
+  // unparseable content, no id, no cwd, no timestamp, nothing — still fails
+  // every field regex and would otherwise inherit a plausible-looking id from
+  // its own filename alone. Require at least one field to have actually been
+  // read out of the content before trusting the filename for the rest.
+  const hasContentField =
+    fields.id !== undefined ||
+    fields.cwd !== undefined ||
+    fields.startedAt !== undefined ||
+    fields.originator !== undefined ||
+    fields.source !== undefined ||
+    fields.threadSource !== undefined ||
+    fields.accountId !== undefined;
+  if (!hasContentField) return undefined;
   const id =
     fields.id ??
-    // Claude names the file after the session; Codex embeds the id in the name.
     basename(file.path)
       .replace(/\.jsonl$/iu, "")
       .replace(/^rollout-[\dT-]*?-/u, "");
