@@ -300,12 +300,24 @@ function readPreview(file: DiscoveredFile): string {
   return "";
 }
 
-function samePath(left: string | undefined, right: string | undefined): boolean {
+/**
+ * Windows folder paths are case-insensitive; POSIX ones are not — a
+ * case-sensitive volume genuinely has `/home/u/Repo` and `/home/u/repo` as two
+ * different folders. `platform` is injectable so both branches are testable
+ * on any machine.
+ */
+function samePath(
+  left: string | undefined,
+  right: string | undefined,
+  platform: NodeJS.Platform,
+): boolean {
   if (!left || !right) return false;
   const normalize = (value: string) => value.replace(/[\\/]+$/u, "").replace(/\\/gu, "/");
-  return (
-    normalize(left).localeCompare(normalize(right), undefined, { sensitivity: "accent" }) === 0
-  );
+  const normalizedLeft = normalize(left);
+  const normalizedRight = normalize(right);
+  return platform === "win32"
+    ? normalizedLeft.localeCompare(normalizedRight, undefined, { sensitivity: "accent" }) === 0
+    : normalizedLeft === normalizedRight;
 }
 
 /**
@@ -346,8 +358,11 @@ export function scanImportableSessions(input: {
   limit?: number;
   /** Injectable so a scan can memoise or fake folder checks. Defaults to `existsSync`. */
   exists?: (path: string) => boolean;
+  /** Injectable so folder comparison is testable on any machine. Defaults to `process.platform`. */
+  platform?: NodeJS.Platform;
 }): ImportScanResult {
   const exists = input.exists ?? existsSync;
+  const platform = input.platform ?? process.platform;
   // A scan checks the same cwd repeatedly across sessions that share a
   // folder; the cache is local to this call so a folder created between
   // scans is still seen next time.
@@ -409,7 +424,7 @@ export function scanImportableSessions(input: {
   const matchesAccount = (candidate: SessionCandidate) =>
     !input.agentKind || candidate.agentKind === input.agentKind;
   const matchesCwd = (candidate: SessionCandidate) =>
-    !input.cwd || samePath(candidate.head.cwd, input.cwd);
+    !input.cwd || samePath(candidate.head.cwd, input.cwd, platform);
 
   // Each facet offers the values that still have sessions under the *other*
   // filters, so picking a provider never leaves an unreachable folder listed.

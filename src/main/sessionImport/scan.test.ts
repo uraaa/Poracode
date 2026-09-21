@@ -405,4 +405,26 @@ describe("scanImportableSessions", () => {
 
     expect(sessions[0]?.cwd).toBe("F:\\real");
   });
+
+  it("compares folders case-insensitively on win32 and case-sensitively elsewhere", () => {
+    const homes: ImportHome[] = [
+      {
+        provider: "codex",
+        agentKind: "codex",
+        dir: codexHome([
+          { id: "cx-upper", cwd: "/home/u/Repo", prompt: "upper" },
+          { id: "cx-lower", cwd: "/home/u/repo", prompt: "lower" },
+        ]),
+      },
+    ];
+
+    const onWindows = scanImportableSessions({ homes, cwd: "/home/u/repo", platform: "win32" });
+    expect(onWindows.sessions.map((s) => s.providerSessionId).sort()).toEqual([
+      "cx-lower",
+      "cx-upper",
+    ]);
+
+    const onLinux = scanImportableSessions({ homes, cwd: "/home/u/repo", platform: "linux" });
+    expect(onLinux.sessions.map((s) => s.providerSessionId)).toEqual(["cx-lower"]);
+  });
 });
