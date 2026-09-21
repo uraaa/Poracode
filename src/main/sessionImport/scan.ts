@@ -201,6 +201,12 @@ interface SessionHead {
   readonly threadSource?: string;
   /** Claude: account the conversation belongs to (`ownerAccountUuid`). */
   readonly accountId?: string;
+  /**
+   * Model the provider recorded, when the head chunk carries one. Neither
+   * provider puts it on the meta line: Codex writes it to `turn_context`,
+   * Claude to `message.model` on `assistant` records.
+   */
+  readonly model?: string;
 }
 
 interface RawHeadFields {
@@ -211,6 +217,7 @@ interface RawHeadFields {
   readonly source?: string | undefined;
   readonly threadSource?: string | undefined;
   readonly accountId?: string | undefined;
+  readonly model?: string | undefined;
 }
 
 /**
@@ -219,9 +226,23 @@ interface RawHeadFields {
  * `source` / `thread_source`. Scanning only that line — rather than the whole
  * head chunk — means nothing a user typed in a later message (which can
  * itself look like JSON) can be mistaken for one of these fields.
+ *
+ * The model is the exception: `session_meta` never carries it. Codex writes
+ * it to `turn_context` records instead, and always within the first few lines
+ * of the file, so the first `turn_context` inside the head chunk is scanned
+ * for it the same way — gated on `type` before the field is trusted, never
+ * `JSON.parse`d in case the head chunk cut the line short.
  */
 function codexHeadFields(prefix: string): RawHeadFields {
-  const metaLine = prefix.split(/\r?\n/u)[0] ?? "";
+  const lines = prefix.split(/\r?\n/u);
+  const metaLine = lines[0] ?? "";
+  let model: string | undefined;
+  for (const line of lines) {
+    if (line.length === 0) continue;
+    if (rawField(line, "type") !== "turn_context") continue;
+    model = rawField(line, "model");
+    if (model !== undefined) break;
+  }
   return {
     id: rawField(metaLine, "session_id"),
     cwd: rawField(metaLine, "cwd"),
@@ -229,6 +250,7 @@ function codexHeadFields(prefix: string): RawHeadFields {
     originator: rawField(metaLine, "originator"),
     source: rawField(metaLine, "source"),
     threadSource: rawField(metaLine, "thread_source"),
+    model,
   };
 }
 
@@ -238,14 +260,21 @@ function codexHeadFields(prefix: string): RawHeadFields {
  * line by line, skipping any record whose `type` isn't one of the ones that
  * legitimately carries them (a `user` record's own message text can't fool
  * this: it's read from the same line, but only after that line's `type` is
- * confirmed to be one of the safe kinds), and stop once both `cwd` and the
- * timestamp are known.
+ * confirmed to be one of the safe kinds).
+ *
+ * `message.model` is narrower still: it only ever appears on an `assistant`
+ * record, so it is read only there even though `assistant` is otherwise
+ * treated the same as `user` above. Keep scanning until every field —
+ * including the model — is known or the head chunk runs out; a session whose
+ * first assistant reply sits later in the file (a long opening user turn)
+ * still finds it as long as it's inside the chunk already read.
  */
 function claudeHeadFields(prefix: string): RawHeadFields {
   let id: string | undefined;
   let cwd: string | undefined;
   let startedAt: string | undefined;
   let accountId: string | undefined;
+  let model: string | undefined;
   for (const line of prefix.split(/\r?\n/u)) {
     if (line.length === 0) continue;
     const type = rawField(line, "type");
@@ -254,9 +283,10 @@ function claudeHeadFields(prefix: string): RawHeadFields {
     cwd ??= rawField(line, "cwd");
     startedAt ??= rawField(line, "timestamp");
     accountId ??= rawField(line, "ownerAccountUuid");
-    if (cwd !== undefined && startedAt !== undefined) break;
+    if (type === "assistant") model ??= rawField(line, "model");
+    if (cwd !== undefined && startedAt !== undefined && model !== undefined) break;
   }
-  return { id, cwd, startedAt, accountId };
+  return { id, cwd, startedAt, accountId, model };
 }
 
 function parseHead(file: DiscoveredFile): SessionHead | undefined {
@@ -279,7 +309,8 @@ function parseHead(file: DiscoveredFile): SessionHead | undefined {
     fields.originator !== undefined ||
     fields.source !== undefined ||
     fields.threadSource !== undefined ||
-    fields.accountId !== undefined;
+    fields.accountId !== undefined ||
+    fields.model !== undefined;
   if (!hasContentField) return undefined;
   const id =
     fields.id ??
@@ -295,6 +326,7 @@ function parseHead(file: DiscoveredFile): SessionHead | undefined {
     ...(fields.source ? { source: fields.source } : {}),
     ...(fields.threadSource ? { threadSource: fields.threadSource } : {}),
     ...(file.home.provider === "claude" && fields.accountId ? { accountId: fields.accountId } : {}),
+    ...(fields.model ? { model: fields.model } : {}),
   };
 }
 
@@ -604,6 +636,7 @@ export function scanImportableSessions(input: {
       updatedAt: new Date(file.mtimeMs).toISOString(),
       preview,
       ...(title ? { title } : {}),
+      ...(head.model ? { model: head.model } : {}),
       cwdExists: head.cwd !== undefined && cachedExists(head.cwd),
     });
   }

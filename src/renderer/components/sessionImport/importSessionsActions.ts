@@ -32,20 +32,35 @@ const FALLBACK_MODEL: Record<ImportableSession["provider"], string> = {
 };
 
 /**
- * Model for the imported thread: the project's last draft when it was for
- * this same agent, else the agent's first advertised model, else a fallback.
+ * Model for the imported thread: the model the session itself was held with,
+ * when the target account still advertises it; else the project's last draft
+ * when it was for this same agent; else the agent's first advertised model;
+ * else a fallback.
+ *
+ * The session's own model wins over the project's last draft — a conversation
+ * resumed on a different model is worse than a project preference ignored.
+ * `resolveModelSelection` returns the preferred model only when the account's
+ * capability list actually contains it, so an account without that model (or
+ * a stale capability list) falls through to the chain below unchanged.
  */
 export function resolveImportModel(
   session: ImportableSession,
   projectId: string,
   agentKind: string = session.agentKind,
 ): string {
-  const project = useAppStore.getState().projects.find((entry) => entry.id === projectId);
-  const draft = project?.lastDraftConfig;
-  if (draft && draft.agentKind === agentKind && draft.model) return draft.model;
   const status = useAgentStatusesStore
     .getState()
     .agentStatuses.find((entry) => entry.kind === agentKind);
+  if (
+    session.model &&
+    status &&
+    resolveModelSelection(status.capabilities, session.model) === session.model
+  ) {
+    return session.model;
+  }
+  const project = useAppStore.getState().projects.find((entry) => entry.id === projectId);
+  const draft = project?.lastDraftConfig;
+  if (draft && draft.agentKind === agentKind && draft.model) return draft.model;
   const detected = status ? resolveModelSelection(status.capabilities) : "";
   return detected || FALLBACK_MODEL[session.provider];
 }

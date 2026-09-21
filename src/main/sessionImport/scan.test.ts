@@ -548,6 +548,100 @@ describe("scanImportableSessions", () => {
     expect(scanImportableSessions({ homes }).sessions[0]?.title).toBe("Renamed");
   });
 
+  // Codex's `session_meta` never carries the model — it lives on `turn_context`
+  // records, which the candidate pass's head read already holds. Reading it
+  // from there (rather than `session_meta`) is what lets an imported thread
+  // open on the model the conversation actually used.
+  it("reads the model off a Codex session's turn_context record", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-scan-codex-model-"));
+    const sessionsDir = join(dir, "sessions");
+    mkdirSync(sessionsDir, { recursive: true });
+    writeFileSync(
+      join(sessionsDir, "rollout-cx-model.jsonl"),
+      [
+        JSON.stringify({
+          type: "session_meta",
+          payload: {
+            session_id: "cx-model",
+            cwd: "F:\\repo",
+            timestamp: "2026-09-20T04:43:18.000Z",
+          },
+        }),
+        JSON.stringify({
+          type: "turn_context",
+          payload: { cwd: "F:\\repo", model: "gpt-6-astra" },
+        }),
+        JSON.stringify({
+          type: "response_item",
+          payload: {
+            type: "message",
+            role: "user",
+            content: [{ type: "input_text", text: "hello" }],
+          },
+        }),
+      ].join("\n"),
+      "utf8",
+    );
+
+    const { sessions } = scanImportableSessions({
+      homes: [{ provider: "codex", agentKind: "codex", dir }],
+    });
+
+    expect(sessions[0]?.model).toBe("gpt-6-astra");
+  });
+
+  // Claude has no meta line either — the model rides `message.model` on
+  // `assistant` records only, the same record type the parser already trusts
+  // for other fields (Task 4). A `user` record's own text can't fool this: it
+  // is read from the same line, but only after that line's `type` is
+  // confirmed to be `assistant`.
+  it("reads the model off a Claude session's first assistant record", () => {
+    const dir = mkdtempSync(join(tmpdir(), "poracode-scan-claude-model-"));
+    const projectDir = join(dir, "projects", "F--repo");
+    mkdirSync(projectDir, { recursive: true });
+    const lines = [
+      JSON.stringify({
+        type: "user",
+        sessionId: "cl-model",
+        cwd: "F:\\repo",
+        timestamp: "2026-09-20T05:00:00.000Z",
+        message: { role: "user", content: "hello" },
+      }),
+      JSON.stringify({
+        type: "assistant",
+        sessionId: "cl-model",
+        cwd: "F:\\repo",
+        timestamp: "2026-09-20T05:00:01.000Z",
+        message: {
+          role: "assistant",
+          model: "claude-opus-5",
+          content: [{ type: "text", text: "hi" }],
+        },
+      }),
+    ];
+    writeFileSync(join(projectDir, "cl-model.jsonl"), lines.join("\n"), "utf8");
+
+    const { sessions } = scanImportableSessions({
+      homes: [{ provider: "claude", agentKind: "claude", dir }],
+    });
+
+    expect(sessions[0]?.model).toBe("claude-opus-5");
+  });
+
+  it("leaves model absent, not an empty string, when the head carries none", () => {
+    const homes: ImportHome[] = [
+      {
+        provider: "codex",
+        agentKind: "codex",
+        dir: codexHome([{ id: "cx-nomodel", cwd: "F:\\repo", prompt: "hi" }]),
+      },
+    ];
+
+    const { sessions } = scanImportableSessions({ homes });
+
+    expect(sessions[0]).not.toHaveProperty("model");
+  });
+
   it("reads a preview whose first user turn sits past the head chunk", () => {
     const dir = mkdtempSync(join(tmpdir(), "poracode-scan-deep-"));
     const sessionsDir = join(dir, "sessions");

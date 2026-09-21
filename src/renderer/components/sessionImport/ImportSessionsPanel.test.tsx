@@ -338,6 +338,54 @@ describe("ImportSessionsPanel", () => {
     expect(rehydrateThreadRuntimeItemsMock).toHaveBeenCalledWith("new-thread");
   });
 
+  it("opens the imported thread on the model the session recorded", async () => {
+    // The account's mocked capabilities only advertise "gpt-5.6-luna" — extend
+    // them with the model the transcript recorded so this genuinely proves the
+    // recorded model is read, not just that it happens to match whatever the
+    // fallback chain would have picked (the first advertised model).
+    const codexStatus = statusState.agentStatuses.find((entry) => entry.kind === "codex");
+    const originalModels = codexStatus?.capabilities.models ?? [];
+    if (codexStatus) {
+      codexStatus.capabilities = {
+        models: [...originalModels, { id: "gpt-6-astra", label: "Astra 6" }],
+      };
+    }
+    try {
+      listImportableSessionsMock.mockResolvedValue([session({ model: "gpt-6-astra" })]);
+      render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
+      fireEvent.click(await screen.findByRole("checkbox", { name: /fix the race condition/iu }));
+      fireEvent.click(screen.getByRole("button", { name: /import 1 session/iu }));
+
+      await vi.waitFor(() =>
+        expect(createThreadMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            config: expect.objectContaining({ model: "gpt-6-astra" }),
+          }),
+        ),
+      );
+    } finally {
+      if (codexStatus) codexStatus.capabilities = { models: originalModels };
+    }
+  });
+
+  it("falls back to the existing chain when the account does not advertise the recorded model", async () => {
+    // The mocked "codex" account only advertises "gpt-5.6-luna"; a recorded
+    // model of anything else is one the account doesn't offer, so the import
+    // must fall back rather than open the thread on a model that isn't there.
+    listImportableSessionsMock.mockResolvedValue([session({ model: "gpt-9-nonexistent" })]);
+    render(<ImportSessionsPanel initialFolder={"F:\\repo"} initialProjectId="p1" />);
+    fireEvent.click(await screen.findByRole("checkbox", { name: /fix the race condition/iu }));
+    fireEvent.click(screen.getByRole("button", { name: /import 1 session/iu }));
+
+    await vi.waitFor(() =>
+      expect(createThreadMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          config: expect.objectContaining({ model: "gpt-5.6-luna" }),
+        }),
+      ),
+    );
+  });
+
   it("keeps a config change made while the transcript replay was in flight", async () => {
     // Replaying a large transcript takes time; the user can open the new
     // thread and change its config (e.g. the model) before the write-back of

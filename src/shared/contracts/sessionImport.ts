@@ -57,6 +57,8 @@ export const importableSessionSchema = z.object({
   preview: z.string(),
   /** Name the provider's own UI shows for the session, when it has one. */
   title: z.string().min(1).optional(),
+  /** Model the provider recorded for the session, when the head carried one. */
+  model: z.string().min(1).optional(),
   /**
    * Whether `cwd` still exists on disk. A session whose folder is gone cannot
    * auto-create a project, so the UI makes the user pick a target instead.
