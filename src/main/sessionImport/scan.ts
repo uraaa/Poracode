@@ -290,7 +290,22 @@ export function scanImportableSessions(input: {
   provider?: ImportedSessionProvider;
   agentKind?: string;
   limit?: number;
+  /** Injectable so a scan can memoise or fake folder checks. Defaults to `existsSync`. */
+  exists?: (path: string) => boolean;
 }): ImportScanResult {
+  const exists = input.exists ?? existsSync;
+  // A scan checks the same cwd repeatedly across sessions that share a
+  // folder; the cache is local to this call so a folder created between
+  // scans is still seen next time.
+  const existsCache = new Map<string, boolean>();
+  const cachedExists = (path: string): boolean => {
+    let value = existsCache.get(path);
+    if (value === undefined) {
+      value = exists(path);
+      existsCache.set(path, value);
+    }
+    return value;
+  };
   // Codex titles come from one index per home; opened on first use so a
   // scan that never reaches a home's files never touches its database.
   const codexTitlesByHome = new Map<string, Map<string, string>>();
@@ -378,7 +393,7 @@ export function scanImportableSessions(input: {
       updatedAt: new Date(file.mtimeMs).toISOString(),
       preview,
       ...(title ? { title } : {}),
-      cwdExists: head.cwd !== undefined && existsSync(head.cwd),
+      cwdExists: head.cwd !== undefined && cachedExists(head.cwd),
     });
   }
   return { sessions, facets };

@@ -309,4 +309,29 @@ describe("scanImportableSessions", () => {
     expect(sessions.map((s) => s.providerSessionId)).toEqual(["cx-quiet"]);
     expect(sessions[0]?.preview).toBe("");
   });
+
+  it("checks a folder once however many sessions share it", () => {
+    const calls: string[] = [];
+    const homes: ImportHome[] = [
+      {
+        provider: "codex",
+        agentKind: "codex",
+        dir: codexHome([
+          { id: "cx-1", cwd: "F:\\repo", prompt: "one" },
+          { id: "cx-2", cwd: "F:\\repo", prompt: "two" },
+          { id: "cx-3", cwd: "F:\\other", prompt: "three" },
+        ]),
+      },
+    ];
+
+    scanImportableSessions({
+      homes,
+      exists: (path) => {
+        calls.push(path);
+        return true;
+      },
+    });
+
+    expect(calls.toSorted()).toEqual(["F:\\other", "F:\\repo"]);
+  });
 });
