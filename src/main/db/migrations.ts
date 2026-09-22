@@ -29,6 +29,22 @@ function addColumnIfMissing(
   }
 }
 
+function createThreadFollowUpQueueTable(sqlite: SqliteDatabase): void {
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS thread_follow_up_queue (
+      thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+      item_id TEXT NOT NULL,
+      position INTEGER NOT NULL,
+      staged_at INTEGER NOT NULL,
+      paused INTEGER NOT NULL DEFAULT 0,
+      payload TEXT NOT NULL,
+      PRIMARY KEY (thread_id, item_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_follow_up_queue_thread_pos
+      ON thread_follow_up_queue (thread_id, position);
+  `);
+}
+
 function createRuntimeItemParentIndex(sqlite: SqliteDatabase): void {
   addColumnIfMissing(sqlite, "thread_runtime_items", "parent_item_id", "TEXT");
   sqlite.exec(
@@ -716,6 +732,13 @@ export const DATABASE_MIGRATIONS = [
     // Creates the shadow text table and its FTS5 index, then fills them from
     // the messages already persisted in thread_runtime_items.
     migrate: backfillMessageSearchIndex,
+  },
+  {
+    version: 44,
+    name: "thread follow-up queue",
+    // Queued follow-ups used to live only in supervisor memory, so a crash or
+    // a restart dropped messages the user had already handed over.
+    migrate: createThreadFollowUpQueueTable,
   },
 ] as const satisfies readonly DatabaseMigration[];
 

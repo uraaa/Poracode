@@ -9,6 +9,51 @@ import {
 } from "./migrations";
 
 describe("database migration registry", () => {
+  it("adds the follow-up queue table to a database that predates it", () => {
+    const sqlite = new Database(":memory:");
+    try {
+      sqlite.exec(`
+        PRAGMA foreign_keys = ON;
+        CREATE TABLE app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        CREATE TABLE projects (
+          id TEXT PRIMARY KEY, name TEXT NOT NULL, icon TEXT, location_kind TEXT NOT NULL,
+          location_path TEXT, location_distro TEXT, location_linux_path TEXT, location_unc_path TEXT,
+          last_draft_config TEXT, scripts TEXT, search_settings TEXT, worktree_location TEXT,
+          mcp_servers TEXT, gh_account TEXT, workspace_id TEXT, disabled INTEGER NOT NULL DEFAULT 0,
+          sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL
+        );
+        CREATE TABLE threads (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE);
+        CREATE TABLE thread_runtime_items (thread_id TEXT REFERENCES threads(id) ON DELETE CASCADE, content TEXT);
+        CREATE TABLE project_notes (project_id TEXT PRIMARY KEY, doc TEXT, todos TEXT NOT NULL, updated_at TEXT NOT NULL);
+        CREATE TABLE scheduled_tasks (id TEXT PRIMARY KEY, project_id TEXT);
+        CREATE TABLE pr_watches (
+          project_id TEXT NOT NULL REFERENCES projects(id), pr_number INTEGER NOT NULL,
+          PRIMARY KEY (project_id, pr_number)
+        );
+      `);
+      sqlite
+        .prepare(
+          `INSERT INTO projects (id, name, location_kind, location_path, sort_order, created_at)
+           VALUES (?, ?, 'posix', ?, ?, ?)`,
+        )
+        .run("project-1", "Poracode", "/repo", 0, "2026-09-22T00:00:00.000Z");
+      sqlite
+        .prepare("INSERT INTO threads (id, project_id) VALUES (?, ?)")
+        .run("thread-1", "project-1");
+      // Start at 43 so only the follow-up queue migration runs: the message
+      // search backfill expects a full thread_runtime_items shape this
+      // hand-built fixture deliberately does not have.
+      runDatabaseMigrations(sqlite, 43);
+
+      expect(() =>
+        sqlite.prepare("SELECT thread_id FROM thread_follow_up_queue").all(),
+      ).not.toThrow();
+      expect(sqlite.prepare("SELECT id FROM threads").all()).toEqual([{ id: "thread-1" }]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("keeps the published migration history append-only", () => {
     expect(DATABASE_MIGRATIONS.map(({ version, name }) => [version, name])).toEqual([
       [2, "threads.done"],
@@ -51,8 +96,9 @@ describe("database migration registry", () => {
       [41, "repair Antigravity persisted model variants"],
       [42, "deduplicate project locations"],
       [43, "message search index"],
+      [44, "thread follow-up queue"],
     ]);
-    expect(LATEST_SCHEMA_VERSION).toBe(43);
+    expect(LATEST_SCHEMA_VERSION).toBe(44);
     expect(() => validateMigrationRegistry()).not.toThrow();
   });
 
