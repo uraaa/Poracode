@@ -1,4 +1,9 @@
 import type Database from "better-sqlite3";
+import {
+  SNIPPET_MARK_END,
+  SNIPPET_MARK_START,
+  type ThreadMessageSearchHit,
+} from "@/shared/contracts";
 import { getSqlite } from "./connection";
 import { buildPhraseQuery } from "./messageSearchQuery";
 import { extractMessageText } from "./messageText";
@@ -78,25 +83,7 @@ export function removeThreadMessagesAfter(
     .run(threadId, position);
 }
 
-/**
- * Control characters, not markup: the renderer splits on them to highlight the
- * match, so nothing the user typed can be interpreted as HTML on the way out.
- */
-export const SNIPPET_MARK_START = "";
-export const SNIPPET_MARK_END = "";
-
 const SNIPPET_TOKENS = 12;
-
-export interface ThreadMessageSearchHit {
-  threadId: string;
-  threadTitle: string;
-  projectId: string;
-  itemId: string;
-  position: number;
-  role: "user" | "assistant";
-  snippet: string;
-  updatedAt: string;
-}
 
 interface SearchRow {
   thread_id: string;

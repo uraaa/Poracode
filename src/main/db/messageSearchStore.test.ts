@@ -3,9 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { Thread } from "@/shared/contracts";
+import { SNIPPET_MARK_END, SNIPPET_MARK_START, type Thread } from "@/shared/contracts";
 import { closeDatabase, initDatabase } from "./connection";
-import { dbSearchThreadMessages, SNIPPET_MARK_END, SNIPPET_MARK_START } from "./messageSearchStore";
+import { dbSearchThreadMessages } from "./messageSearchStore";
 import { dbUpsertProject, dbUpsertThread } from "./projectsThreads";
 import { dbReplaceThreadRuntimeItems } from "./runtimeItems";
 

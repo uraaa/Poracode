@@ -14,6 +14,7 @@ import { prWatchProcedures } from "./procedures/prWatches";
 import { scheduleProcedures } from "./procedures/schedules";
 import { skillProcedures } from "./procedures/skills";
 import { projectTreeProcedures } from "./procedures/projectTree";
+import { messageSearchProcedures } from "./procedures/messageSearch";
 import { sessionImportProcedures } from "./procedures/sessionImport";
 import { settingsProcedures } from "./procedures/settings";
 import { sshProcedures } from "./procedures/ssh";
@@ -43,6 +44,7 @@ export const groupedIpcProcedures = {
   skills: skillProcedures,
   plugins: pluginProcedures,
   agentCredentials: agentCredentialProcedures,
+  messageSearch: messageSearchProcedures,
   sessionImport: sessionImportProcedures,
 } as const;
 
@@ -68,6 +70,7 @@ export const ipcProcedureMap = {
   ...skillProcedures,
   ...pluginProcedures,
   ...agentCredentialProcedures,
+  ...messageSearchProcedures,
   ...sessionImportProcedures,
 } as const;
 
@@ -127,6 +130,7 @@ export const MAIN_LOCAL_PROCEDURE_NAMES = [
   "setProfileEnvironment",
   "createProfile",
   "listImportableSessions",
+  "searchThreadMessages",
   "importSessionTranscript",
   "setWindowChrome",
   "dbGetProjects",

@@ -87,6 +87,7 @@ import {
   type WindowChromeResult,
 } from "@/shared/ipc";
 import { supportsNativeWindowMaterial, syncNativeThemeForMaterial } from "../window/windowMaterial";
+import { dbSearchThreadMessages } from "@/main/db/messageSearchStore";
 import type { SharedSettings } from "@/shared/settings";
 import {
   importSessionTranscript as runImportSessionTranscript,
@@ -469,6 +470,7 @@ export function createLocalIpcHandlers(
     },
     listImportableSessions: async (payload) =>
       runListImportableSessions(payload, sessionImportDeps()),
+    searchThreadMessages: async (payload) => dbSearchThreadMessages(payload.query, payload.limit),
     importSessionTranscript: async (payload) =>
       runImportSessionTranscript(payload, sessionImportDeps()),
     setProfileEnvironment: (payload) =>
