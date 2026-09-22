@@ -433,6 +433,10 @@ msgstr "{agentLabel}: {statusLabel}. Hover for status details."
 msgid "{agentLead} needs your input to continue."
 msgstr "{agentLead} needs your input to continue."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "{alreadyImported} session(s) were already imported."
+msgstr "{alreadyImported} session(s) were already imported."
+
 #: src/mobile/views/pr/PrOverviewPage.tsx
 msgid "{commitsCount, plural, one {# commit} other {# commits}}"
 msgstr "{commitsCount, plural, one {# commit} other {# commits}}"
@@ -1125,6 +1129,7 @@ msgstr "Advertise a custom base URL, e.g. a reverse proxy or tunnel. Leave empty
 #: src/renderer/components/thread/ChatPane/parts/items/toolDisplay.ts
 #: src/renderer/views/SchedulesView/ScheduleEditor.tsx
 #: src/renderer/views/SettingsOverlay/parts/SingleAgentSettings/parts/AgentEnvironmentRow.tsx
+#: src/renderer/views/ThreadSearchOverlay/parts/MessageSearchResultRow.tsx
 msgid "Agent"
 msgstr "Agent"
 
@@ -3655,6 +3660,10 @@ msgstr "Could not read existing CLI sessions."
 #: src/renderer/components/thread/ChatPane/parts/items/useReadAbsoluteFile.tsx
 msgid "Could not read file."
 msgstr "Could not read file."
+
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
+msgid "Could not search messages."
+msgstr "Could not search messages."
 
 #: src/renderer/components/mcp/useMcpServerOauth.ts
 msgid "Could not sign in to {serverName}: {message}"
@@ -6452,6 +6461,10 @@ msgstr "Imported session"
 msgid "Improved"
 msgstr "Improved"
 
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
+msgid "In messages"
+msgstr "In messages"
+
 #: src/renderer/views/GitHubActionsView/GitHubActionsRunList.tsx
 msgid "In progress"
 msgstr "In progress"
@@ -8500,6 +8513,10 @@ msgstr "No MCP servers match your search."
 #: src/renderer/views/SettingsOverlay/parts/ProfileSettings.tsx
 msgid "No MCP tools used yet."
 msgstr "No MCP tools used yet."
+
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
+msgid "No messages match."
+msgstr "No messages match."
 
 #: src/renderer/components/thread/ChatPane/ChatPane.tsx
 msgid "No messages yet"
@@ -11756,6 +11773,7 @@ msgid "Searching..."
 msgstr "Searching..."
 
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "Searching…"
 msgstr "Searching…"
 
@@ -15395,6 +15413,10 @@ msgstr "WSL base folder"
 #: src/renderer/views/SettingsOverlay/parts/AcpRegistrySettings.tsx
 msgid "WSL: {distro}"
 msgstr "WSL: {distro}"
+
+#: src/renderer/views/ThreadSearchOverlay/parts/MessageSearchResultRow.tsx
+msgid "You"
+msgstr "You"
 
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CommitSyncPanel.tsx
 msgid "Your local changes are stashed and will be re-applied when you commit or abort this merge."

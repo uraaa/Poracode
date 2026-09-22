@@ -6,9 +6,13 @@ import { useAppStore } from "@/renderer/state/appStore";
 import { usePanelStore } from "@/renderer/state/panelStore";
 import { useDragSource } from "@/renderer/dnd";
 import { openThread } from "@/renderer/actions/threadActions";
+import { MessageSearchResultRow } from "./parts/MessageSearchResultRow";
 import { ThreadSearchResultRow } from "./parts/ThreadSearchResultRow";
+import { useMessageSearch } from "./parts/useMessageSearch";
 
 const RESULT_LIMIT = 50;
+/** Mirrors MIN_SEARCH_QUERY_CHARS in the main process. */
+const MIN_QUERY_CHARS = 2;
 
 export function ThreadSearchOverlay(props: { onClose: () => void }) {
   const { onClose } = props;
@@ -72,17 +76,26 @@ export function ThreadSearchOverlay(props: { onClose: () => void }) {
     setSelectedIndex(0);
   }
 
+  const { hits, status } = useMessageSearch(query);
+
+  // Titles first, message matches after: one selection space, so ArrowDown
+  // walks out of the title list straight into the message list.
+  const selectable = useMemo(
+    () => [...results.map((thread) => thread.id), ...hits.map((hit) => hit.threadId)],
+    [results, hits],
+  );
+
   function activateAt(index: number) {
-    const thread = results[index];
-    if (!thread) return;
-    openThread(thread.id);
+    const threadId = selectable[index];
+    if (!threadId) return;
+    openThread(threadId);
     onClose();
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setSelectedIndex((i) => Math.min(i + 1, Math.max(0, results.length - 1)));
+      setSelectedIndex((i) => Math.min(i + 1, Math.max(0, selectable.length - 1)));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setSelectedIndex((i) => Math.max(0, i - 1));
@@ -153,6 +166,36 @@ export function ThreadSearchOverlay(props: { onClose: () => void }) {
               ))}
             </div>
           )}
+          {query.trim().length >= MIN_QUERY_CHARS ? (
+            <div className="mt-1 flex flex-col gap-0.5 border-t border-[var(--hairline)] pt-1">
+              <div className="px-3 pb-0.5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted/70">
+                <Trans>In messages</Trans>
+              </div>
+              {status === "failed" ? (
+                <div className="px-3 py-2 text-xs text-danger">
+                  <Trans>Could not search messages.</Trans>
+                </div>
+              ) : hits.length === 0 ? (
+                <div className="px-3 py-2 text-xs text-muted">
+                  {status === "ready" ? (
+                    <Trans>No messages match.</Trans>
+                  ) : (
+                    <Trans>Searching…</Trans>
+                  )}
+                </div>
+              ) : (
+                hits.map((hit, index) => (
+                  <MessageSearchResultRow
+                    key={`${hit.threadId}:${hit.itemId}`}
+                    hit={hit}
+                    isSelected={selectedIndex === results.length + index}
+                    onActivate={() => activateAt(results.length + index)}
+                    onHover={() => setSelectedIndex(results.length + index)}
+                  />
+                ))
+              )}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

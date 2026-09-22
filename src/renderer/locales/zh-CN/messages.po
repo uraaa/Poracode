@@ -433,6 +433,10 @@ msgstr "{agentLabel}：{statusLabel}。将鼠标悬停以查看状态详细信�
 msgid "{agentLead} needs your input to continue."
 msgstr "{agentLead} 需要你的输入才能继续。"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "{alreadyImported} session(s) were already imported."
+msgstr ""
+
 #: src/mobile/views/pr/PrOverviewPage.tsx
 msgid "{commitsCount, plural, one {# commit} other {# commits}}"
 msgstr "{commitsCount, plural, one {# 个提交} other {# 个提交}}"
@@ -1125,6 +1129,7 @@ msgstr "公布自定义基础 URL，例如反向代理或隧道。留空则自�
 #: src/renderer/components/thread/ChatPane/parts/items/toolDisplay.ts
 #: src/renderer/views/SchedulesView/ScheduleEditor.tsx
 #: src/renderer/views/SettingsOverlay/parts/SingleAgentSettings/parts/AgentEnvironmentRow.tsx
+#: src/renderer/views/ThreadSearchOverlay/parts/MessageSearchResultRow.tsx
 msgid "Agent"
 msgstr "智能体"
 
@@ -3651,6 +3656,10 @@ msgstr "无法读取现有的 CLI 会话。"
 #: src/renderer/components/thread/ChatPane/parts/items/useReadAbsoluteFile.tsx
 msgid "Could not read file."
 msgstr "无法读取文件。"
+
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
+msgid "Could not search messages."
+msgstr ""
 
 #: src/renderer/components/mcp/useMcpServerOauth.ts
 msgid "Could not sign in to {serverName}: {message}"
@@ -6448,6 +6457,10 @@ msgstr "导入的会话"
 msgid "Improved"
 msgstr "已改进"
 
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
+msgid "In messages"
+msgstr ""
+
 #: src/renderer/views/GitHubActionsView/GitHubActionsRunList.tsx
 msgid "In progress"
 msgstr "进行中"
@@ -8495,6 +8508,10 @@ msgstr "没有符合搜索条件的 MCP 服务器。"
 #: src/renderer/views/SettingsOverlay/parts/ProfileSettings.tsx
 msgid "No MCP tools used yet."
 msgstr "暂未使用任何MCP工具。"
+
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
+msgid "No messages match."
+msgstr ""
 
 #: src/renderer/components/thread/ChatPane/ChatPane.tsx
 msgid "No messages yet"
@@ -11751,6 +11768,7 @@ msgid "Searching..."
 msgstr "正在搜索..."
 
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "Searching…"
 msgstr "正在搜索…"
 
@@ -15386,6 +15404,10 @@ msgstr "WSL 基础文件夹"
 #: src/renderer/views/SettingsOverlay/parts/AcpRegistrySettings.tsx
 msgid "WSL: {distro}"
 msgstr "WSL：{distro}"
+
+#: src/renderer/views/ThreadSearchOverlay/parts/MessageSearchResultRow.tsx
+msgid "You"
+msgstr ""
 
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CommitSyncPanel.tsx
 msgid "Your local changes are stashed and will be re-applied when you commit or abort this merge."

@@ -433,6 +433,10 @@ msgstr "{agentLabel}: {statusLabel}. Durum ayrıntıları için fareyle üzerine
 msgid "{agentLead} needs your input to continue."
 msgstr "{agentLead} devam etmek için girişinizi bekliyor."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "{alreadyImported} session(s) were already imported."
+msgstr ""
+
 #: src/mobile/views/pr/PrOverviewPage.tsx
 msgid "{commitsCount, plural, one {# commit} other {# commits}}"
 msgstr "{commitsCount, plural, one {# commit} other {# commit}}"
@@ -1125,6 +1129,7 @@ msgstr "Özel bir temel URL duyurun, örn. bir ters proxy veya tünel. Otomatik 
 #: src/renderer/components/thread/ChatPane/parts/items/toolDisplay.ts
 #: src/renderer/views/SchedulesView/ScheduleEditor.tsx
 #: src/renderer/views/SettingsOverlay/parts/SingleAgentSettings/parts/AgentEnvironmentRow.tsx
+#: src/renderer/views/ThreadSearchOverlay/parts/MessageSearchResultRow.tsx
 msgid "Agent"
 msgstr "Temsilci"
 
@@ -3651,6 +3656,10 @@ msgstr "Mevcut CLI oturumları okunamadı."
 #: src/renderer/components/thread/ChatPane/parts/items/useReadAbsoluteFile.tsx
 msgid "Could not read file."
 msgstr "Dosya okunamadı."
+
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
+msgid "Could not search messages."
+msgstr ""
 
 #: src/renderer/components/mcp/useMcpServerOauth.ts
 msgid "Could not sign in to {serverName}: {message}"
@@ -6448,6 +6457,10 @@ msgstr "İçe aktarılan oturum"
 msgid "Improved"
 msgstr "İyileştirildi"
 
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
+msgid "In messages"
+msgstr ""
+
 #: src/renderer/views/GitHubActionsView/GitHubActionsRunList.tsx
 msgid "In progress"
 msgstr "Devam ediyor"
@@ -8496,6 +8509,10 @@ msgstr "Aramanızla eşleşen MCP sunucusu yok."
 #: src/renderer/views/SettingsOverlay/parts/ProfileSettings.tsx
 msgid "No MCP tools used yet."
 msgstr "Henüz MCP aracı kullanılmadı."
+
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
+msgid "No messages match."
+msgstr ""
 
 #: src/renderer/components/thread/ChatPane/ChatPane.tsx
 msgid "No messages yet"
@@ -11752,6 +11769,7 @@ msgid "Searching..."
 msgstr "Aranıyor..."
 
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "Searching…"
 msgstr "Aranıyor…"
 
@@ -15387,6 +15405,10 @@ msgstr "WSL temel klasörü"
 #: src/renderer/views/SettingsOverlay/parts/AcpRegistrySettings.tsx
 msgid "WSL: {distro}"
 msgstr "WSL: {distro}"
+
+#: src/renderer/views/ThreadSearchOverlay/parts/MessageSearchResultRow.tsx
+msgid "You"
+msgstr ""
 
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CommitSyncPanel.tsx
 msgid "Your local changes are stashed and will be re-applied when you commit or abort this merge."

@@ -433,6 +433,10 @@ msgstr "{agentLabel}: {statusLabel}. 상태 세부정보를 보려면 마우스�
 msgid "{agentLead} needs your input to continue."
 msgstr "{agentLead}가 계속하려면 입력이 필요합니다."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "{alreadyImported} session(s) were already imported."
+msgstr ""
+
 #: src/mobile/views/pr/PrOverviewPage.tsx
 msgid "{commitsCount, plural, one {# commit} other {# commits}}"
 msgstr "{commitsCount, plural, one {커밋 #개} other {커밋 #개}}"
@@ -1125,6 +1129,7 @@ msgstr "사용자 정의 기본 URL을 게시합니다(예: 리버스 프록시 
 #: src/renderer/components/thread/ChatPane/parts/items/toolDisplay.ts
 #: src/renderer/views/SchedulesView/ScheduleEditor.tsx
 #: src/renderer/views/SettingsOverlay/parts/SingleAgentSettings/parts/AgentEnvironmentRow.tsx
+#: src/renderer/views/ThreadSearchOverlay/parts/MessageSearchResultRow.tsx
 msgid "Agent"
 msgstr "에이전트"
 
@@ -3651,6 +3656,10 @@ msgstr "기존 CLI 세션을 읽지 못했습니다."
 #: src/renderer/components/thread/ChatPane/parts/items/useReadAbsoluteFile.tsx
 msgid "Could not read file."
 msgstr "파일을 읽을 수 없습니다."
+
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
+msgid "Could not search messages."
+msgstr ""
 
 #: src/renderer/components/mcp/useMcpServerOauth.ts
 msgid "Could not sign in to {serverName}: {message}"
@@ -6448,6 +6457,10 @@ msgstr "가져온 세션"
 msgid "Improved"
 msgstr "개선됨"
 
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
+msgid "In messages"
+msgstr ""
+
 #: src/renderer/views/GitHubActionsView/GitHubActionsRunList.tsx
 msgid "In progress"
 msgstr "진행 중"
@@ -8496,6 +8509,10 @@ msgstr "검색과 일치하는 MCP 서버가 없습니다."
 #: src/renderer/views/SettingsOverlay/parts/ProfileSettings.tsx
 msgid "No MCP tools used yet."
 msgstr "아직 사용한 MCP 도구가 없습니다."
+
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
+msgid "No messages match."
+msgstr ""
 
 #: src/renderer/components/thread/ChatPane/ChatPane.tsx
 msgid "No messages yet"
@@ -11752,6 +11769,7 @@ msgid "Searching..."
 msgstr "검색 중..."
 
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "Searching…"
 msgstr "검색 중…"
 
@@ -15387,6 +15405,10 @@ msgstr "WSL 기본 폴더"
 #: src/renderer/views/SettingsOverlay/parts/AcpRegistrySettings.tsx
 msgid "WSL: {distro}"
 msgstr "WSL: {distro}"
+
+#: src/renderer/views/ThreadSearchOverlay/parts/MessageSearchResultRow.tsx
+msgid "You"
+msgstr ""
 
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CommitSyncPanel.tsx
 msgid "Your local changes are stashed and will be re-applied when you commit or abort this merge."

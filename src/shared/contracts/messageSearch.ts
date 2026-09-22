@@ -1,13 +1,21 @@
 import { z } from "zod";
 
 export const MAX_MESSAGE_SEARCH_RESULTS = 200;
+export const DEFAULT_MESSAGE_SEARCH_RESULTS = 50;
 
 export const searchThreadMessagesPayloadSchema = z.object({
   /** Raw user input; the main process decides what is too short to run. */
   query: z.string(),
-  limit: z.number().int().min(1).max(MAX_MESSAGE_SEARCH_RESULTS).default(50),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_MESSAGE_SEARCH_RESULTS)
+    .default(DEFAULT_MESSAGE_SEARCH_RESULTS),
 });
-export type SearchThreadMessagesPayload = z.infer<typeof searchThreadMessagesPayloadSchema>;
+// `z.input`, like the other payloads with defaults: callers omit `limit`,
+// the schema fills it in on parse.
+export type SearchThreadMessagesPayload = z.input<typeof searchThreadMessagesPayloadSchema>;
 
 /**
  * Control characters, not markup: the renderer splits the snippet on them and

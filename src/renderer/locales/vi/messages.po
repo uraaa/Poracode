@@ -433,6 +433,10 @@ msgstr "{agentLabel}: {statusLabel}. Di chuột để biết chi tiết trạng 
 msgid "{agentLead} needs your input to continue."
 msgstr "{agentLead} cần bạn nhập thông tin để tiếp tục."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "{alreadyImported} session(s) were already imported."
+msgstr ""
+
 #: src/mobile/views/pr/PrOverviewPage.tsx
 msgid "{commitsCount, plural, one {# commit} other {# commits}}"
 msgstr "{commitsCount, plural, one {# commit} other {# commit}}"
@@ -1125,6 +1129,7 @@ msgstr "Công bố một URL cơ sở tùy chỉnh, ví dụ một reverse proxy
 #: src/renderer/components/thread/ChatPane/parts/items/toolDisplay.ts
 #: src/renderer/views/SchedulesView/ScheduleEditor.tsx
 #: src/renderer/views/SettingsOverlay/parts/SingleAgentSettings/parts/AgentEnvironmentRow.tsx
+#: src/renderer/views/ThreadSearchOverlay/parts/MessageSearchResultRow.tsx
 msgid "Agent"
 msgstr "Tác nhân"
 
@@ -3651,6 +3656,10 @@ msgstr "Không thể đọc các phiên CLI hiện có."
 #: src/renderer/components/thread/ChatPane/parts/items/useReadAbsoluteFile.tsx
 msgid "Could not read file."
 msgstr "Không thể đọc tập tin."
+
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
+msgid "Could not search messages."
+msgstr ""
 
 #: src/renderer/components/mcp/useMcpServerOauth.ts
 msgid "Could not sign in to {serverName}: {message}"
@@ -6448,6 +6457,10 @@ msgstr "Phiên đã nhập"
 msgid "Improved"
 msgstr "Cải thiện"
 
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
+msgid "In messages"
+msgstr ""
+
 #: src/renderer/views/GitHubActionsView/GitHubActionsRunList.tsx
 msgid "In progress"
 msgstr "Đang chạy"
@@ -8496,6 +8509,10 @@ msgstr "Không có máy chủ MCP nào khớp với tìm kiếm."
 #: src/renderer/views/SettingsOverlay/parts/ProfileSettings.tsx
 msgid "No MCP tools used yet."
 msgstr "Chưa dùng công cụ MCP nào."
+
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
+msgid "No messages match."
+msgstr ""
 
 #: src/renderer/components/thread/ChatPane/ChatPane.tsx
 msgid "No messages yet"
@@ -11752,6 +11769,7 @@ msgid "Searching..."
 msgstr "Đang tìm kiếm..."
 
 #: src/renderer/views/FileEditorOverlay/parts/ProjectTreeView/ProjectTreeView.tsx
+#: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "Searching…"
 msgstr "Đang tìm kiếm…"
 
@@ -15387,6 +15405,10 @@ msgstr "Thư mục gốc WSL"
 #: src/renderer/views/SettingsOverlay/parts/AcpRegistrySettings.tsx
 msgid "WSL: {distro}"
 msgstr "WSL: {distro}"
+
+#: src/renderer/views/ThreadSearchOverlay/parts/MessageSearchResultRow.tsx
+msgid "You"
+msgstr ""
 
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CommitSyncPanel.tsx
 msgid "Your local changes are stashed and will be re-applied when you commit or abort this merge."
