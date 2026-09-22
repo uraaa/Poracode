@@ -97,6 +97,24 @@ function runtimeItemState(state: string): PersistedRuntimeItem["state"] {
   return state === "completed" || state === "updated" ? state : "started";
 }
 
+/**
+ * Delivery state belongs to a live session. A process that died between the
+ * optimistic paint and the hand-off to the model would otherwise leave the
+ * message muted in every future open of the thread, waiting for a delivery
+ * that can no longer happen.
+ */
+function deliveredPayload(payload: unknown): unknown {
+  if (
+    !payload ||
+    typeof payload !== "object" ||
+    Array.isArray(payload) ||
+    (payload as { pendingDelivery?: unknown }).pendingDelivery !== true
+  ) {
+    return payload;
+  }
+  return { ...(payload as Record<string, unknown>), pendingDelivery: false };
+}
+
 function mapRuntimeItemRow(
   row: PersistedRuntimeItemRow,
   tails?: ItemStreamTails,
@@ -106,7 +124,7 @@ function mapRuntimeItemRow(
     id: row.item_id,
     type: row.type,
     state: runtimeItemState(row.state),
-    payload: row.payload ? safeParse(row.payload) : undefined,
+    payload: row.payload ? deliveredPayload(safeParse(row.payload)) : undefined,
     streams: assembleItemStreams(head, tails),
     ...(row.parent_item_id ? { parentItemId: row.parent_item_id } : {}),
   };

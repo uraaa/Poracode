@@ -284,8 +284,11 @@ export const UserMessage = memo(function UserMessage({
   return (
     <Surface
       variant="tertiary"
-      className={chatPromptSurfaceClass}
+      // A message sent into a running turn is painted before the model has it.
+      // Dimming the row keeps it from reading as one the agent saw and ignored.
+      className={`${chatPromptSurfaceClass}${payload?.pendingDelivery ? " opacity-60" : ""}`}
       data-user-message="true"
+      {...(payload?.pendingDelivery ? { "data-pending-delivery": "true" } : {})}
       {...longPressHandlers}
     >
       <div className="min-w-0 space-y-1.5 leading-snug">

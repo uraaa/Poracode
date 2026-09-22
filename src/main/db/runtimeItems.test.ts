@@ -82,6 +82,23 @@ describe.skipIf(!sqliteAvailable)("runtimeItems incremental persistence", () => 
     delete process.env.PORACODE_BETTER_SQLITE3_NATIVE_BINDING;
   });
 
+  it("never restores a user message as still undelivered", () => {
+    dbReplaceThreadRuntimeItems("thread-1", [
+      {
+        id: "user-1",
+        type: "user_message",
+        state: "completed",
+        payload: { content: [{ kind: "text", text: "stuck" }], pendingDelivery: true },
+        streams: {},
+      },
+    ]);
+
+    expect(dbGetThreadRuntimeItems("thread-1")[0]?.payload).toEqual({
+      content: [{ kind: "text", text: "stuck" }],
+      pendingDelivery: false,
+    });
+  });
+
   it("replaces pre-snapshot chunked streams and preserves other streams", () => {
     const threadId = "thread-1",
       itemId = "recovery";
