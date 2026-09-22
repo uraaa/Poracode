@@ -11912,6 +11912,10 @@ msgstr "Send generic text instead of conversation titles through Apple's push se
 msgid "Send message"
 msgstr "Send message"
 
+#: src/renderer/components/thread/ThreadFollowUpQueue.tsx
+msgid "Send queued follow-ups now"
+msgstr "Send queued follow-ups now"
+
 #: src/renderer/i18n/sharedMessages.ts
 msgid "Send terminal input"
 msgstr "Send terminal input"

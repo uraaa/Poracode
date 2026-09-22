@@ -11908,6 +11908,10 @@ msgstr "Отправлять общий текст вместо названий
 msgid "Send message"
 msgstr "Отправить сообщение"
 
+#: src/renderer/components/thread/ThreadFollowUpQueue.tsx
+msgid "Send queued follow-ups now"
+msgstr "Отправить сообщения из очереди сейчас"
+
 #: src/renderer/i18n/sharedMessages.ts
 msgid "Send terminal input"
 msgstr "Отправить ввод в терминал"

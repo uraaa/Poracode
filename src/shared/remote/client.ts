@@ -799,11 +799,12 @@ export class RemoteDesktopClient {
       })) as { result: unknown };
       return result.result;
     } catch (error) {
-      // The remote protocol remains additive within v9. A v9 host from before
-      // queued follow-ups knows the passthrough endpoint but rejects these new
-      // procedure names; turn that capability miss into a stable, actionable
-      // error. Never retry through setPendingSteer: queue and steer have
-      // intentionally different semantics.
+      // The remote protocol stays additive: a host from before queued
+      // follow-ups (v9), or before send-now (v10), knows the passthrough
+      // endpoint but rejects these newer procedure names. Turn that capability
+      // miss into a stable, actionable error. Never retry through
+      // setPendingSteer: queue and steer have intentionally different
+      // semantics.
       if (
         isRemoteFollowUpQueueProcedure(procedure) &&
         error instanceof RemoteClientError &&

@@ -666,6 +666,10 @@ export class ThreadSessionManager {
     return this.followUpQueue.steerQueuedThreadFollowUp(input);
   }
 
+  sendThreadFollowUpsNow(input: { threadId: string }): Promise<void> {
+    return this.followUpQueue.sendThreadFollowUpsNow(input);
+  }
+
   async removeQueuedThreadFollowUp(input: { threadId: string; id: string }): Promise<void> {
     return this.followUpQueue.removeQueuedThreadFollowUp(input);
   }

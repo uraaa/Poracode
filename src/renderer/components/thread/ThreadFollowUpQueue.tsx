@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ListOrdered, Play } from "lucide-react";
+import { FastForward, ListOrdered, Play } from "lucide-react";
 import { toast } from "@heroui/react";
 import { useLingui } from "@lingui/react/macro";
 import type { PendingSteerState, ThreadFollowUpQueueState } from "@/shared/contracts";
@@ -66,15 +66,24 @@ export function ThreadFollowUpQueue({
         title={t`Queued follow-ups`}
         countLabel={queue?.paused ? t`Paused` : String(items.length)}
         actions={
-          queue?.paused ? (
+          <>
             <ThreadDockIconButton
-              label={t`Resume queued follow-ups`}
+              label={t`Send queued follow-ups now`}
               isDisabled={pending || Boolean(currentEdit)}
-              onPress={() => run(() => readBridge().resumeThreadFollowUps({ threadId }))}
+              onPress={() => run(() => readBridge().sendThreadFollowUpsNow({ threadId }))}
             >
-              <Play className="size-3.5" />
+              <FastForward className="size-3.5" />
             </ThreadDockIconButton>
-          ) : undefined
+            {queue?.paused ? (
+              <ThreadDockIconButton
+                label={t`Resume queued follow-ups`}
+                isDisabled={pending || Boolean(currentEdit)}
+                onPress={() => run(() => readBridge().resumeThreadFollowUps({ threadId }))}
+              >
+                <Play className="size-3.5" />
+              </ThreadDockIconButton>
+            ) : null}
+          </>
         }
       />
       <DragDropProvider onDragEnd={handleDragEnd}>

@@ -29,6 +29,9 @@ export function createFollowUpQueueHarness() {
     return completion;
   });
   const steerTurn = vi.fn<NonNullable<StructuredSessionHandle["steerTurn"]>>(async () => {});
+  const interruptTurn = vi.fn<NonNullable<StructuredSessionHandle["interruptTurn"]>>(
+    async () => {},
+  );
   const session = {
     threadId: "queue-config",
     instanceId: "queue-instance",
@@ -43,8 +46,8 @@ export function createFollowUpQueueHarness() {
     prevChunk: "",
     lastStrippedPtyChunk: "",
     ptyOscCarry: "",
-    structuredSession: { startTurn, steerTurn, dispose: async () => {} },
+    structuredSession: { startTurn, steerTurn, interruptTurn, dispose: async () => {} },
   } as unknown as SessionRuntime;
   manager.sessions.set(session.threadId, session);
-  return { manager, session, startTurn, steerTurn, finish, completion };
+  return { manager, session, emit, startTurn, steerTurn, interruptTurn, finish, completion };
 }

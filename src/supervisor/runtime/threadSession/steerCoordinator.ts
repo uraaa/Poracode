@@ -26,6 +26,13 @@ export interface SteerSubmissionOptions {
   awaitCanonicalStart?: boolean;
   /** Stable transcript identity allocated when the row entered the FIFO. */
   userMessageItemId?: string;
+  /**
+   * Require delivery before the running turn continues. A provider whose
+   * native steer only holds the prompt until the turn ends would otherwise
+   * make "now" mean "later"; this keeps the interrupt-drain path for every
+   * provider, whatever its steer capability does.
+   */
+  forceInterrupt?: boolean;
 }
 
 export interface PendingSteerAdmission {
@@ -407,7 +414,11 @@ export class SteerCoordinator {
     // the supervisor is still reconnecting. Native steering is valid only for
     // an authoritatively live turn; idle/needs-reply/error must drain as a
     // normal turn instead.
-    if (session.status === "working" && session.structuredSession.steerTurn) {
+    if (
+      session.status === "working" &&
+      session.structuredSession.steerTurn &&
+      options?.forceInterrupt !== true
+    ) {
       const admission = options?.awaitReplacement ? createPendingSteerAdmission() : undefined;
       if (!admission) {
         // Ordinary composer steering still needs to retain the caller's

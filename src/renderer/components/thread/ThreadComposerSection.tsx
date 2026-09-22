@@ -928,8 +928,21 @@ function ThreadComposerSectionInner(props: ThreadComposerSectionProps & { thread
                           if (e.nativeEvent.isComposing || e.keyCode === 229) return true;
                           if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
                             e.preventDefault();
+                            const overrideSegments = mentionRef.current?.serializeSegments() ?? [];
+                            // Nothing to send makes the override meaningless, so the
+                            // chord escalates the queue instead: interrupt the turn and
+                            // hand over everything waiting.
+                            if (
+                              overrideSegments.length === 0 &&
+                              attachments.attachments.length === 0
+                            ) {
+                              void readBridge()
+                                .sendThreadFollowUpsNow({ threadId: thread.id })
+                                .catch((error: unknown) => toast.danger(friendlyError(error)));
+                              return true;
+                            }
                             submitPrompt(
-                              mentionRef.current?.serializeSegments() ?? [],
+                              overrideSegments,
                               followUpBehavior === "queue" ? "steer" : "queue",
                             );
                             return true;

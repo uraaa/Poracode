@@ -509,3 +509,87 @@ it("keeps a restored queue gated until the thread has a session", async () => {
     await manager.dispose();
   }
 });
+
+it("sends every queued follow-up as one interrupting turn", async () => {
+  const { manager, session, emit, interruptTurn, finish } = createHarness();
+  session.status = "working";
+  try {
+    await manager.queueThreadFollowUp({
+      threadId: session.threadId,
+      prompt: "first",
+      config: session.config,
+    });
+    await manager.queueThreadFollowUp({
+      threadId: session.threadId,
+      prompt: "second",
+      config: session.config,
+    });
+
+    await manager.sendThreadFollowUpsNow({ threadId: session.threadId });
+
+    expect(interruptTurn).toHaveBeenCalledOnce();
+    expect(session.pendingSteer).toMatchObject({ prompt: "first\n\nsecond" });
+    expect(lastPendingSteerEvent(emit)).toMatchObject({ prompt: "first\n\nsecond" });
+    expect(manager.getThreadFollowUpQueue(session.threadId)).toBeNull();
+  } finally {
+    finish();
+    await manager.dispose();
+  }
+});
+
+function lastPendingSteerEvent(emit: ReturnType<typeof createHarness>["emit"]) {
+  const events = emit.mock.calls
+    .map(([event]) => event)
+    .filter((event) => event.type === "thread-pending-steer");
+  return events.at(-1)?.pending ?? null;
+}
+
+it("leaves a dispatched follow-up alone when the rest are sent now", async () => {
+  const { manager, session, startTurn, emit, finish } = createHarness();
+  try {
+    await manager.queueThreadFollowUp({
+      threadId: session.threadId,
+      prompt: "already running",
+      config: session.config,
+    });
+    await vi.waitFor(() => expect(startTurn).toHaveBeenCalledTimes(1));
+    await manager.queueThreadFollowUp({
+      threadId: session.threadId,
+      prompt: "waiting",
+      config: session.config,
+    });
+
+    await manager.sendThreadFollowUpsNow({ threadId: session.threadId });
+
+    expect(lastPendingSteerEvent(emit)).toMatchObject({ prompt: "waiting" });
+  } finally {
+    finish();
+    await manager.dispose();
+  }
+});
+
+it("lifts the pause after the paused queue is sent now", async () => {
+  const { manager, session, finish } = createHarness();
+  session.status = "working";
+  try {
+    await manager.queueThreadFollowUp({
+      threadId: session.threadId,
+      prompt: "paused for editing",
+      config: session.config,
+    });
+    const item = manager.getThreadFollowUpQueue(session.threadId)!.items[0]!;
+    await manager.pauseThreadFollowUps({ threadId: session.threadId, id: item.id });
+
+    await manager.sendThreadFollowUpsNow({ threadId: session.threadId });
+    await manager.queueThreadFollowUp({
+      threadId: session.threadId,
+      prompt: "after send now",
+      config: session.config,
+    });
+
+    expect(manager.getThreadFollowUpQueue(session.threadId)).toMatchObject({ paused: false });
+  } finally {
+    finish();
+    await manager.dispose();
+  }
+});

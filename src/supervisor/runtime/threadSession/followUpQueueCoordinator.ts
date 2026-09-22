@@ -243,6 +243,54 @@ export class FollowUpQueueCoordinator {
     });
   }
 
+  /**
+   * Hand the whole FIFO to the running turn as one interrupting turn, in
+   * order. Stop is a deliberate queue pause (see `interruptThread`), so this
+   * is the opposite lever and only ever runs when the user asks for it. The
+   * rows merge into a single turn rather than draining one at a time:
+   * otherwise "send now" would interrupt once per row.
+   */
+  async sendThreadFollowUpsNow(input: { threadId: string }): Promise<void> {
+    // Reserve before any await: preparation of the FIFO head may already be running.
+    const reservation = this.beginDirectInput(input.threadId);
+    try {
+      await this.mutate(input.threadId, async () => {
+        const record = this.records.get(input.threadId);
+        if (!record) return;
+        // Dispatch shifts the head out of `items`, so an entry already on its
+        // way to the provider cannot be picked up and delivered twice here.
+        const entries = record.items.slice();
+        const first = entries[0];
+        const last = entries[entries.length - 1];
+        if (!first || !last) return;
+        for (const entry of entries) this.cancelPreparation(record, entry);
+        const segments = entries.flatMap((entry) => snapshotPayload(entry.payload).segments ?? []);
+        await this.ctx.steer(
+          {
+            threadId: input.threadId,
+            prompt: entries.map((entry) => entry.payload.prompt).join("\n\n"),
+            // Newest config wins, matching a direct steer submitted now.
+            config: snapshotPayload(last.payload).config,
+            ...(segments.length > 0 ? { segments } : {}),
+          },
+          { forceInterrupt: true, userMessageItemId: first.userMessageItemId },
+        );
+        for (const entry of entries) {
+          const index = record.items.indexOf(entry);
+          if (index >= 0) record.items.splice(index, 1);
+        }
+        // Sending now answers whatever paused the queue — an edit, a Stop, a
+        // failed direct input. Leaving the gate closed would silently hold the
+        // next follow-up after the user just asked for delivery.
+        this.pausedThreads.delete(input.threadId);
+        record.paused = false;
+        this.emitQueueState(input.threadId);
+      });
+    } finally {
+      reservation.release();
+    }
+  }
+
   private findPending(input: { threadId: string; id: string }) {
     const record = this.records.get(input.threadId);
     const index = record?.items.findIndex((entry) => entry.id === input.id) ?? -1;

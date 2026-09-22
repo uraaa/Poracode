@@ -11908,6 +11908,10 @@ msgstr "Gửi văn bản chung chung thay vì tiêu đề cuộc trò chuyện q
 msgid "Send message"
 msgstr "Gửi tin nhắn"
 
+#: src/renderer/components/thread/ThreadFollowUpQueue.tsx
+msgid "Send queued follow-ups now"
+msgstr "Gửi ngay các tin nhắn tiếp theo trong hàng đợi"
+
 #: src/renderer/i18n/sharedMessages.ts
 msgid "Send terminal input"
 msgstr "Gửi dữ liệu vào terminal"

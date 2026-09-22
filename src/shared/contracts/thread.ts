@@ -366,6 +366,11 @@ export const resumeThreadFollowUpsPayloadSchema = z.object({
 });
 export type ResumeThreadFollowUpsPayload = z.infer<typeof resumeThreadFollowUpsPayloadSchema>;
 
+export const sendThreadFollowUpsNowPayloadSchema = z.object({
+  threadId: z.string().min(1),
+});
+export type SendThreadFollowUpsNowPayload = z.infer<typeof sendThreadFollowUpsNowPayloadSchema>;
+
 export const getThreadFollowUpQueuePayloadSchema = z.object({
   threadId: z.string().min(1),
 });

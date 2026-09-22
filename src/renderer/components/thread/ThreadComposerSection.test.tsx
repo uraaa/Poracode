@@ -27,6 +27,7 @@ const bridgeMock = vi.hoisted(() => ({
   interruptThread: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
   setPendingSteer: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
   queueThreadFollowUp: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+  sendThreadFollowUpsNow: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
   getThreadFollowUpQueue: vi.fn<() => Promise<null>>().mockResolvedValue(null),
   refreshAgentStatuses: vi
     .fn<() => Promise<{ windows: AgentStatus[]; wsl: AgentStatus[] }>>()
@@ -89,6 +90,7 @@ vi.mock("../../bridge", () => ({
     interruptThread: bridgeMock.interruptThread,
     setPendingSteer: bridgeMock.setPendingSteer,
     queueThreadFollowUp: bridgeMock.queueThreadFollowUp,
+    sendThreadFollowUpsNow: bridgeMock.sendThreadFollowUpsNow,
     getThreadFollowUpQueue: bridgeMock.getThreadFollowUpQueue,
     writeTerminal: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
     refreshAgentStatuses: bridgeMock.refreshAgentStatuses,
@@ -272,6 +274,7 @@ describe("ThreadComposerSection", () => {
     useRevertedPromptStore.setState({ byThread: {} });
     useThreadFollowUpQueueStore.setState({ byThread: {} });
     bridgeMock.queueThreadFollowUp.mockReset().mockResolvedValue(undefined);
+    bridgeMock.sendThreadFollowUpsNow.mockReset().mockResolvedValue(undefined);
     bridgeMock.getThreadFollowUpQueue.mockReset().mockResolvedValue(null);
     bridgeMock.isRemoteSession.mockReturnValue(false);
     bridgeMock.clearPendingSteer.mockClear();
@@ -1535,6 +1538,19 @@ describe("ThreadComposerSection", () => {
       );
       expect(unused).not.toHaveBeenCalled();
       expect(useSharedSettings.getState().followUpBehavior).toBe(behavior);
+    },
+  );
+
+  it.each(["ctrlKey", "metaKey"] as const)(
+    "sends the queued follow-ups now on %s+Enter with an empty composer",
+    async (modifier) => {
+      renderComposer({ thread: { ...guiThread, status: "working", attention: "working" } });
+      fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter", [modifier]: true });
+      await waitFor(() =>
+        expect(bridgeMock.sendThreadFollowUpsNow).toHaveBeenCalledWith({ threadId: guiThread.id }),
+      );
+      expect(bridgeMock.queueThreadFollowUp).not.toHaveBeenCalled();
+      expect(bridgeMock.setPendingSteer).not.toHaveBeenCalled();
     },
   );
 

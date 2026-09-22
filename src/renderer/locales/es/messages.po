@@ -11908,6 +11908,10 @@ msgstr "Envía texto genérico en lugar de los títulos de conversación a trav�
 msgid "Send message"
 msgstr "Enviar mensaje"
 
+#: src/renderer/components/thread/ThreadFollowUpQueue.tsx
+msgid "Send queued follow-ups now"
+msgstr "Enviar ahora los seguimientos en cola"
+
 #: src/renderer/i18n/sharedMessages.ts
 msgid "Send terminal input"
 msgstr "Enviar entrada al terminal"

@@ -11,6 +11,7 @@ const bridge = vi.hoisted(() => ({
   resumeThreadFollowUps: vi.fn<() => Promise<void>>(),
   editQueuedThreadFollowUp: vi.fn<() => Promise<void>>(),
   steerQueuedThreadFollowUp: vi.fn<() => Promise<void>>(),
+  sendThreadFollowUpsNow: vi.fn<() => Promise<void>>(),
 }));
 vi.mock("@/renderer/bridge", () => ({ readBridge: () => bridge }));
 const queue = {
@@ -28,6 +29,15 @@ describe("ThreadFollowUpQueue", () => {
     bridge.resumeThreadFollowUps.mockReset().mockResolvedValue(undefined);
     bridge.editQueuedThreadFollowUp.mockReset().mockResolvedValue(undefined);
     bridge.steerQueuedThreadFollowUp.mockReset().mockResolvedValue(undefined);
+    bridge.sendThreadFollowUpsNow.mockReset().mockResolvedValue(undefined);
+  });
+
+  it("sends the whole queue now from the header", async () => {
+    render(<ThreadFollowUpQueue threadId="thread" queue={queue} />);
+    fireEvent.click(screen.getByRole("button", { name: "Send queued follow-ups now" }));
+    await waitFor(() =>
+      expect(bridge.sendThreadFollowUpsNow).toHaveBeenCalledWith({ threadId: "thread" }),
+    );
   });
 
   it("focuses the editor after its pause request finishes", () => {

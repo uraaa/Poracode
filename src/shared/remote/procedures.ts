@@ -50,6 +50,7 @@ export const REMOTE_PROCEDURE_SPECS = {
   steerQueuedThreadFollowUp: operate("thread"),
   pauseThreadFollowUps: operate("thread"),
   resumeThreadFollowUps: operate("thread"),
+  sendThreadFollowUpsNow: operate("thread"),
   getThreadFollowUpQueue: read("thread"),
   createFileCheckpoint: operate("thread"),
   finalizeFileCheckpoint: operate("thread"),
@@ -181,6 +182,7 @@ export const REMOTE_FOLLOW_UP_QUEUE_PROCEDURES = [
   "steerQueuedThreadFollowUp",
   "pauseThreadFollowUps",
   "resumeThreadFollowUps",
+  "sendThreadFollowUpsNow",
   "getThreadFollowUpQueue",
 ] as const satisfies readonly RemoteProcedureName[];
 
