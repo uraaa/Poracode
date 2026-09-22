@@ -433,6 +433,10 @@ msgstr "{agentLabel}: {statusLabel}. Наведите для подробнос�
 msgid "{agentLead} needs your input to continue."
 msgstr "{agentLead} требуется ваш ввод, чтобы продолжить."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "{alreadyImported} session(s) were already imported."
+msgstr ""
+
 #: src/mobile/views/pr/PrOverviewPage.tsx
 msgid "{commitsCount, plural, one {# commit} other {# commits}}"
 msgstr "{commitsCount, plural, one {# коммит} few {# коммита} many {# коммитов} other {# коммита}}"
@@ -7870,6 +7874,10 @@ msgstr "Переместить панель"
 msgid "Move to clean worktree"
 msgstr "Переместить в чистый worktree"
 
+#: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
+msgid "Move to Project"
+msgstr "Переместить в проект"
+
 #: src/renderer/components/workspace/workspaceMenuItems.tsx
 msgid "Move to Workspace"
 msgstr "Переместить в рабочую область"
@@ -13638,6 +13646,10 @@ msgstr "Это общесистемное сочетание клавиш нед
 msgid "This thread does not support queued follow-ups."
 msgstr "Этот тред не поддерживает сообщения в очереди."
 
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "This thread is hosted on another desktop; it can't be moved to a local project."
+msgstr "Этот тред размещён на другом десктопе — его нельзя переместить в локальный проект."
+
 #: src/renderer/i18n/sharedMessages.ts
 msgid "This thread is not ready for Steer."
 msgstr "Этот поток пока не готов к корректировке."
@@ -14931,6 +14943,10 @@ msgstr "Дождитесь завершения работы всех канди
 #: src/renderer/actions/moveThreadToWorktreeActions.ts
 msgid "Wait for the thread to finish starting before moving it to a worktree."
 msgstr "Дождитесь завершения запуска треда, прежде чем перемещать его в worktree."
+
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "Wait for the thread to finish starting before moving it to another project."
+msgstr "Дождитесь завершения запуска треда, прежде чем перемещать его в другой проект."
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Wait for the thread to finish starting."

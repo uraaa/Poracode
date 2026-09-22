@@ -433,6 +433,10 @@ msgstr "{agentLabel}:{statusLabel}。マウスを移動するとステータス�
 msgid "{agentLead} needs your input to continue."
 msgstr "{agentLead}が続行するには入力が必要です。"
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "{alreadyImported} session(s) were already imported."
+msgstr ""
+
 #: src/mobile/views/pr/PrOverviewPage.tsx
 msgid "{commitsCount, plural, one {# commit} other {# commits}}"
 msgstr "{commitsCount, plural, one {# 件のコミット} other {# 件のコミット}}"
@@ -7868,6 +7872,10 @@ msgstr "パネルを移動"
 msgid "Move to clean worktree"
 msgstr "クリーンなワークツリーに移動"
 
+#: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
+msgid "Move to Project"
+msgstr ""
+
 #: src/renderer/components/workspace/workspaceMenuItems.tsx
 msgid "Move to Workspace"
 msgstr "ワークスペースへ移動"
@@ -13636,6 +13644,10 @@ msgstr "このシステム全体のショートカットは使用できません
 msgid "This thread does not support queued follow-ups."
 msgstr "このスレッドはキューに入ったフォローアップをサポートしていません。"
 
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "This thread is hosted on another desktop; it can't be moved to a local project."
+msgstr ""
+
 #: src/renderer/i18n/sharedMessages.ts
 msgid "This thread is not ready for Steer."
 msgstr "このスレッドはまだ軌道修正を受け付けられません。"
@@ -14929,6 +14941,10 @@ msgstr "プルリクエストを開く前に、すべての候補が完了する
 #: src/renderer/actions/moveThreadToWorktreeActions.ts
 msgid "Wait for the thread to finish starting before moving it to a worktree."
 msgstr "ワークツリーに移動する前に、スレッドの起動が完了するまでお待ちください。"
+
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "Wait for the thread to finish starting before moving it to another project."
+msgstr ""
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Wait for the thread to finish starting."
