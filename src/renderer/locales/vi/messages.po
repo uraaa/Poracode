@@ -13381,6 +13381,10 @@ msgstr "nhà cung cấp mục tiêu"
 msgid "The thread session is not available for queued follow-ups."
 msgstr "Không có phiên của cuộc trò chuyện để xử lý tin nhắn tiếp theo trong hàng đợi."
 
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "The thread was stopped to move it — start it again in its new project."
+msgstr ""
+
 #: src/renderer/components/thread/MoveThreadToWorktreeDialog.tsx
 #~ msgid "The thread will run in a separate worktree on a new branch."
 #~ msgstr "Luồng sẽ chạy trong một cây làm việc riêng trên một nhánh mới."

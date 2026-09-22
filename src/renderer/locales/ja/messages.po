@@ -13379,6 +13379,10 @@ msgstr "対象プロバイダー"
 msgid "The thread session is not available for queued follow-ups."
 msgstr "キューに入ったフォローアップにはスレッドセッションを利用できません。"
 
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "The thread was stopped to move it — start it again in its new project."
+msgstr ""
+
 #: src/renderer/components/thread/MoveThreadToWorktreeDialog.tsx
 #~ msgid "The thread will run in a separate worktree on a new branch."
 #~ msgstr "スレッドは新しいブランチ上の別のワークツリーで実行されます。"

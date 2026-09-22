@@ -13381,6 +13381,10 @@ msgstr "대상 공급자"
 msgid "The thread session is not available for queued follow-ups."
 msgstr "대기 중인 후속 메시지에 스레드 세션을 사용할 수 없습니다."
 
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "The thread was stopped to move it — start it again in its new project."
+msgstr ""
+
 #: src/renderer/components/thread/MoveThreadToWorktreeDialog.tsx
 #~ msgid "The thread will run in a separate worktree on a new branch."
 #~ msgstr "스레드가 새 브랜치의 별도 작업 트리에서 실행됩니다."

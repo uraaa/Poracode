@@ -13381,6 +13381,10 @@ msgstr "el proveedor de destino"
 msgid "The thread session is not available for queued follow-ups."
 msgstr "La sesión del hilo no está disponible para los seguimientos en cola."
 
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "The thread was stopped to move it — start it again in its new project."
+msgstr ""
+
 #: src/renderer/components/thread/MoveThreadToWorktreeDialog.tsx
 #~ msgid "The thread will run in a separate worktree on a new branch."
 #~ msgstr "El hilo se ejecutará en un worktree separado en una nueva rama."

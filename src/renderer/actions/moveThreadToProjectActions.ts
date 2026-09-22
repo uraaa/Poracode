@@ -41,6 +41,10 @@ export async function moveThreadToProject(threadId: string, projectId: string): 
 
   if (thread.status !== "inactive") {
     await unloadStoredThread(threadId);
+    // The runtime does not survive the move (it holds the old project's
+    // working directory), and nothing relaunches it in the new one — tell the
+    // user, or a busy thread silently goes inactive under them.
+    toast.info(i18n._(msg`The thread was stopped to move it — start it again in its new project.`));
   }
 
   useAppStore.getState().moveThreadToProject(threadId, projectId);

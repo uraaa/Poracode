@@ -13380,6 +13380,10 @@ msgstr "目标提供商"
 msgid "The thread session is not available for queued follow-ups."
 msgstr "聊天线程会话不可用于排队的后续消息。"
 
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "The thread was stopped to move it — start it again in its new project."
+msgstr ""
+
 #: src/renderer/components/thread/MoveThreadToWorktreeDialog.tsx
 #~ msgid "The thread will run in a separate worktree on a new branch."
 #~ msgstr "线程将在新分支上的独立工作树中运行。"

@@ -66,6 +66,43 @@ describe("moveThreadToProject", () => {
     expect(otherAfter).toEqual(otherBefore);
   });
 
+  it("leaves everything but projectId and the worktree fields unchanged", () => {
+    const sourceProject = useAppStore
+      .getState()
+      .addProject({ kind: "windows", path: "C:\\repo-a" });
+    const targetProject = useAppStore
+      .getState()
+      .addProject({ kind: "windows", path: "C:\\repo-b" });
+    const thread = useAppStore.getState().createThread({
+      projectId: sourceProject.id,
+      agentKind: "claude",
+      config: { model: "claude-opus-5", effort: "high" },
+      prompt: "start the task",
+      presentationMode: "gui",
+      title: "Custom title",
+    });
+    useAppStore.getState().starThread(thread.id);
+    useAppStore.getState().updateThreadRuntime(thread.id, {
+      status: "idle",
+      attention: "none",
+      canResumeWithConfig: true,
+    });
+    const before = currentThread(thread.id)!;
+    expect(before.title).toBe("Custom title");
+    expect(before.starred).toBe(true);
+    expect(before.status).toBe("idle");
+    expect(before.config).toEqual({ model: "claude-opus-5", effort: "high" });
+
+    useAppStore.getState().moveThreadToProject(thread.id, targetProject.id);
+
+    const after = currentThread(thread.id)!;
+    expect(after.projectId).toBe(targetProject.id);
+    expect(after.title).toBe(before.title);
+    expect(after.starred).toBe(before.starred);
+    expect(after.status).toBe(before.status);
+    expect(after.config).toEqual(before.config);
+  });
+
   it("is a no-op for an unknown thread", () => {
     const before = useAppStore.getState().threads;
     useAppStore.getState().moveThreadToProject("missing-thread", "some-project");

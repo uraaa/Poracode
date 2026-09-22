@@ -13381,6 +13381,10 @@ msgstr "der Zielanbieter"
 msgid "The thread session is not available for queued follow-ups."
 msgstr "Die Thread-Sitzung ist für eingereihte Nachfragen nicht verfügbar."
 
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "The thread was stopped to move it — start it again in its new project."
+msgstr ""
+
 #: src/renderer/components/thread/MoveThreadToWorktreeDialog.tsx
 #~ msgid "The thread will run in a separate worktree on a new branch."
 #~ msgstr "Der Thread wird in einem separaten Arbeitsbaum auf einem neuen Zweig ausgeführt."

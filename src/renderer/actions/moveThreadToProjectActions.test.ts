@@ -84,6 +84,22 @@ describe("moveThreadToProject action", () => {
     expect(mocks.appState.moveThreadToProject).toHaveBeenCalledWith("thread-1", projectB.id);
   });
 
+  it("tells the user a live thread was stopped by the move", async () => {
+    mocks.appState.threads = [thread("idle")];
+
+    await moveThreadToProject("thread-1", projectB.id);
+
+    expect(mocks.toast.info).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not toast when the thread was already inactive", async () => {
+    mocks.appState.threads = [thread("inactive")];
+
+    await moveThreadToProject("thread-1", projectB.id);
+
+    expect(mocks.toast.info).not.toHaveBeenCalled();
+  });
+
   it("refuses a remote-owned thread with a toast", async () => {
     mocks.appState.threads = [
       thread("idle", { remoteServerId: "d1", remoteId: "remote-thread-1" }),

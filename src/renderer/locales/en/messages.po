@@ -13385,6 +13385,10 @@ msgstr "the target provider"
 msgid "The thread session is not available for queued follow-ups."
 msgstr "The thread session is not available for queued follow-ups."
 
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "The thread was stopped to move it — start it again in its new project."
+msgstr "The thread was stopped to move it — start it again in its new project."
+
 #: src/renderer/components/thread/MoveThreadToWorktreeDialog.tsx
 #~ msgid "The thread will run in a separate worktree on a new branch."
 #~ msgstr "The thread will run in a separate worktree on a new branch."
