@@ -674,6 +674,12 @@ export class ThreadSessionManager {
     return this.followUpQueue.pauseThreadFollowUps(input);
   }
 
+  restoreThreadFollowUpQueue(
+    input: Parameters<FollowUpQueueCoordinator["restoreThreadFollowUpQueue"]>[0],
+  ): Promise<void> {
+    return this.followUpQueue.restoreThreadFollowUpQueue(input);
+  }
+
   resumeThreadFollowUps(threadId: string): Promise<void> {
     return this.followUpQueue.resumeThreadFollowUps(threadId);
   }

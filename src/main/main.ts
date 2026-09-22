@@ -15,6 +15,10 @@ import { BROWSER_SESSION_PARTITION } from "@/shared/browserPartition";
 import { resolveThemeMode } from "@/shared/themeMode";
 import { isThreadTurnActive, type RemoteThreadCommand } from "@/shared/contracts";
 import {
+  persistFollowUpQueueEvent,
+  restorePersistedFollowUpQueues,
+} from "./threads/followUpQueuePersistence";
+import {
   closeDatabase,
   dbDeleteThread,
   dbGetProject,
@@ -823,6 +827,7 @@ if (!hasSingleInstanceLock) {
             return;
           }
           persistSupervisorEvent(event);
+          persistFollowUpQueueEvent(event);
           handleSupervisorEventForSleep(event);
           appControlsMcpIngress?.observeSupervisorEvent(event);
           scheduleRunCoordinator?.observeSupervisorEvent(event);
@@ -835,17 +840,15 @@ if (!hasSingleInstanceLock) {
         onReset: () => {
           workingThreads.clear();
           remoteAccessController?.handleSupervisorReset();
-          // Queue state belongs to the supervisor process. A crash/restart
-          // drops its in-memory records without emitting per-thread events,
-          // so clear every renderer cache at the same boundary instead of
-          // leaving rows whose actions can only fail with item-not-found.
-          for (const thread of dbGetThreads()) {
-            mainWindow?.webContents.send(IPC_EVENT_CHANNELS.supervisorEvent, {
-              type: "thread-follow-up-queue",
-              threadId: thread.id,
-              queue: null,
-            } satisfies SupervisorEvent);
-          }
+          // A crash/restart drops the supervisor's in-memory records without
+          // emitting per-thread events. The rows survive in the database, so
+          // hand them back instead of clearing the renderer caches: a queue
+          // the user filled must outlive the process that was holding it.
+          void restorePersistedFollowUpQueues(async ({ threadId, queue }) => {
+            const config = dbGetThread(threadId)?.config;
+            if (!config) return;
+            await supervisorClient.call("restoreThreadFollowUpQueue", { threadId, queue, config });
+          });
           updatePowerSaveBlocker();
         },
       });

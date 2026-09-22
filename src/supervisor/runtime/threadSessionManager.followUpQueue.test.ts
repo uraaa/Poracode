@@ -374,3 +374,70 @@ it("settles and removes a queued steer only after forced restart admission", asy
     await manager.dispose();
   }
 });
+
+it("restores a persisted queue into an empty thread queue", async () => {
+  const { manager, session, finish } = createHarness();
+  try {
+    await manager.restoreThreadFollowUpQueue({
+      threadId: session.threadId,
+      queue: { paused: true, items: [{ id: "kept", prompt: "survived restart", stagedAt: 42 }] },
+      config: session.config,
+    });
+
+    expect(manager.getThreadFollowUpQueue(session.threadId)).toMatchObject({
+      paused: true,
+      items: [{ id: "kept", prompt: "survived restart", stagedAt: 42 }],
+    });
+  } finally {
+    finish();
+    await manager.dispose();
+  }
+});
+
+it("leaves a live queue alone when a restore arrives late", async () => {
+  const { manager, session, finish } = createHarness();
+  session.status = "working";
+  try {
+    await manager.queueThreadFollowUp({
+      threadId: session.threadId,
+      prompt: "typed just now",
+      config: session.config,
+    });
+
+    await manager.restoreThreadFollowUpQueue({
+      threadId: session.threadId,
+      queue: { paused: false, items: [{ id: "stale", prompt: "from disk", stagedAt: 1 }] },
+      config: session.config,
+    });
+
+    expect(manager.getThreadFollowUpQueue(session.threadId)!.items).toMatchObject([
+      { prompt: "typed just now" },
+    ]);
+  } finally {
+    finish();
+    await manager.dispose();
+  }
+});
+
+it("keeps a restored queue gated until the thread has a session", async () => {
+  const { manager, session, finish } = createHarness();
+  manager.sessions.delete(session.threadId);
+  try {
+    await manager.restoreThreadFollowUpQueue({
+      threadId: session.threadId,
+      queue: {
+        paused: false,
+        items: [{ id: "kept", prompt: "waiting for a session", stagedAt: 3 }],
+      },
+      config: session.config,
+    });
+
+    expect(manager.getThreadFollowUpQueue(session.threadId)).toMatchObject({
+      paused: true,
+      items: [{ prompt: "waiting for a session" }],
+    });
+  } finally {
+    finish();
+    await manager.dispose();
+  }
+});

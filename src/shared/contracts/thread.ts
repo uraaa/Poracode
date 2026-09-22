@@ -412,6 +412,15 @@ export interface ThreadFollowUpQueueState {
   paused: boolean;
 }
 
+export const restoreThreadFollowUpQueuePayloadSchema = z.object({
+  threadId: z.string().min(1),
+  queue: threadFollowUpQueueStateSchema,
+  config: threadConfigSchema,
+});
+export type RestoreThreadFollowUpQueuePayload = z.infer<
+  typeof restoreThreadFollowUpQueuePayloadSchema
+>;
+
 /**
  * Thread-metadata mutation issued by a remote client (the mobile PWA). Thread
  * metadata is owned by the desktop renderer's store (which persists it via

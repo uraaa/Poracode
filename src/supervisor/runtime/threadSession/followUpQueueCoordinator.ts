@@ -5,6 +5,7 @@ import type {
   ReorderQueuedThreadFollowUpPayload,
   RuntimeEvent,
   SetPendingSteerPayload,
+  ThreadConfig,
   ThreadFollowUpQueueState,
   ThreadStatus,
 } from "@/shared/contracts";
@@ -188,6 +189,48 @@ export class FollowUpQueueCoordinator {
     } finally {
       reservation.release();
     }
+  }
+
+  /**
+   * Adopt a queue restored from disk after a supervisor (re)start. The live
+   * queue wins whenever it already holds anything: the user may have typed
+   * while the restore was in flight, and their newer message must not be
+   * replaced by the snapshot that produced it.
+   */
+  async restoreThreadFollowUpQueue(input: {
+    threadId: string;
+    queue: ThreadFollowUpQueueState;
+    config: ThreadConfig;
+  }): Promise<void> {
+    await this.mutate(input.threadId, () => {
+      if (input.queue.items.length === 0) return;
+      const record = this.records.get(input.threadId) ?? this.createRecord(input.threadId);
+      if (record.items.length > 0) return;
+      for (const item of input.queue.items) {
+        record.items.push({
+          id: item.id,
+          stagedAt: item.stagedAt,
+          payload: snapshotPayload({
+            threadId: input.threadId,
+            prompt: item.prompt,
+            // A restored row carries no config of its own; the caller passes
+            // the thread's current one, so delivery uses what the thread is
+            // configured with now rather than a revived older model.
+            config: input.config,
+            ...(item.segments ? { segments: item.segments } : {}),
+          }),
+          userMessageItemId: `user-${randomUUID()}`,
+        });
+      }
+      // A thread with no live session has nothing to deliver into yet. Keep
+      // the rows visible but gated, exactly like a queue paused by a Stop.
+      if (input.queue.paused || !this.ctx.sessions.has(input.threadId)) {
+        record.paused = true;
+        this.pausedThreads.add(input.threadId);
+      }
+      this.emitQueueState(input.threadId);
+      this.schedulePump(input.threadId);
+    });
   }
 
   private findPending(input: { threadId: string; id: string }) {

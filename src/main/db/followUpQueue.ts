@@ -59,13 +59,14 @@ export function dbGetThreadFollowUpQueues(): Map<string, ThreadFollowUpQueueStat
   for (const row of rows) {
     const parsed = safeParse(row.payload) as { prompt?: unknown; segments?: unknown } | null;
     if (!parsed || typeof parsed.prompt !== "string") continue;
+    const segments = Array.isArray(parsed.segments)
+      ? (parsed.segments as NonNullable<PendingSteerState["segments"]>)
+      : undefined;
     const item: PendingSteerState = {
       id: row.item_id,
       prompt: parsed.prompt,
       stagedAt: row.staged_at,
-      ...(Array.isArray(parsed.segments)
-        ? { segments: parsed.segments as PendingSteerState["segments"] }
-        : {}),
+      ...(segments ? { segments } : {}),
     };
     const queue = queues.get(row.thread_id);
     if (queue) queue.items.push(item);

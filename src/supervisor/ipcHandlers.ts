@@ -77,6 +77,7 @@ export function createSupervisorIpcHandlers(runtime: SupervisorRuntime): Supervi
     steerQueuedThreadFollowUp: (payload) => threads.steerQueuedThreadFollowUp(payload),
     pauseThreadFollowUps: (payload) => threads.pauseThreadFollowUps(payload),
     resumeThreadFollowUps: ({ threadId }) => threads.resumeThreadFollowUps(threadId),
+    restoreThreadFollowUpQueue: (payload) => threads.restoreThreadFollowUpQueue(payload),
     getThreadFollowUpQueue: ({ threadId }) => threads.getThreadFollowUpQueue(threadId),
     writeTerminal: (payload) => threads.writeTerminal(payload),
     stageThreadInput: (payload) => threads.stageThreadInput(payload),
