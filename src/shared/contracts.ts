@@ -1,5 +1,6 @@
 export * from "./contracts/common";
 export * from "./contracts/config";
+export * from "./contracts/followUpDelivery";
 export * from "./contracts/agent";
 export * from "./contracts/project";
 export * from "./contracts/thread";
