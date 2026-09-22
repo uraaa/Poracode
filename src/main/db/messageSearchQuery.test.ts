@@ -21,6 +21,12 @@ describe("buildPhraseQuery", () => {
     expect(buildPhraseQuery('он сказал "нет"')).toBe('"он сказал ""нет"""');
   });
 
+  it("strips control characters, which FTS5 reads as an unterminated string", () => {
+    const withNul = `импорт${String.fromCharCode(0)} сессий`;
+    expect(buildPhraseQuery(withNul)).toBe('"импорт сессий"');
+    expect(buildPhraseQuery(String.fromCharCode(1, 2))).toBeNull();
+  });
+
   it("neutralises FTS5 operators so they match literally", () => {
     expect(buildPhraseQuery("NEAR(a b)")).toBe('"NEAR(a b)"');
     expect(buildPhraseQuery("foo* -bar AND baz:qux")).toBe('"foo* -bar AND baz:qux"');

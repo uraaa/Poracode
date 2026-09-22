@@ -239,7 +239,7 @@ function backfillMessageSearchIndex(sqlite: SqliteDatabase): void {
   );
   // `rowid` paging keeps memory flat on a database with a long history.
   const page = sqlite.prepare(
-    `SELECT rowid AS row_id, thread_id, item_id, position, type, payload, streams
+    `SELECT rowid AS row_id, thread_id, item_id, position, type, state, payload, streams
      FROM thread_runtime_items
      WHERE type IN ('user_message', 'assistant_message') AND rowid > ?
      ORDER BY rowid
@@ -253,6 +253,7 @@ function backfillMessageSearchIndex(sqlite: SqliteDatabase): void {
       item_id: string;
       position: number;
       type: string;
+      state: string;
       payload: string | null;
       streams: string | null;
     }>;
@@ -260,6 +261,7 @@ function backfillMessageSearchIndex(sqlite: SqliteDatabase): void {
     for (const row of rows) {
       const extracted = extractMessageText({
         type: row.type,
+        state: row.state as "started" | "updated" | "completed",
         payload: row.payload ? (JSON.parse(row.payload) as unknown) : undefined,
         streams: row.streams ? (JSON.parse(row.streams) as Record<string, string>) : {},
       });

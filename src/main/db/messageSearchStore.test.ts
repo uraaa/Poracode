@@ -4,7 +4,7 @@ import { join } from "node:path";
 import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { SNIPPET_MARK_END, SNIPPET_MARK_START, type Thread } from "@/shared/contracts";
-import { closeDatabase, initDatabase } from "./connection";
+import { closeDatabase, getSqlite, initDatabase } from "./connection";
 import { dbSearchThreadMessages } from "./messageSearchStore";
 import { dbUpsertProject, dbUpsertThread } from "./projectsThreads";
 import { dbReplaceThreadRuntimeItems } from "./runtimeItems";
@@ -123,6 +123,16 @@ describe.skipIf(!sqliteAvailable)("dbSearchThreadMessages", () => {
 
     expect(() => dbSearchThreadMessages('"нет" NEAR(a', 50)).not.toThrow();
     expect(dbSearchThreadMessages('сказал "нет"', 50)).toHaveLength(1);
+  });
+
+  it("returns nothing instead of throwing when the index is missing", () => {
+    dbUpsertThread(thread("t1", "Первый"), 0);
+    dbReplaceThreadRuntimeItems("t1", [userItem("i1", "импорт сессий")]);
+    // An interrupted migration, simulated: the index is gone but the app runs.
+    getSqlite().exec("DROP TABLE thread_message_fts");
+
+    expect(() => dbSearchThreadMessages("импорт", 50)).not.toThrow();
+    expect(dbSearchThreadMessages("импорт", 50)).toEqual([]);
   });
 
   it("honours the limit", () => {

@@ -16,6 +16,7 @@ import {
   dbGetThreadConversationItemsPage,
   dbGetThreadRuntimeItems,
   dbGetThreadRuntimeItemsPage,
+  dbClearThreadRuntimeItems,
   dbReplaceThreadRuntimeItems,
   dbTruncateThreadRuntimeAfter,
 } from "./runtimeItems";
@@ -1059,6 +1060,75 @@ describe.skipIf(!sqliteAvailable)("runtimeItems incremental persistence", () => 
     ]);
     dbFlushThreadRuntimeWrites("thread-1");
     expect(indexedRows("thread-1")).toEqual([{ item_id: "a1", role: "assistant", text: "Готово" }]);
+  });
+
+  it("drops an indexed message from the index when its text is rewritten away", () => {
+    dbApplyThreadRuntimeEvents("thread-1", [
+      { type: "item.started", threadId: "thread-1", itemId: "a1", itemType: "assistant_message" },
+      {
+        type: "content.delta",
+        threadId: "thread-1",
+        itemId: "a1",
+        stream: "assistant_text",
+        delta: "Готово",
+      },
+      { type: "item.completed", threadId: "thread-1", itemId: "a1" },
+    ]);
+    dbFlushThreadRuntimeWrites("thread-1");
+    expect(indexedRows("thread-1")).toEqual([{ item_id: "a1", role: "assistant", text: "Готово" }]);
+
+    // The provider rewrote the message non-append-only, to nothing.
+    dbApplyThreadRuntimeEvents("thread-1", [
+      {
+        type: "content.delta",
+        threadId: "thread-1",
+        itemId: "a1",
+        stream: "assistant_text",
+        delta: "",
+        replace: true,
+      },
+    ]);
+    dbFlushThreadRuntimeWrites("thread-1");
+    expect(indexedRows("thread-1")).toEqual([]);
+  });
+
+  it("removes indexed rows past the truncation point", () => {
+    dbReplaceThreadRuntimeItems("thread-1", [
+      {
+        id: "u1",
+        type: "user_message",
+        state: "completed",
+        payload: { content: [{ kind: "text", text: "первое" }] },
+        streams: {},
+      },
+      {
+        id: "u2",
+        type: "user_message",
+        state: "completed",
+        payload: { content: [{ kind: "text", text: "второе" }] },
+        streams: {},
+      },
+    ]);
+    expect(indexedRows("thread-1")).toHaveLength(2);
+
+    dbTruncateThreadRuntimeAfter("thread-1", "u1");
+    expect(indexedRows("thread-1")).toEqual([{ item_id: "u1", role: "user", text: "первое" }]);
+  });
+
+  it("clears the index when the thread's items are cleared", () => {
+    dbReplaceThreadRuntimeItems("thread-1", [
+      {
+        id: "u1",
+        type: "user_message",
+        state: "completed",
+        payload: { content: [{ kind: "text", text: "первое" }] },
+        streams: {},
+      },
+    ]);
+    expect(indexedRows("thread-1")).toHaveLength(1);
+
+    dbClearThreadRuntimeItems("thread-1");
+    expect(indexedRows("thread-1")).toEqual([]);
   });
 
   it("does not index command output", () => {

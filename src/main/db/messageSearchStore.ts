@@ -44,15 +44,25 @@ export function indexThreadMessages(
      ON CONFLICT (thread_id, item_id)
      DO UPDATE SET position = excluded.position, role = excluded.role, text = excluded.text`,
   );
+  const drop = sqlite.prepare(
+    "DELETE FROM thread_message_text WHERE thread_id = ? AND item_id = ?",
+  );
   for (const itemId of new Set(itemIds)) {
     const row = read.get(threadId, itemId) as IndexableRow | undefined;
     if (!row || !isReadyToIndex(row)) continue;
     const extracted = extractMessageText({
       type: row.type,
+      state: row.state as "started" | "updated" | "completed",
       payload: row.payload ? (JSON.parse(row.payload) as unknown) : undefined,
       streams: row.streams ? (JSON.parse(row.streams) as Record<string, string>) : {},
     });
-    if (!extracted) continue;
+    if (!extracted) {
+      // The message lost its text — rewritten non-append-only, or suppressed
+      // by an authoritative payload. Leaving the old row behind would keep
+      // text the transcript no longer shows searchable.
+      drop.run(threadId, itemId);
+      continue;
+    }
     upsert.run(threadId, itemId, row.position, extracted.role, extracted.text);
   }
 }
@@ -99,7 +109,30 @@ interface SearchRow {
 export function dbSearchThreadMessages(query: string, limit: number): ThreadMessageSearchHit[] {
   const match = buildPhraseQuery(query);
   if (!match) return [];
-  const rows = getSqlite()
+  let rows: SearchRow[];
+  try {
+    rows = queryHits(match, limit);
+  } catch (error) {
+    // The index is derived data: a missing or corrupt FTS table (an
+    // interrupted migration) must not take the search overlay — or the app —
+    // down with it. The next migration run rebuilds it.
+    console.error("[poracode] thread message search failed", error);
+    return [];
+  }
+  return rows.map((row) => ({
+    threadId: row.thread_id,
+    threadTitle: row.title,
+    projectId: row.project_id,
+    itemId: row.item_id,
+    position: row.position,
+    role: row.role === "assistant" ? "assistant" : "user",
+    snippet: row.snippet,
+    updatedAt: row.updated_at,
+  }));
+}
+
+function queryHits(match: string, limit: number): SearchRow[] {
+  return getSqlite()
     .prepare(
       `SELECT th.id AS thread_id, th.title, th.project_id, th.updated_at,
               m.item_id, m.position, m.role,
@@ -114,14 +147,4 @@ export function dbSearchThreadMessages(query: string, limit: number): ThreadMess
        LIMIT ?`,
     )
     .all(SNIPPET_MARK_START, SNIPPET_MARK_END, match, limit) as SearchRow[];
-  return rows.map((row) => ({
-    threadId: row.thread_id,
-    threadTitle: row.title,
-    projectId: row.project_id,
-    itemId: row.item_id,
-    position: row.position,
-    role: row.role === "assistant" ? "assistant" : "user",
-    snippet: row.snippet,
-    updatedAt: row.updated_at,
-  }));
 }

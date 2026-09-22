@@ -1,3 +1,4 @@
+import { assistantDisplayText } from "@/shared/assistantMessageText";
 import type { PersistedRuntimeItem } from "./runtimeItems";
 
 export interface ExtractedMessage {
@@ -5,7 +6,9 @@ export interface ExtractedMessage {
   text: string;
 }
 
-type ItemForExtraction = Pick<PersistedRuntimeItem, "type" | "streams"> & { payload?: unknown };
+type ItemForExtraction = Pick<PersistedRuntimeItem, "type" | "state" | "streams"> & {
+  payload?: unknown;
+};
 
 function userText(payload: unknown): string {
   if (typeof payload !== "object" || payload === null) return "";
@@ -31,7 +34,14 @@ export function extractMessageText(item: ItemForExtraction): ExtractedMessage | 
     return text.length > 0 ? { role: "user", text } : null;
   }
   if (item.type === "assistant_message") {
-    const text = item.streams?.assistant_text ?? "";
+    // Through the shared helper, so the index holds exactly the text the
+    // transcript shows: an authoritative payload overrides the stream, and an
+    // authoritative empty payload suppresses the message everywhere at once.
+    const text = assistantDisplayText({
+      state: item.state,
+      payload: item.payload,
+      streams: item.streams ?? {},
+    });
     return text.length > 0 ? { role: "assistant", text } : null;
   }
   return null;
