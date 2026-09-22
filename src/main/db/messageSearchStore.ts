@@ -1,4 +1,6 @@
 import type Database from "better-sqlite3";
+import { getSqlite } from "./connection";
+import { buildPhraseQuery } from "./messageSearchQuery";
 import { extractMessageText } from "./messageText";
 
 type SqliteDatabase = InstanceType<typeof Database>;
@@ -74,4 +76,65 @@ export function removeThreadMessagesAfter(
   sqlite
     .prepare("DELETE FROM thread_message_text WHERE thread_id = ? AND position > ?")
     .run(threadId, position);
+}
+
+/**
+ * Control characters, not markup: the renderer splits on them to highlight the
+ * match, so nothing the user typed can be interpreted as HTML on the way out.
+ */
+export const SNIPPET_MARK_START = "";
+export const SNIPPET_MARK_END = "";
+
+const SNIPPET_TOKENS = 12;
+
+export interface ThreadMessageSearchHit {
+  threadId: string;
+  threadTitle: string;
+  projectId: string;
+  itemId: string;
+  position: number;
+  role: "user" | "assistant";
+  snippet: string;
+  updatedAt: string;
+}
+
+interface SearchRow {
+  thread_id: string;
+  title: string;
+  project_id: string;
+  updated_at: string;
+  item_id: string;
+  position: number;
+  role: string;
+  snippet: string;
+}
+
+export function dbSearchThreadMessages(query: string, limit: number): ThreadMessageSearchHit[] {
+  const match = buildPhraseQuery(query);
+  if (!match) return [];
+  const rows = getSqlite()
+    .prepare(
+      `SELECT th.id AS thread_id, th.title, th.project_id, th.updated_at,
+              m.item_id, m.position, m.role,
+              snippet(thread_message_fts, 0, ?, ?, '…', ${SNIPPET_TOKENS}) AS snippet,
+              bm25(thread_message_fts) AS rank
+       FROM thread_message_fts
+       JOIN thread_message_text m ON m.rowid = thread_message_fts.rowid
+       JOIN threads th            ON th.id = m.thread_id
+       WHERE thread_message_fts MATCH ?
+         AND th.archived = 0
+       ORDER BY rank, th.updated_at DESC
+       LIMIT ?`,
+    )
+    .all(SNIPPET_MARK_START, SNIPPET_MARK_END, match, limit) as SearchRow[];
+  return rows.map((row) => ({
+    threadId: row.thread_id,
+    threadTitle: row.title,
+    projectId: row.project_id,
+    itemId: row.item_id,
+    position: row.position,
+    role: row.role === "assistant" ? "assistant" : "user",
+    snippet: row.snippet,
+    updatedAt: row.updated_at,
+  }));
 }
