@@ -1015,4 +1015,108 @@ describe.skipIf(!sqliteAvailable)("runtimeItems incremental persistence", () => 
     ]);
     expect(dbGetLatestThreadGoalItem("thread-1")?.id).toBe("goal-new");
   });
+
+  function indexedRows(threadId: string) {
+    return getSqlite()
+      .prepare(
+        "SELECT item_id, role, text FROM thread_message_text WHERE thread_id = ? ORDER BY position",
+      )
+      .all(threadId);
+  }
+
+  it("indexes a user message as soon as it arrives", () => {
+    dbApplyThreadRuntimeEvents("thread-1", [
+      {
+        type: "item.started",
+        threadId: "thread-1",
+        itemId: "u1",
+        itemType: "user_message",
+        payload: { content: [{ kind: "text", text: "Импорт сессий" }] },
+      },
+    ]);
+    dbFlushThreadRuntimeWrites("thread-1");
+    expect(indexedRows("thread-1")).toEqual([
+      { item_id: "u1", role: "user", text: "Импорт сессий" },
+    ]);
+  });
+
+  it("indexes an assistant message only once it completes", () => {
+    dbApplyThreadRuntimeEvents("thread-1", [
+      { type: "item.started", threadId: "thread-1", itemId: "a1", itemType: "assistant_message" },
+      {
+        type: "content.delta",
+        threadId: "thread-1",
+        itemId: "a1",
+        stream: "assistant_text",
+        delta: "Готово",
+      },
+    ]);
+    dbFlushThreadRuntimeWrites("thread-1");
+    expect(indexedRows("thread-1")).toEqual([]);
+
+    dbApplyThreadRuntimeEvents("thread-1", [
+      { type: "item.completed", threadId: "thread-1", itemId: "a1" },
+    ]);
+    dbFlushThreadRuntimeWrites("thread-1");
+    expect(indexedRows("thread-1")).toEqual([{ item_id: "a1", role: "assistant", text: "Готово" }]);
+  });
+
+  it("does not index command output", () => {
+    dbApplyThreadRuntimeEvents("thread-1", [
+      {
+        type: "item.started",
+        threadId: "thread-1",
+        itemId: "c1",
+        itemType: "command_execution",
+        payload: { command: "ls" },
+      },
+      { type: "item.completed", threadId: "thread-1", itemId: "c1" },
+    ]);
+    dbFlushThreadRuntimeWrites("thread-1");
+    expect(indexedRows("thread-1")).toEqual([]);
+  });
+
+  it("drops indexed rows when the thread is deleted", () => {
+    dbApplyThreadRuntimeEvents("thread-1", [
+      {
+        type: "item.started",
+        threadId: "thread-1",
+        itemId: "u1",
+        itemType: "user_message",
+        payload: { content: [{ kind: "text", text: "Импорт" }] },
+      },
+    ]);
+    dbFlushThreadRuntimeWrites("thread-1");
+    dbDeleteThread("thread-1");
+    expect(indexedRows("thread-1")).toEqual([]);
+    expect(getSqlite().prepare("SELECT COUNT(*) AS c FROM thread_message_fts").get()).toEqual({
+      c: 0,
+    });
+  });
+
+  it("re-indexes a thread when its items are replaced", () => {
+    dbReplaceThreadRuntimeItems("thread-1", [
+      {
+        id: "u1",
+        type: "user_message",
+        state: "completed",
+        payload: { content: [{ kind: "text", text: "Старый текст" }] },
+        streams: {},
+      },
+    ]);
+    expect(indexedRows("thread-1")).toEqual([
+      { item_id: "u1", role: "user", text: "Старый текст" },
+    ]);
+
+    dbReplaceThreadRuntimeItems("thread-1", [
+      {
+        id: "u2",
+        type: "user_message",
+        state: "completed",
+        payload: { content: [{ kind: "text", text: "Новый текст" }] },
+        streams: {},
+      },
+    ]);
+    expect(indexedRows("thread-1")).toEqual([{ item_id: "u2", role: "user", text: "Новый текст" }]);
+  });
 });

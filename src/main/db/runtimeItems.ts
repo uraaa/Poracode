@@ -5,6 +5,12 @@ import { inlineImagePayloadRenders } from "@/shared/inlineImagePayload";
 import type { PersistedRuntimePage } from "@/shared/ipc/schemas";
 import { isSubAgentTool } from "@/shared/toolCallClassification";
 import { getSqlite, registerBeforeDatabaseClose } from "./connection";
+import {
+  clearThreadMessages,
+  indexThreadMessages,
+  removeThreadMessages,
+  removeThreadMessagesAfter,
+} from "./messageSearchStore";
 import { safeParse } from "./rowMappers";
 import {
   appendStreamDelta,
@@ -565,6 +571,9 @@ function applyThreadRuntimeEventsNow(threadId: string, events: readonly RuntimeE
        WHERE thread_id = ? AND type = ? AND state != 'completed'`,
     );
 
+    const touched = new Set<string>();
+    const removed = new Set<string>();
+
     const readItem = (itemId: string) =>
       getItem.get(threadId, itemId) as
         | { type: string; state: string; payload: string | null; streams: string | null }
@@ -588,6 +597,7 @@ function applyThreadRuntimeEventsNow(threadId: string, events: readonly RuntimeE
     for (const event of events) {
       switch (event.type) {
         case "item.started":
+          touched.add(event.itemId);
           appendItem({
             id: event.itemId,
             type: event.itemType,
@@ -601,6 +611,7 @@ function applyThreadRuntimeEventsNow(threadId: string, events: readonly RuntimeE
         case "item.updated": {
           const row = readItem(event.itemId);
           if (!row) break;
+          touched.add(event.itemId);
           updateItem.run(
             row.state === "completed" ? "completed" : "updated",
             JSON.stringify(
@@ -616,6 +627,7 @@ function applyThreadRuntimeEventsNow(threadId: string, events: readonly RuntimeE
         case "item.completed": {
           const row = readItem(event.itemId);
           if (!row) break;
+          touched.add(event.itemId);
           const streams = row.streams ? (safeParse(row.streams) as Record<string, string>) : {};
           if (
             row.type === "reasoning" &&
@@ -628,6 +640,8 @@ function applyThreadRuntimeEventsNow(threadId: string, events: readonly RuntimeE
             )
           ) {
             deleteItem.run(threadId, event.itemId);
+            touched.delete(event.itemId);
+            removed.add(event.itemId);
             break;
           }
           const previousPayload = row.payload ? safeParse(row.payload) : undefined;
@@ -648,6 +662,7 @@ function applyThreadRuntimeEventsNow(threadId: string, events: readonly RuntimeE
         case "content.delta": {
           const row = readItem(event.itemId);
           if (!row) break;
+          touched.add(event.itemId);
           const head = row.streams ? (safeParse(row.streams) as Record<string, string>) : {};
           if (event.replace) {
             clearItemStream(sqlite, threadId, event.itemId, event.stream);
@@ -746,6 +761,9 @@ function applyThreadRuntimeEventsNow(threadId: string, events: readonly RuntimeE
           break;
       }
     }
+
+    removeThreadMessages(sqlite, threadId, [...removed]);
+    indexThreadMessages(sqlite, threadId, [...touched]);
   })();
 }
 
@@ -811,11 +829,18 @@ function replaceThreadRuntimeItemsInSqlite(
     );
     writeItemStreams(sqlite, threadId, it.id, it.streams ?? {});
   }
+  clearThreadMessages(sqlite, threadId);
+  indexThreadMessages(
+    sqlite,
+    threadId,
+    items.map((item) => item.id),
+  );
 }
 
 export function dbClearThreadRuntimeItems(threadId: string): void {
   runtimeWriteQueue.discard(threadId);
   getSqlite().prepare("DELETE FROM thread_runtime_items WHERE thread_id = ?").run(threadId);
+  clearThreadMessages(getSqlite(), threadId);
 }
 
 export function dbTruncateThreadRuntimeAfter(threadId: string, itemId: string): void {
@@ -829,6 +854,7 @@ export function dbTruncateThreadRuntimeAfter(threadId: string, itemId: string): 
     sqlite
       .prepare("DELETE FROM thread_runtime_items WHERE thread_id = ? AND position > ?")
       .run(threadId, checkpoint.position);
+    removeThreadMessagesAfter(sqlite, threadId, checkpoint.position);
     sqlite
       .prepare(
         `DELETE FROM thread_completed_turns
