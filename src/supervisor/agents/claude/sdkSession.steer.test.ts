@@ -281,3 +281,43 @@ it("surfaces a failed follow-up attachment and discards later steers", async () 
   expect(h.updates.at(-1)?.status).toBe("error");
   expect(h.events.filter((event) => event.type === "turn.started")).toHaveLength(2);
 });
+
+it("paints a held steer as undelivered until its turn starts", async () => {
+  const h = await createSession();
+  await h.session.startTurn("first", config);
+  await h.inputs.next();
+
+  await h.session.steerTurn("wait for me", config, undefined, {
+    userMessageItemId: "held-row",
+  });
+
+  const painted = h.events.find(
+    (event) => event.type === "item.started" && event.itemId === "held-row",
+  );
+  expect(painted).toMatchObject({
+    payload: expect.objectContaining({ pendingDelivery: true }),
+  });
+
+  h.output.write(resultMessage(h.id));
+  await h.inputs.next();
+  await flushSdkMessages();
+
+  expect(
+    h.events.filter((event) => event.type === "item.updated" && event.itemId === "held-row"),
+  ).toMatchObject([{ payload: expect.objectContaining({ pendingDelivery: false }) }]);
+});
+
+it("clears the undelivered flag when a held steer is dropped", async () => {
+  const h = await createSession();
+  await h.session.startTurn("first", config);
+  await h.inputs.next();
+  await h.session.steerTurn("never delivered", config, undefined, {
+    userMessageItemId: "dropped-row",
+  });
+
+  await h.session.dispose();
+
+  expect(
+    h.events.filter((event) => event.type === "item.updated" && event.itemId === "dropped-row"),
+  ).toMatchObject([{ payload: expect.objectContaining({ pendingDelivery: false }) }]);
+});

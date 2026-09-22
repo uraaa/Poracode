@@ -121,6 +121,14 @@ export const messageItemPayloadSchema = z.object({
    * messages from older apps retain the normal turn-activity behavior.
    */
   turnIndependent: z.boolean().optional(),
+  /**
+   * The user sent this message while a turn was running and the model has not
+   * received it yet; the chat paints it muted until delivery clears the flag.
+   * Versioning: optional on purpose — messages persisted before this field
+   * existed carry no flag and read as delivered, which is the pre-flag
+   * behaviour. Old data stays valid, so no version bump or migration.
+   */
+  pendingDelivery: z.boolean().optional(),
 });
 export type MessageItemPayload = z.infer<typeof messageItemPayloadSchema>;
 

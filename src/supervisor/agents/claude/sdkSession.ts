@@ -63,6 +63,7 @@ import {
   parseClaudeQuestions,
   readParentToolUseId,
   startClaudeTurn,
+  deliverClaudeSteer,
   steerClaudeTurn,
   type ClaudeMapperState,
 } from "./sdkCanonicalMapping";
@@ -340,19 +341,53 @@ export class ClaudeSdkSession implements StructuredSessionHandle {
     if (!this.currentTurnInFlight) return this.startTurn(prompt, config, segments, options);
     const userMessageItemId = options?.userMessageItemId ?? `user-${randomUUID()}`;
     this.pendingSteers.push([prompt, config, segments, { ...options, userMessageItemId }]);
-    this.emitRuntimeEvents(steerClaudeTurn(this.mapperState, prompt, segments, userMessageItemId));
+    this.emitRuntimeEvents(
+      steerClaudeTurn(this.mapperState, prompt, segments, userMessageItemId, {
+        pendingDelivery: true,
+      }),
+    );
+  }
+
+  /**
+   * Un-flag every held steer row that will never reach the model. A message
+   * dropped with the session must stop claiming it is on its way; otherwise
+   * the transcript keeps a row greyed out forever, waiting for a delivery
+   * that cannot happen.
+   */
+  private releaseHeldSteers(): void {
+    const held = this.pendingSteers.splice(0);
+    for (const [prompt, , segments, options] of held) {
+      if (!options?.userMessageItemId) continue;
+      this.emitRuntimeEvents(
+        deliverClaudeSteer(this.mapperState, prompt, segments, options.userMessageItemId),
+      );
+    }
   }
 
   private startPendingSteer(): boolean {
     const next = this.pendingSteers.shift();
     if (!next) return false;
+    // The row has been sitting in the transcript flagged as undelivered since
+    // `steerTurn` painted it. It is reaching the model now, so clear the flag
+    // before the turn opens.
+    const [heldPrompt, , heldSegments, heldOptions] = next;
+    if (heldOptions?.userMessageItemId) {
+      this.emitRuntimeEvents(
+        deliverClaudeSteer(
+          this.mapperState,
+          heldPrompt,
+          heldSegments,
+          heldOptions.userMessageItemId,
+        ),
+      );
+    }
     // startTurn opens the next lifecycle synchronously, before any idle update
     // can release the supervisor's FIFO queue. It also applies all live config.
     const submission = this.startTurn(...next);
     const generation = this.submissionGeneration;
     void submission.catch((error: unknown) => {
       if (this.disposed || generation !== this.submissionGeneration) return;
-      this.pendingSteers = [];
+      this.releaseHeldSteers();
       const message = error instanceof Error ? error.message : String(error);
       this.reportError(message);
       this.emitRuntimeEvents([{ type: "error", threadId: this.input.threadId, message }]);
@@ -614,8 +649,8 @@ export class ClaudeSdkSession implements StructuredSessionHandle {
 
   async dispose(): Promise<void> {
     if (this.disposed) return;
+    this.releaseHeldSteers();
     this.disposed = true;
-    this.pendingSteers = [];
     this.submissionGeneration++;
     this.stopGoalTracking();
     this.flushDeferredCompletion();

@@ -25,6 +25,10 @@ describe("runtimeEventSchema discriminated union", () => {
     // round-trip; readers treat a missing flag as stream-first.
     const flagged = { content: [{ kind: "text", text: "" }], displayAuthoritative: true };
     expect(messageItemPayloadSchema.parse(roundTrip(flagged))).toEqual(flagged);
+    // A message the user sent into a running turn carries the delivery flag
+    // until the model receives it; payloads without it read as delivered.
+    const undelivered = { content: [{ kind: "text", text: "hold on" }], pendingDelivery: true };
+    expect(messageItemPayloadSchema.parse(roundTrip(undelivered))).toEqual(undelivered);
     expect(promptSegmentSchema.parse({ kind: "mcp", id: "browser", name: "Browser" })).toEqual({
       kind: "mcp",
       id: "browser",
