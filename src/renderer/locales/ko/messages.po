@@ -11899,9 +11899,17 @@ msgstr "선택…"
 msgid "Send a message..."
 msgstr "메시지 보내기..."
 
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Send after this turn"
+msgstr "이번 턴이 끝난 뒤 보내기"
+
 #: src/renderer/views/SettingsOverlay/parts/RemoteAccessSettings.tsx
 msgid "Send generic text instead of conversation titles through Apple's push service."
 msgstr "대화 제목 대신 일반 텍스트를 Apple 푸시 서비스로 전송합니다."
+
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Send into this turn"
+msgstr "현재 턴에 보내기"
 
 #: src/renderer/commands/shortcutCatalog.ts
 #: src/renderer/components/thread/ThreadComposerSection.tsx
@@ -12731,8 +12739,8 @@ msgid "Steer"
 msgstr "현재 응답에 반영"
 
 #: src/renderer/components/thread/ThreadComposerSection.tsx
-msgid "Steer current turn"
-msgstr "현재 턴에 반영"
+#~ msgid "Steer current turn"
+#~ msgstr "현재 턴에 반영"
 
 #: src/renderer/components/thread/ThreadFollowUpQueueItem.tsx
 msgid "Steer queued follow-up"

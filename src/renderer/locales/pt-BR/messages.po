@@ -11899,9 +11899,17 @@ msgstr "Selecionar…"
 msgid "Send a message..."
 msgstr "Envie uma mensagem..."
 
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Send after this turn"
+msgstr "Enviar depois deste turno"
+
 #: src/renderer/views/SettingsOverlay/parts/RemoteAccessSettings.tsx
 msgid "Send generic text instead of conversation titles through Apple's push service."
 msgstr "Enviar texto genérico em vez dos títulos das conversas pelo serviço push da Apple."
+
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Send into this turn"
+msgstr "Enviar neste turno"
 
 #: src/renderer/commands/shortcutCatalog.ts
 #: src/renderer/components/thread/ThreadComposerSection.tsx
@@ -12731,8 +12739,8 @@ msgid "Steer"
 msgstr "Direcionar"
 
 #: src/renderer/components/thread/ThreadComposerSection.tsx
-msgid "Steer current turn"
-msgstr "Direcionar o turno atual"
+#~ msgid "Steer current turn"
+#~ msgstr "Direcionar o turno atual"
 
 #: src/renderer/components/thread/ThreadFollowUpQueueItem.tsx
 msgid "Steer queued follow-up"

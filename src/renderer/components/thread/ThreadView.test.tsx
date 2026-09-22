@@ -2022,7 +2022,7 @@ describe("ThreadView", () => {
   });
 
   it.each([
-    ["steer", "Steer current turn"],
+    ["steer", "Send after this turn"],
     ["queue", "Queue message"],
   ] as const)("allows %s and stop on a working GUI thread", async (behavior, label) => {
     useSharedSettings.setState({ followUpBehavior: behavior });

@@ -116,6 +116,7 @@ vi.mock("./ThreadComposer", () => ({
     onStop?: () => void;
     onSubmit: () => void;
     submitDisabled?: boolean;
+    submitLabel?: string;
   }) => (
     <div>
       {props.fixedContent}
@@ -134,6 +135,7 @@ vi.mock("./ThreadComposer", () => ({
           stop
         </button>
       ) : null}
+      <output data-testid="submit-label">{props.submitLabel}</output>
       <button type="button" onClick={props.onSubmit}>
         send
       </button>
@@ -1587,6 +1589,33 @@ describe("ThreadComposerSection", () => {
     });
     // There is no turn to interrupt; the FIFO drains on its own.
     expect(bridgeMock.sendThreadFollowUpsNow).not.toHaveBeenCalled();
+  });
+
+  it("names the delivery an agent can actually do while it works", () => {
+    useSharedSettings.setState({ followUpBehavior: "steer" });
+    renderComposer({
+      thread: { ...guiThread, status: "working", attention: "working" },
+      agentStatus: {
+        ...codexGuiStatus,
+        capabilities: {
+          ...codexGuiStatus.capabilities,
+          followUpDeliveries: ["mid-turn", "end-of-turn", "interrupt"],
+        },
+      },
+    });
+    expect(screen.getByTestId("submit-label")).toHaveTextContent("Send into this turn");
+  });
+
+  it("says a follow-up lands after the turn when the agent cannot interject", () => {
+    useSharedSettings.setState({ followUpBehavior: "steer" });
+    renderComposer({
+      thread: { ...guiThread, status: "working", attention: "working" },
+      agentStatus: {
+        ...codexGuiStatus,
+        capabilities: { ...codexGuiStatus.capabilities, followUpDeliveries: ["end-of-turn"] },
+      },
+    });
+    expect(screen.getByTestId("submit-label")).toHaveTextContent("Send after this turn");
   });
 
   it("leaves a pending approval open when queueing a follow-up", async () => {

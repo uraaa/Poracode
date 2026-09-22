@@ -13,6 +13,7 @@ import { ChevronDown, Monitor, Settings2, Webhook } from "lucide-react";
 import { useLingui } from "@lingui/react/macro";
 import type { AgentStatus, ProjectLocation, PromptSegment, Thread } from "@/shared/contracts";
 import { friendlyError } from "@/shared/messages";
+import { DEFAULT_FOLLOW_UP_DELIVERIES, resolveFollowUpDelivery } from "@/shared/contracts";
 import type { FollowUpBehavior } from "@/shared/settings";
 import { useThreadFollowUpQueue } from "@/renderer/state/threadFollowUpQueueStore";
 import { agentStatusForPresentation, hasSelectableReasoning } from "@/shared/agentSelection";
@@ -508,6 +509,16 @@ function ThreadComposerSectionInner(props: ThreadComposerSectionProps & { thread
   const visiblePendingSteer = useDelayedPendingSteer(pendingSteer);
   const usesPendingSteerPath =
     !isConnecting && !usesTerminalPresentation && thread.status === "working";
+  // What the submit button promises has to match what this agent does with a
+  // follow-up: the same "steer" reaches the model inside the running turn on
+  // one agent and only after it on another, and only the agent's declared
+  // deliveries can tell them apart.
+  const followUpDelivery = resolveFollowUpDelivery({
+    requested: "mid-turn",
+    supported:
+      effectiveAgentStatus?.capabilities.followUpDeliveries ?? DEFAULT_FOLLOW_UP_DELIVERIES,
+    turn: { live: usesPendingSteerPath, steerable: true },
+  });
   const runtimeRequests = useAppStore((s) => s.runtimeRequestsByThread[thread.id]);
   const activeRuntimeRequest = canShowRuntimeChrome ? runtimeRequests?.[0] : undefined;
   const approvalDenyOption = activeRuntimeRequest
@@ -1022,7 +1033,9 @@ function ThreadComposerSectionInner(props: ThreadComposerSectionProps & { thread
                     (!usesTerminalPresentation && activeRuntimeRequest !== undefined)
                       ? followUpBehavior === "queue"
                         ? t`Queue message`
-                        : t`Steer current turn`
+                        : followUpDelivery.delivery === "mid-turn"
+                          ? t`Send into this turn`
+                          : t`Send after this turn`
                       : t`Send message`
                   }
                   hideSubmitButton={
