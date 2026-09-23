@@ -294,7 +294,16 @@ export class FollowUpQueueCoordinator {
             config: snapshotPayload(last.payload).config,
             ...(segments.length > 0 ? { segments } : {}),
           },
-          { forceInterrupt: true, userMessageItemId: first.userMessageItemId },
+          // Same admission contract as a single queued steer: the rows stay
+          // the durable copy of the text until the provider has actually
+          // taken the interrupting turn. A rejection leaves the FIFO intact
+          // rather than stranding the messages in the volatile steer slot.
+          {
+            awaitReplacement: true,
+            awaitCanonicalStart: true,
+            forceInterrupt: true,
+            userMessageItemId: first.userMessageItemId,
+          },
         );
         for (const entry of entries) {
           const index = record.items.indexOf(entry);

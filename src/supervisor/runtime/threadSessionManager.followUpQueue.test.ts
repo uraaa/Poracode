@@ -511,7 +511,7 @@ it("keeps a restored queue gated until the thread has a session", async () => {
 });
 
 it("sends every queued follow-up as one interrupting turn", async () => {
-  const { manager, session, emit, interruptTurn, finish } = createHarness();
+  const { manager, session, emit, interruptTurn, startTurn, finish } = createHarness();
   session.status = "working";
   try {
     await manager.queueThreadFollowUp({
@@ -525,11 +525,14 @@ it("sends every queued follow-up as one interrupting turn", async () => {
       config: session.config,
     });
 
-    await manager.sendThreadFollowUpsNow({ threadId: session.threadId });
+    const sending = manager.sendThreadFollowUpsNow({ threadId: session.threadId });
+    await vi.waitFor(() => expect(interruptTurn).toHaveBeenCalledOnce());
 
-    expect(interruptTurn).toHaveBeenCalledOnce();
     expect(session.pendingSteer).toMatchObject({ prompt: "first\n\nsecond" });
     expect(lastPendingSteerEvent(emit)).toMatchObject({ prompt: "first\n\nsecond" });
+
+    await drainForcedSteer({ manager, session, startTurn });
+    await sending;
     expect(manager.getThreadFollowUpQueue(session.threadId)).toBeNull();
   } finally {
     finish();
@@ -559,9 +562,13 @@ it("leaves a dispatched follow-up alone when the rest are sent now", async () =>
       config: session.config,
     });
 
-    await manager.sendThreadFollowUpsNow({ threadId: session.threadId });
+    const sending = manager.sendThreadFollowUpsNow({ threadId: session.threadId });
+    await vi.waitFor(() => expect(session.pendingSteer).toBeDefined());
 
     expect(lastPendingSteerEvent(emit)).toMatchObject({ prompt: "waiting" });
+
+    await drainForcedSteer({ manager, session, startTurn });
+    await sending;
   } finally {
     finish();
     await manager.dispose();
@@ -569,7 +576,7 @@ it("leaves a dispatched follow-up alone when the rest are sent now", async () =>
 });
 
 it("lifts the pause after the paused queue is sent now", async () => {
-  const { manager, session, finish } = createHarness();
+  const { manager, session, startTurn, finish } = createHarness();
   session.status = "working";
   try {
     await manager.queueThreadFollowUp({
@@ -580,7 +587,9 @@ it("lifts the pause after the paused queue is sent now", async () => {
     const item = manager.getThreadFollowUpQueue(session.threadId)!.items[0]!;
     await manager.pauseThreadFollowUps({ threadId: session.threadId, id: item.id });
 
-    await manager.sendThreadFollowUpsNow({ threadId: session.threadId });
+    const sending = manager.sendThreadFollowUpsNow({ threadId: session.threadId });
+    await drainForcedSteer({ manager, session, startTurn });
+    await sending;
     await manager.queueThreadFollowUp({
       threadId: session.threadId,
       prompt: "after send now",
@@ -652,3 +661,72 @@ async function drainForcedSteer({
   await vi.waitFor(() => expect(startTurn.mock.calls.length).toBe(before + 1));
   steerCoordinator.noteSteerTurnStarted(session);
 }
+
+it("keeps the send-now rows queued until the interrupting turn is admitted", async () => {
+  const { manager, session, startTurn, finish } = createHarness();
+  session.status = "working";
+  try {
+    await manager.queueThreadFollowUp({
+      threadId: session.threadId,
+      prompt: "first",
+      config: session.config,
+    });
+    await manager.queueThreadFollowUp({
+      threadId: session.threadId,
+      prompt: "second",
+      config: session.config,
+    });
+
+    const sending = manager.sendThreadFollowUpsNow({ threadId: session.threadId });
+    const outcome = sending.then(
+      () => "resolved",
+      () => "rejected",
+    );
+    await vi.waitFor(() => expect(session.pendingSteer).toBeDefined());
+
+    // The staged slot is volatile; the rows are the durable copy. Dropping
+    // them here would lose the text to a cleared strip or a dead supervisor.
+    expect(await Promise.race([outcome, Promise.resolve("pending")])).toBe("pending");
+    expect(manager.getThreadFollowUpQueue(session.threadId)!.items).toMatchObject([
+      { prompt: "first" },
+      { prompt: "second" },
+    ]);
+
+    await drainForcedSteer({ manager, session, startTurn });
+    expect(await outcome).toBe("resolved");
+    expect(manager.getThreadFollowUpQueue(session.threadId)).toBeNull();
+  } finally {
+    finish();
+    await manager.dispose();
+  }
+});
+
+it("retains the queue when the send-now steer is never admitted", async () => {
+  const { manager, session, finish } = createHarness();
+  session.status = "working";
+  try {
+    await manager.queueThreadFollowUp({
+      threadId: session.threadId,
+      prompt: "do not lose me",
+      config: session.config,
+    });
+
+    const sending = manager.sendThreadFollowUpsNow({ threadId: session.threadId });
+    const outcome = sending.then(
+      () => "resolved",
+      () => "rejected",
+    );
+    await vi.waitFor(() => expect(session.pendingSteer).toBeDefined());
+
+    // Dismissing the steer strip destroys the slot. The FIFO has to survive it.
+    await manager.clearPendingSteer({ threadId: session.threadId });
+
+    expect(await outcome).toBe("rejected");
+    expect(manager.getThreadFollowUpQueue(session.threadId)!.items).toMatchObject([
+      { prompt: "do not lose me" },
+    ]);
+  } finally {
+    finish();
+    await manager.dispose();
+  }
+});
