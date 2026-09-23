@@ -11906,6 +11906,10 @@ msgstr "会話のタイトルの代わりに一般的なテキストを Apple �
 msgid "Send message"
 msgstr "メッセージを送信する"
 
+#: src/renderer/components/thread/ThreadFollowUpQueue.tsx
+msgid "Send queued follow-ups now"
+msgstr "キューに入ったフォローアップを今すぐ送信"
+
 #: src/renderer/i18n/sharedMessages.ts
 msgid "Send terminal input"
 msgstr "ターミナルに入力を送信"

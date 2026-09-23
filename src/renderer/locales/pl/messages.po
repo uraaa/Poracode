@@ -11908,6 +11908,10 @@ msgstr "Wysyłaj ogólny tekst zamiast tytułów rozmów przez usługę push fir
 msgid "Send message"
 msgstr "Wyślij wiadomość"
 
+#: src/renderer/components/thread/ThreadFollowUpQueue.tsx
+msgid "Send queued follow-ups now"
+msgstr "Wyślij teraz wiadomości z kolejki"
+
 #: src/renderer/i18n/sharedMessages.ts
 msgid "Send terminal input"
 msgstr "Wyślij dane do terminala"

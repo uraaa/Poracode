@@ -27,6 +27,7 @@ const bridgeMock = vi.hoisted(() => ({
   interruptThread: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
   setPendingSteer: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
   queueThreadFollowUp: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+  sendThreadFollowUpsNow: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
   getThreadFollowUpQueue: vi.fn<() => Promise<null>>().mockResolvedValue(null),
   refreshAgentStatuses: vi
     .fn<() => Promise<{ windows: AgentStatus[]; wsl: AgentStatus[] }>>()
@@ -89,6 +90,7 @@ vi.mock("../../bridge", () => ({
     interruptThread: bridgeMock.interruptThread,
     setPendingSteer: bridgeMock.setPendingSteer,
     queueThreadFollowUp: bridgeMock.queueThreadFollowUp,
+    sendThreadFollowUpsNow: bridgeMock.sendThreadFollowUpsNow,
     getThreadFollowUpQueue: bridgeMock.getThreadFollowUpQueue,
     writeTerminal: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
     refreshAgentStatuses: bridgeMock.refreshAgentStatuses,
@@ -272,6 +274,7 @@ describe("ThreadComposerSection", () => {
     useRevertedPromptStore.setState({ byThread: {} });
     useThreadFollowUpQueueStore.setState({ byThread: {} });
     bridgeMock.queueThreadFollowUp.mockReset().mockResolvedValue(undefined);
+    bridgeMock.sendThreadFollowUpsNow.mockReset().mockResolvedValue(undefined);
     bridgeMock.getThreadFollowUpQueue.mockReset().mockResolvedValue(null);
     bridgeMock.isRemoteSession.mockReturnValue(false);
     bridgeMock.clearPendingSteer.mockClear();
@@ -1537,6 +1540,54 @@ describe("ThreadComposerSection", () => {
       expect(useSharedSettings.getState().followUpBehavior).toBe(behavior);
     },
   );
+
+  function seedFollowUpQueue(threadId: string) {
+    useThreadFollowUpQueueStore.setState({
+      byThread: {
+        [threadId]: {
+          queue: { paused: false, items: [{ id: "queued-1", prompt: "waiting", stagedAt: 1 }] },
+        },
+      },
+    });
+  }
+
+  it.each(["ctrlKey", "metaKey"] as const)(
+    "sends the queued follow-ups now on %s+Enter with an empty composer",
+    async (modifier) => {
+      seedFollowUpQueue(guiThread.id);
+      renderComposer({ thread: { ...guiThread, status: "working", attention: "working" } });
+      fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter", [modifier]: true });
+      await waitFor(() =>
+        expect(bridgeMock.sendThreadFollowUpsNow).toHaveBeenCalledWith({ threadId: guiThread.id }),
+      );
+      expect(bridgeMock.queueThreadFollowUp).not.toHaveBeenCalled();
+      expect(bridgeMock.setPendingSteer).not.toHaveBeenCalled();
+    },
+  );
+
+  it("leaves the running turn alone on ctrl+Enter when nothing is queued", async () => {
+    renderComposer({ thread: { ...guiThread, status: "working", attention: "working" } });
+    fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter", ctrlKey: true });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    // An empty composer with an empty queue has nothing to escalate. Firing
+    // send-now here would force-interrupt the agent for no reason.
+    expect(bridgeMock.sendThreadFollowUpsNow).not.toHaveBeenCalled();
+    expect(bridgeMock.queueThreadFollowUp).not.toHaveBeenCalled();
+    expect(bridgeMock.setPendingSteer).not.toHaveBeenCalled();
+  });
+
+  it("leaves an idle thread alone on ctrl+Enter with an empty composer", async () => {
+    seedFollowUpQueue(guiThread.id);
+    renderComposer({ thread: { ...guiThread, status: "idle", attention: "none" } });
+    fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter", ctrlKey: true });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    // There is no turn to interrupt; the FIFO drains on its own.
+    expect(bridgeMock.sendThreadFollowUpsNow).not.toHaveBeenCalled();
+  });
 
   it("leaves a pending approval open when queueing a follow-up", async () => {
     useSharedSettings.setState({ followUpBehavior: "queue" });

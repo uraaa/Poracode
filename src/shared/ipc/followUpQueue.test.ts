@@ -22,6 +22,7 @@ const queueProcedureNames = [
   "steerQueuedThreadFollowUp",
   "pauseThreadFollowUps",
   "resumeThreadFollowUps",
+  "sendThreadFollowUpsNow",
   "getThreadFollowUpQueue",
 ] as const satisfies readonly IpcProcedureName[];
 

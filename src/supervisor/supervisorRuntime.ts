@@ -631,6 +631,12 @@ export class SupervisorRuntime {
     return this.threadSessionManager.restoreThreadFollowUpQueue(input);
   }
 
+  sendThreadFollowUpsNow(
+    input: Parameters<ThreadSessionManager["sendThreadFollowUpsNow"]>[0],
+  ): ReturnType<ThreadSessionManager["sendThreadFollowUpsNow"]> {
+    return this.threadSessionManager.sendThreadFollowUpsNow(input);
+  }
+
   getThreadFollowUpQueue(
     threadId: Parameters<ThreadSessionManager["getThreadFollowUpQueue"]>[0],
   ): ReturnType<ThreadSessionManager["getThreadFollowUpQueue"]> {
