@@ -11,9 +11,14 @@ import {
 import { toast } from "@heroui/react";
 import { ChevronDown, Monitor, Settings2, Webhook } from "lucide-react";
 import { useLingui } from "@lingui/react/macro";
-import type { AgentStatus, ProjectLocation, PromptSegment, Thread } from "@/shared/contracts";
+import {
+  resolveFollowUpDelivery,
+  type AgentStatus,
+  type ProjectLocation,
+  type PromptSegment,
+  type Thread,
+} from "@/shared/contracts";
 import { friendlyError } from "@/shared/messages";
-import { DEFAULT_FOLLOW_UP_DELIVERIES, resolveFollowUpDelivery } from "@/shared/contracts";
 import type { FollowUpBehavior } from "@/shared/settings";
 import { useThreadFollowUpQueue } from "@/renderer/state/threadFollowUpQueueStore";
 import { agentStatusForPresentation, hasSelectableReasoning } from "@/shared/agentSelection";
@@ -511,13 +516,12 @@ function ThreadComposerSectionInner(props: ThreadComposerSectionProps & { thread
     !isConnecting && !usesTerminalPresentation && thread.status === "working";
   // What the submit button promises has to match what this agent does with a
   // follow-up: the same "steer" reaches the model inside the running turn on
-  // one agent and only after it on another, and only the agent's declared
-  // deliveries can tell them apart.
+  // one agent, only after it on another, and kills the turn on a third. Only
+  // the agent's own declaration can tell them apart, so an agent that has
+  // declared nothing resolves to "unknown" and the button stays non-committal.
   const followUpDelivery = resolveFollowUpDelivery({
     requested: "mid-turn",
-    supported:
-      effectiveAgentStatus?.capabilities.followUpDeliveries ?? DEFAULT_FOLLOW_UP_DELIVERIES,
-    turn: { live: usesPendingSteerPath, steerable: true },
+    declared: effectiveAgentStatus?.capabilities.followUpDeliveries,
   });
   const runtimeRequests = useAppStore((s) => s.runtimeRequestsByThread[thread.id]);
   const activeRuntimeRequest = canShowRuntimeChrome ? runtimeRequests?.[0] : undefined;
@@ -550,6 +554,29 @@ function ThreadComposerSectionInner(props: ThreadComposerSectionProps & { thread
     s.projects.find((candidate) => candidate.id === thread.projectId),
   );
   const agentFallbackLabel = t`the agent`;
+
+  /**
+   * What the submit button promises. Every branch has to be something the
+   * runtime will actually do with this message: a timing may only be named
+   * when the agent declared it, and everything else says only that the message
+   * is sent.
+   */
+  function submitLabelText(): string {
+    const followUpPending =
+      usesPendingSteerPath || (!usesTerminalPresentation && activeRuntimeRequest !== undefined);
+    if (!followUpPending) return t`Send message`;
+    if (followUpBehavior === "queue") return t`Queue message`;
+    switch (followUpDelivery) {
+      case "mid-turn":
+        return t`Send into this turn`;
+      case "end-of-turn":
+        return t`Send after this turn`;
+      case "interrupt":
+        return t`Stop and send now`;
+      default:
+        return t`Send message`;
+    }
+  }
 
   useEffect(() => {
     if (!showContextIndicator && contextDockOpen) {
@@ -1028,16 +1055,7 @@ function ThreadComposerSectionInner(props: ThreadComposerSectionProps & { thread
                   promptDisabled={!(showServerComposer || showTerminalComposer)}
                   stopPending={isInterrupting}
                   submitDisabled={!(hasContent || attachments.attachments.length > 0) || !canSubmit}
-                  submitLabel={
-                    usesPendingSteerPath ||
-                    (!usesTerminalPresentation && activeRuntimeRequest !== undefined)
-                      ? followUpBehavior === "queue"
-                        ? t`Queue message`
-                        : followUpDelivery.delivery === "mid-turn"
-                          ? t`Send into this turn`
-                          : t`Send after this turn`
-                      : t`Send message`
-                  }
+                  submitLabel={submitLabelText()}
                   hideSubmitButton={
                     threadVoiceActive &&
                     !hasContent &&

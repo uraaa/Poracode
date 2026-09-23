@@ -13,55 +13,39 @@ import { z } from "zod";
 export const followUpDeliverySchema = z.enum(["mid-turn", "end-of-turn", "interrupt"]);
 export type FollowUpDelivery = z.infer<typeof followUpDeliverySchema>;
 
-/** Why a requested delivery could not be used. */
-export const followUpDegradeReasonSchema = z.enum([
-  "provider-cannot",
-  "turn-not-steerable",
-  "no-live-turn",
-]);
-export type FollowUpDegradeReason = z.infer<typeof followUpDegradeReasonSchema>;
-
 /**
- * What an adapter can do when it declares nothing. Every agent can hold a
- * follow-up until the turn ends and every agent can be interrupted, so an
- * adapter that says nothing still promises nothing extra.
+ * What can be said about a follow-up. `unknown` is not something an adapter
+ * performs — it is the absence of a declaration, and the only honest answer
+ * when the agent has not been probed yet, the remote host predates the
+ * capability, or the adapter simply never declared. It exists so a caller
+ * cannot accidentally render a guess as a promise.
  */
-export const DEFAULT_FOLLOW_UP_DELIVERIES: readonly FollowUpDelivery[] = [
-  "end-of-turn",
-  "interrupt",
-];
-
-export interface ResolvedFollowUpDelivery {
-  delivery: FollowUpDelivery;
-  /** Set when the request could not be honoured and was lowered. */
-  degradedFrom?: FollowUpDelivery;
-  reason?: FollowUpDegradeReason;
-}
+export type ResolvedFollowUpDelivery = FollowUpDelivery | "unknown";
 
 /**
- * Decide what will actually happen to a follow-up, given what the user asked
- * for, what the agent declares it can do, and the state of the running turn.
+ * Gentlest first: a follow-up that is held costs the user nothing, a follow-up
+ * that interrupts costs them the running turn.
+ */
+const FALLBACK_ORDER: readonly FollowUpDelivery[] = ["end-of-turn", "interrupt"];
+
+/**
+ * Decide what will actually happen to a follow-up sent into a live turn, given
+ * what the user asked for and what the agent declares it can do.
  *
- * Only `mid-turn` can degrade: every agent can hold a follow-up until the turn
- * ends, and every agent can be interrupted. Returning the reason is the point
- * of this function — a silent downgrade leaves the composer promising one
- * thing while the runtime does another.
+ * There is deliberately no default for `declared`. The two paths behind a
+ * follow-up are not interchangeable: an adapter with a native steer that holds
+ * the prompt delivers `end-of-turn`, while one without it has its running turn
+ * cancelled so the prompt can drain as a fresh turn — an `interrupt`. Guessing
+ * between them is how the composer ends up naming a turn that gets killed, so
+ * an agent that declares nothing resolves to `unknown` and the caller must say
+ * something non-committal.
  */
 export function resolveFollowUpDelivery(input: {
   requested: FollowUpDelivery;
-  supported: readonly FollowUpDelivery[];
-  turn: { live: boolean; steerable: boolean };
+  declared: readonly FollowUpDelivery[] | undefined;
 }): ResolvedFollowUpDelivery {
-  const { requested, supported, turn } = input;
-  if (requested !== "mid-turn") return { delivery: requested };
-  if (!supported.includes("mid-turn")) {
-    return { delivery: "end-of-turn", degradedFrom: "mid-turn", reason: "provider-cannot" };
-  }
-  if (!turn.live) {
-    return { delivery: "end-of-turn", degradedFrom: "mid-turn", reason: "no-live-turn" };
-  }
-  if (!turn.steerable) {
-    return { delivery: "end-of-turn", degradedFrom: "mid-turn", reason: "turn-not-steerable" };
-  }
-  return { delivery: "mid-turn" };
+  const { requested, declared } = input;
+  if (declared === undefined) return "unknown";
+  if (declared.includes(requested)) return requested;
+  return FALLBACK_ORDER.find((candidate) => declared.includes(candidate)) ?? "unknown";
 }

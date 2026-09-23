@@ -12766,6 +12766,10 @@ msgstr "Dừng lại"
 msgid "Stop {0}"
 msgstr "Dừng {0}"
 
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Stop and send now"
+msgstr "Dừng và gửi ngay"
+
 #: src/mobile/views/PortsView.tsx
 msgid "Stop forwarding"
 msgstr "Dừng chuyển tiếp"

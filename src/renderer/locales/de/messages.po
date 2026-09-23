@@ -12766,6 +12766,10 @@ msgstr "Stopp"
 msgid "Stop {0}"
 msgstr "{0} stoppen"
 
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Stop and send now"
+msgstr "Anhalten und jetzt senden"
+
 #: src/mobile/views/PortsView.tsx
 msgid "Stop forwarding"
 msgstr "Weiterleitung stoppen"

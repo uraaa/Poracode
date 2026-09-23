@@ -290,9 +290,10 @@ export const agentCapabilitySchema = z.object({
    * Which follow-up deliveries this agent can actually perform. Declared, not
    * inferred: a provider whose native steer merely holds the prompt until the
    * turn ends does not support "mid-turn", however capable its steer call is.
-   * Optional: absent means {@link DEFAULT_FOLLOW_UP_DELIVERIES}, which is what
-   * every adapter already does, so an adapter that says nothing promises
-   * nothing extra.
+   * Optional, and deliberately without a default: absent means "not known" —
+   * the agent has not been probed, the remote host predates the field, or the
+   * adapter has not declared — and callers must say nothing about timing
+   * rather than assume one. See {@link resolveFollowUpDelivery}.
    */
   followUpDeliveries: z.array(followUpDeliverySchema).optional(),
   /**

@@ -12766,6 +12766,10 @@ msgstr "중지"
 msgid "Stop {0}"
 msgstr "{0} 중지"
 
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Stop and send now"
+msgstr "중지하고 지금 보내기"
+
 #: src/mobile/views/PortsView.tsx
 msgid "Stop forwarding"
 msgstr "전달 중지"

@@ -3,7 +3,7 @@ import { toast } from "@heroui/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithI18n as render } from "@/renderer/testUtils/i18n";
-import type { AgentStatus, GitStatusResult, Thread } from "@/shared/contracts";
+import type { AgentStatus, FollowUpDelivery, GitStatusResult, Thread } from "@/shared/contracts";
 import "@/renderer/components/providers/bootstrap";
 import * as skills from "@/renderer/components/skills/useSkills";
 import { useAppStore } from "@/renderer/state/appStore";
@@ -1591,7 +1591,7 @@ describe("ThreadComposerSection", () => {
     expect(bridgeMock.sendThreadFollowUpsNow).not.toHaveBeenCalled();
   });
 
-  it("names the delivery an agent can actually do while it works", () => {
+  function renderWorkingWithDeliveries(deliveries?: FollowUpDelivery[]) {
     useSharedSettings.setState({ followUpBehavior: "steer" });
     renderComposer({
       thread: { ...guiThread, status: "working", attention: "working" },
@@ -1599,23 +1599,36 @@ describe("ThreadComposerSection", () => {
         ...codexGuiStatus,
         capabilities: {
           ...codexGuiStatus.capabilities,
-          followUpDeliveries: ["mid-turn", "end-of-turn", "interrupt"],
+          ...(deliveries ? { followUpDeliveries: deliveries } : {}),
         },
       },
     });
-    expect(screen.getByTestId("submit-label")).toHaveTextContent("Send into this turn");
+    return screen.getByTestId("submit-label");
+  }
+
+  it("names the delivery an agent can actually do while it works", () => {
+    expect(renderWorkingWithDeliveries(["mid-turn", "end-of-turn", "interrupt"])).toHaveTextContent(
+      "Send into this turn",
+    );
   });
 
-  it("says a follow-up lands after the turn when the agent cannot interject", () => {
-    useSharedSettings.setState({ followUpBehavior: "steer" });
-    renderComposer({
-      thread: { ...guiThread, status: "working", attention: "working" },
-      agentStatus: {
-        ...codexGuiStatus,
-        capabilities: { ...codexGuiStatus.capabilities, followUpDeliveries: ["end-of-turn"] },
-      },
-    });
-    expect(screen.getByTestId("submit-label")).toHaveTextContent("Send after this turn");
+  it("says a follow-up lands after the turn when the agent declares it holds one", () => {
+    expect(renderWorkingWithDeliveries(["end-of-turn", "interrupt"])).toHaveTextContent(
+      "Send after this turn",
+    );
+  });
+
+  it("says the turn stops when the agent can only be interrupted", () => {
+    // Without a native steer the supervisor cancels the running turn and
+    // drains the text as a fresh one. "after this turn" would name a turn
+    // that never finishes.
+    expect(renderWorkingWithDeliveries(["interrupt"])).toHaveTextContent("Stop and send now");
+  });
+
+  it("promises no timing at all for an agent that declared nothing", () => {
+    // Not probed yet, an older remote host, or an adapter that never
+    // declared. None of those is a licence to name a timing.
+    expect(renderWorkingWithDeliveries(undefined)).toHaveTextContent("Send message");
   });
 
   it("leaves a pending approval open when queueing a follow-up", async () => {
