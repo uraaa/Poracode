@@ -135,6 +135,36 @@ describe.skipIf(!sqliteAvailable)("dbSearchThreadMessages", () => {
     expect(dbSearchThreadMessages("импорт", 50)).toEqual([]);
   });
 
+  it("recreates a dropped FTS table on the next startup", () => {
+    dbUpsertThread(thread("t1", "Первый"), 0);
+    dbReplaceThreadRuntimeItems("t1", [userItem("i1", "импорт сессий")]);
+    const dbPath = join(dir, "state.sqlite");
+    // Same failure as above, but this time the app is restarted afterwards —
+    // repairSafeSchemaDrift runs on every startup and must heal the schema
+    // even though migration 43 is already stamped as applied.
+    getSqlite().exec("DROP TABLE thread_message_fts");
+    closeDatabase();
+
+    initDatabase(dbPath);
+
+    expect(dbSearchThreadMessages("импорт", 50)).toHaveLength(1);
+  });
+
+  it("repopulates an emptied FTS index on the next startup", () => {
+    dbUpsertThread(thread("t1", "Первый"), 0);
+    dbReplaceThreadRuntimeItems("t1", [userItem("i1", "импорт сессий")]);
+    const dbPath = join(dir, "state.sqlite");
+    // The shadow table still has the text, but its index went empty (a
+    // corrupt or partially-rebuilt FTS table). The next startup must notice
+    // the mismatch and rebuild from the shadow table.
+    getSqlite().exec("DELETE FROM thread_message_fts");
+    closeDatabase();
+
+    initDatabase(dbPath);
+
+    expect(dbSearchThreadMessages("импорт", 50)).toHaveLength(1);
+  });
+
   it("honours the limit", () => {
     dbUpsertThread(thread("t1", "Первый"), 0);
     dbReplaceThreadRuntimeItems(
