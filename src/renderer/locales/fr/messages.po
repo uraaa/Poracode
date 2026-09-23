@@ -4376,6 +4376,10 @@ msgid "Deny"
 msgstr "Refuser"
 
 #: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Deny and send"
+msgstr "Refuser et envoyer"
+
+#: src/renderer/components/thread/ThreadComposerSection.tsx
 msgid "Deny and tell the agent what to do differently…"
 msgstr "Refuser et dire à l’agent quoi faire différemment…"
 

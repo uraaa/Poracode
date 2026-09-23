@@ -4376,6 +4376,10 @@ msgid "Deny"
 msgstr "Reddet"
 
 #: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Deny and send"
+msgstr "Reddet ve gönder"
+
+#: src/renderer/components/thread/ThreadComposerSection.tsx
 msgid "Deny and tell the agent what to do differently…"
 msgstr "Reddet ve aracıya neyi farklı yapması gerektiğini söyle…"
 

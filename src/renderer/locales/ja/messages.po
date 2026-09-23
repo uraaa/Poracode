@@ -4375,6 +4375,10 @@ msgid "Deny"
 msgstr "拒否する"
 
 #: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Deny and send"
+msgstr "拒否して送信"
+
+#: src/renderer/components/thread/ThreadComposerSection.tsx
 msgid "Deny and tell the agent what to do differently…"
 msgstr "拒否し、エージェントに別の対処法を伝えます..."
 

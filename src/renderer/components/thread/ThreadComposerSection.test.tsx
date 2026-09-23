@@ -1631,6 +1631,38 @@ describe("ThreadComposerSection", () => {
     expect(renderWorkingWithDeliveries(undefined)).toHaveTextContent("Send message");
   });
 
+  function seedPendingApproval(threadId: string) {
+    useAppStore.setState({
+      runtimeRequestsByThread: {
+        [threadId]: [
+          {
+            requestId: "approval-label",
+            threadId,
+            requestType: "command_execution_approval",
+            payload: { summary: "Run first" },
+            receivedAt: new Date().toISOString(),
+          },
+        ],
+      },
+    });
+  }
+
+  it("says the approval is denied when submitting answers it instead of steering", () => {
+    // No turn is running, so there is nothing to steer into or wait out: the
+    // submit declines the approval and the text opens the next turn at once.
+    useSharedSettings.setState({ followUpBehavior: "steer" });
+    seedPendingApproval(guiThread.id);
+    renderComposer({ thread: { ...guiThread, status: "needs_approval" } });
+    expect(screen.getByTestId("submit-label")).toHaveTextContent("Deny and send");
+  });
+
+  it("keeps the queue label when a queued follow-up leaves the approval open", () => {
+    useSharedSettings.setState({ followUpBehavior: "queue" });
+    seedPendingApproval(guiThread.id);
+    renderComposer({ thread: { ...guiThread, status: "needs_approval" } });
+    expect(screen.getByTestId("submit-label")).toHaveTextContent("Queue message");
+  });
+
   it("leaves a pending approval open when queueing a follow-up", async () => {
     useSharedSettings.setState({ followUpBehavior: "queue" });
     useAppStore.setState({

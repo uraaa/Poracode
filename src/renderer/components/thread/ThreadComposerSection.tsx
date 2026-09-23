@@ -566,6 +566,10 @@ function ThreadComposerSectionInner(props: ThreadComposerSectionProps & { thread
       usesPendingSteerPath || (!usesTerminalPresentation && activeRuntimeRequest !== undefined);
     if (!followUpPending) return t`Send message`;
     if (followUpBehavior === "queue") return t`Queue message`;
+    // No turn is running, so there is nothing to interject into or wait out:
+    // submit declines the open approval and the text opens the next turn
+    // straight away, which is what the composer placeholder already offers.
+    if (!usesPendingSteerPath && approvalDenyOption) return t`Deny and send`;
     switch (followUpDelivery) {
       case "mid-turn":
         return t`Send into this turn`;
