@@ -1,6 +1,60 @@
 {
   "releases": [
     {
+      "version": "1.9.0",
+      "tagline": "Queue Truth",
+      "date": "2026-09-23",
+      "title": "Search every message, keep the follow-up queue honest, and file a thread where it belongs",
+      "summary": "Threads are searchable by what was said in them, not just by title. The follow-up queue now survives a supervisor restart, can be sent into the running turn on demand, and says what will actually happen to your next message instead of guessing. A thread started in the wrong project can be moved without losing its history, the thread header names the account it runs on, and a message the agent has not received yet looks different from one it is ignoring.",
+      "changes": [
+        {
+          "kind": "added",
+          "label": "Search",
+          "text": "Full-text search over the messages of every thread, not just their titles. Typing in the thread search box now matches what was said — indexed with SQLite FTS5, which folds case correctly for Russian where the previous approach could not."
+        },
+        {
+          "kind": "added",
+          "label": "Threads",
+          "text": "Move a thread to another project from its context menu. A thread started in the wrong place used to be stuck there; now it carries its history across, and a running thread is stopped first and says so rather than going quiet."
+        },
+        {
+          "kind": "added",
+          "label": "Threads",
+          "text": "Queued follow-ups survive a supervisor restart. They are persisted as they are queued and restored when the supervisor comes back, in the order they were typed."
+        },
+        {
+          "kind": "added",
+          "label": "Threads",
+          "text": "Send the queued follow-ups into the running turn instead of waiting for it to end."
+        },
+        {
+          "kind": "added",
+          "label": "Threads",
+          "text": "The composer says what your next message will do — steer the running turn, wait behind it, or start a new one — and only claims a timing the agent has actually declared. An agent that has not declared one gets a neutral label instead of a confident guess."
+        },
+        {
+          "kind": "added",
+          "label": "Threads",
+          "text": "The thread header names the account the thread runs on, with the signed-in email, plan and organization in the tooltip, so two threads on two logins of one provider no longer look identical."
+        },
+        {
+          "kind": "added",
+          "label": "Chat",
+          "text": "A message the model has not received yet is dimmed and labelled, so a message held behind a running turn is not mistaken for one the agent is ignoring."
+        },
+        {
+          "kind": "added",
+          "label": "Usage",
+          "text": "The usage rail marks the ring of the provider the open thread runs on, in the expanded row and the collapsed column alike."
+        },
+        {
+          "kind": "fixed",
+          "label": "Mobile",
+          "text": "Attachments, keyboard positioning and composer touch behaviour restored on the mobile client."
+        }
+      ]
+    },
+    {
       "version": "1.8.6",
       "tagline": "Trustworthy Import",
       "date": "2026-09-21",
