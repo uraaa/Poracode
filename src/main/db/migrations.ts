@@ -1,5 +1,6 @@
 import Database from "better-sqlite3";
 import { normalizePersistedAntigravityModelSelection } from "@/shared/agents/antigravity";
+import { extractMessageText } from "./messageText";
 import { repairDuplicateProjects } from "./projectDeduplication";
 import { HEAD_CHARS } from "./runtimeStreamCap";
 import { writeItemStreams } from "./runtimeStreamStore";
@@ -183,6 +184,101 @@ function normalizeAntigravityAcpConfigs(sqlite: SqliteDatabase): void {
  * Append-only database history. Never reuse or reorder a version: add the next
  * integer at the end, even when repairing a migration that shipped previously.
  */
+/**
+ * Message text is extracted out of the JSON columns because neither `payload`
+ * nor `streams` can be indexed as-is. The FTS table is external content over
+ * the extracted rows, so the text is stored once and the triggers below keep
+ * the index in step.
+ */
+export function createMessageSearchSchema(sqlite: SqliteDatabase): void {
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS thread_message_text (
+      rowid     INTEGER PRIMARY KEY,
+      thread_id TEXT    NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+      item_id   TEXT    NOT NULL,
+      position  INTEGER NOT NULL,
+      role      TEXT    NOT NULL,
+      text      TEXT    NOT NULL,
+      UNIQUE (thread_id, item_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_thread_message_text_thread
+      ON thread_message_text (thread_id, position);
+
+    CREATE VIRTUAL TABLE IF NOT EXISTS thread_message_fts USING fts5(
+      text,
+      content='thread_message_text',
+      content_rowid='rowid',
+      tokenize='unicode61'
+    );
+
+    CREATE TRIGGER IF NOT EXISTS thread_message_text_ai
+    AFTER INSERT ON thread_message_text BEGIN
+      INSERT INTO thread_message_fts (rowid, text) VALUES (new.rowid, new.text);
+    END;
+    CREATE TRIGGER IF NOT EXISTS thread_message_text_ad
+    AFTER DELETE ON thread_message_text BEGIN
+      INSERT INTO thread_message_fts (thread_message_fts, rowid, text)
+        VALUES ('delete', old.rowid, old.text);
+    END;
+    CREATE TRIGGER IF NOT EXISTS thread_message_text_au
+    AFTER UPDATE ON thread_message_text BEGIN
+      INSERT INTO thread_message_fts (thread_message_fts, rowid, text)
+        VALUES ('delete', old.rowid, old.text);
+      INSERT INTO thread_message_fts (rowid, text) VALUES (new.rowid, new.text);
+    END;
+  `);
+}
+
+const BACKFILL_BATCH = 500;
+
+function backfillMessageSearchIndex(sqlite: SqliteDatabase): void {
+  createMessageSearchSchema(sqlite);
+  // ON CONFLICT DO UPDATE, not INSERT OR REPLACE: with recursive_triggers off
+  // (the default), a REPLACE conflict deletes-then-inserts without firing the
+  // AFTER DELETE trigger, so a stale FTS entry would survive a re-run of this
+  // backfill. DO UPDATE fires the AFTER UPDATE trigger instead, which evicts
+  // the old text before indexing the new text.
+  const insert = sqlite.prepare(
+    `INSERT INTO thread_message_text (thread_id, item_id, position, role, text)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT (thread_id, item_id)
+     DO UPDATE SET position = excluded.position, role = excluded.role, text = excluded.text`,
+  );
+  // `rowid` paging keeps memory flat on a database with a long history.
+  const page = sqlite.prepare(
+    `SELECT rowid AS row_id, thread_id, item_id, position, type, state, payload, streams
+     FROM thread_runtime_items
+     WHERE type IN ('user_message', 'assistant_message') AND rowid > ?
+     ORDER BY rowid
+     LIMIT ${BACKFILL_BATCH}`,
+  );
+  let cursor = 0;
+  for (;;) {
+    const rows = page.all(cursor) as Array<{
+      row_id: number;
+      thread_id: string;
+      item_id: string;
+      position: number;
+      type: string;
+      state: string;
+      payload: string | null;
+      streams: string | null;
+    }>;
+    if (rows.length === 0) break;
+    for (const row of rows) {
+      const extracted = extractMessageText({
+        type: row.type,
+        state: row.state as "started" | "updated" | "completed",
+        payload: row.payload ? (JSON.parse(row.payload) as unknown) : undefined,
+        streams: row.streams ? (JSON.parse(row.streams) as Record<string, string>) : {},
+      });
+      if (!extracted) continue;
+      insert.run(row.thread_id, row.item_id, row.position, extracted.role, extracted.text);
+    }
+    cursor = rows[rows.length - 1]!.row_id;
+  }
+}
+
 export const DATABASE_MIGRATIONS = [
   {
     version: 2,
@@ -614,6 +710,13 @@ export const DATABASE_MIGRATIONS = [
     // before deleting duplicate rows, including newest-first legacy profiles.
     migrate: repairDuplicateProjects,
   },
+  {
+    version: 43,
+    name: "message search index",
+    // Creates the shadow text table and its FTS5 index, then fills them from
+    // the messages already persisted in thread_runtime_items.
+    migrate: backfillMessageSearchIndex,
+  },
 ] as const satisfies readonly DatabaseMigration[];
 
 export const LATEST_SCHEMA_VERSION = DATABASE_MIGRATIONS[DATABASE_MIGRATIONS.length - 1]!.version;
@@ -707,7 +810,44 @@ export function repairSafeSchemaDrift(sqlite: SqliteDatabase): void {
     sqlite.exec(
       "UPDATE threads SET archived_at = updated_at WHERE archived = 1 AND archived_at IS NULL",
     );
+    // Migration 43 only ever runs once per database. If the FTS table (or its
+    // shadow table) is later dropped or corrupted, migration 43 being stamped
+    // as applied means it never runs again — so the schema has to be able to
+    // heal on every startup instead of relying on the one-off migration.
+    createMessageSearchSchema(sqlite);
+    repairMessageSearchIndex(sqlite);
   })();
+}
+
+/**
+ * `thread_message_fts` is external content over `thread_message_text`: it is
+ * only ever populated through the triggers `createMessageSearchSchema`
+ * installs. If the FTS table was just recreated after being dropped, or its
+ * index rows were lost while the shadow table survived, those triggers never
+ * ran for the existing rows — the index silently stays empty and search
+ * silently stays broken.
+ *
+ * `SELECT count(*) FROM thread_message_fts` cannot detect that: on an
+ * external-content table, an unqualified scan reads straight through the
+ * content table, so it reports the same row count whether or not the FTS
+ * index itself was ever built. The `integrity-check` command with a non-zero
+ * `rank` argument is what actually compares the index against the content
+ * table's text (verified empirically — a dropped-and-recreated FTS table
+ * passes a plain row-count check but fails this one). Rebuild on any
+ * mismatch, which also covers genuine corruption.
+ */
+function repairMessageSearchIndex(sqlite: SqliteDatabase): void {
+  const { textRows } = sqlite
+    .prepare("SELECT COUNT(*) AS textRows FROM thread_message_text")
+    .get() as { textRows: number };
+  if (textRows === 0) return;
+  try {
+    sqlite.exec(
+      "INSERT INTO thread_message_fts(thread_message_fts, rank) VALUES('integrity-check', 1)",
+    );
+  } catch {
+    sqlite.exec("INSERT INTO thread_message_fts(thread_message_fts) VALUES('rebuild')");
+  }
 }
 
 const REQUIRED_COLUMNS = {

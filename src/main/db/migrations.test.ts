@@ -50,8 +50,9 @@ describe("database migration registry", () => {
       [40, "normalize Antigravity ACP model variants"],
       [41, "repair Antigravity persisted model variants"],
       [42, "deduplicate project locations"],
+      [43, "message search index"],
     ]);
-    expect(LATEST_SCHEMA_VERSION).toBe(42);
+    expect(LATEST_SCHEMA_VERSION).toBe(43);
     expect(() => validateMigrationRegistry()).not.toThrow();
   });
 
@@ -113,7 +114,10 @@ describe("database migration registry", () => {
           sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL
         );
         CREATE TABLE threads (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE);
-        CREATE TABLE thread_runtime_items (thread_id TEXT REFERENCES threads(id) ON DELETE CASCADE, content TEXT);
+        CREATE TABLE thread_runtime_items (
+          thread_id TEXT REFERENCES threads(id) ON DELETE CASCADE, content TEXT,
+          item_id TEXT, position INTEGER, type TEXT, state TEXT, payload TEXT, streams TEXT
+        );
         CREATE TABLE project_notes (project_id TEXT PRIMARY KEY, doc TEXT, todos TEXT NOT NULL, updated_at TEXT NOT NULL);
         CREATE TABLE scheduled_tasks (id TEXT PRIMARY KEY, project_id TEXT);
         CREATE TABLE pr_watches (
@@ -167,7 +171,9 @@ describe("database migration registry", () => {
         }
         sqlite.prepare("INSERT INTO threads VALUES (?, ?)").run("thread-1", "duplicate");
         for (const content of ["first reply", "second reply", "third reply"]) {
-          sqlite.prepare("INSERT INTO thread_runtime_items VALUES (?, ?)").run("thread-1", content);
+          sqlite
+            .prepare("INSERT INTO thread_runtime_items (thread_id, content) VALUES (?, ?)")
+            .run("thread-1", content);
         }
         sqlite
           .prepare("INSERT INTO project_notes VALUES (?, ?, ?, ?)")
@@ -249,4 +255,56 @@ describe("database migration registry", () => {
       }
     },
   );
+});
+
+describe("message search backfill", () => {
+  it("backfills message text for threads that already exist", () => {
+    const sqlite = new Database(":memory:");
+    try {
+      sqlite.exec(`
+        PRAGMA foreign_keys = ON;
+        CREATE TABLE app_state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        CREATE TABLE projects (id TEXT PRIMARY KEY, name TEXT NOT NULL);
+        CREATE TABLE threads (
+          id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+          title TEXT, archived INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL
+        );
+        CREATE TABLE thread_runtime_items (
+          thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+          item_id TEXT NOT NULL, position INTEGER NOT NULL, type TEXT NOT NULL,
+          state TEXT NOT NULL, payload TEXT, streams TEXT
+        );
+        INSERT INTO projects (id, name) VALUES ('p1', 'P');
+        INSERT INTO threads (id, project_id, title, archived, updated_at)
+          VALUES ('t1', 'p1', 'T', 0, '2026-01-01T00:00:00.000Z');
+        INSERT INTO thread_runtime_items (thread_id, item_id, position, type, state, payload, streams)
+          VALUES ('t1', 'i1', 0, 'user_message', 'completed',
+                  '{"content":[{"kind":"text","text":"Импорт сессий"}]}', '{}'),
+                 ('t1', 'i2', 1, 'assistant_message', 'completed', NULL,
+                  '{"assistant_text":"Готово"}'),
+                 ('t1', 'i3', 2, 'command_execution', 'completed', '{"command":"ls"}', '{}');
+      `);
+
+      runDatabaseMigrations(sqlite, 42);
+
+      const rows = sqlite
+        .prepare("SELECT item_id, role, text FROM thread_message_text ORDER BY position")
+        .all();
+      expect(rows).toEqual([
+        { item_id: "i1", role: "user", text: "Импорт сессий" },
+        { item_id: "i2", role: "assistant", text: "Готово" },
+      ]);
+
+      const hit = sqlite
+        .prepare(
+          `SELECT m.item_id FROM thread_message_fts f
+           JOIN thread_message_text m ON m.rowid = f.rowid
+           WHERE thread_message_fts MATCH ?`,
+        )
+        .all('"импорт"');
+      expect(hit).toEqual([{ item_id: "i1" }]);
+    } finally {
+      sqlite.close();
+    }
+  });
 });
