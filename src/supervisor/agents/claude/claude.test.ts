@@ -125,6 +125,15 @@ describe("createClaudeAdapter structured sessions", () => {
     expect(adapter.capabilities.presentationModes).toEqual(["terminal", "gui"]);
   });
 
+  it("declares that a follow-up is held until the running turn ends", () => {
+    // `steerTurn` parks the prompt in `pendingSteers` and only submits it once
+    // the in-flight turn returns; it never reaches the model inside that turn.
+    expect(createClaudeAdapter().capabilities.followUpDeliveries).toEqual([
+      "end-of-turn",
+      "interrupt",
+    ]);
+  });
+
   it("creates a structured SDK session only for GUI presentation", async () => {
     const adapter = createClaudeAdapter();
 

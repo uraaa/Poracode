@@ -264,10 +264,10 @@ export const useAgentStatusesStore = create<AgentStatusesStore>()(
     }),
     {
       name: "poracode-agent-statuses-v1",
-      version: 30,
-      // v30 mirrors supervisor STATUS_CACHE_VERSION=33: discover the OpenCode 2
-      // provider and re-probe the per-provider credentials agents report
-      // alongside their auth state.
+      version: 31,
+      // v31 mirrors supervisor STATUS_CACHE_VERSION=34: agents now declare
+      // which follow-up deliveries they can perform, and a snapshot taken
+      // before that field existed cannot answer the question.
 
       migrate: (persisted) => {
         const prev = (persisted ?? {}) as Partial<AgentStatusesStore>;

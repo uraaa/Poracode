@@ -660,6 +660,10 @@ msgstr "{visibleCount} de {totalCount} visíveis"
 #~ msgid "{visibleSidebarShortcutCount}/{0} selected"
 #~ msgstr "{visibleSidebarShortcutCount}/{0} selecionados"
 
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "{waiting, plural, one {Queue behind # message} other {Queue behind # messages}}"
+msgstr "{waiting, plural, one {Enfileirar após # mensagem} other {Enfileirar após # mensagens}}"
+
 #: src/renderer/views/SettingsOverlay/parts/CursorSdkRuntimeSetup.tsx
 msgid "@cursor/sdk is not installed."
 msgstr "@cursor/sdk não está instalado."
@@ -1098,6 +1102,10 @@ msgstr "Adicionar aos favoritos"
 #: src/mobile/views/DesktopsView.tsx
 msgid "Add to Home Screen"
 msgstr "Adicionar à tela inicial"
+
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Add to paused queue"
+msgstr "Adicionar à fila pausada"
 
 #: src/renderer/views/MainView/parts/RightPanel/parts/NotesPanel/TodoList.tsx
 msgid "Add to-do"
@@ -4374,6 +4382,10 @@ msgstr "Excluindo"
 #: src/renderer/components/thread/ThreadRuntimeRequestPanel/helpers.ts
 msgid "Deny"
 msgstr "Negar"
+
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Deny and send"
+msgstr "Negar e enviar"
 
 #: src/renderer/components/thread/ThreadComposerSection.tsx
 msgid "Deny and tell the agent what to do differently…"
@@ -11899,9 +11911,17 @@ msgstr "Selecionar…"
 msgid "Send a message..."
 msgstr "Envie uma mensagem..."
 
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Send after this turn"
+msgstr "Enviar depois deste turno"
+
 #: src/renderer/views/SettingsOverlay/parts/RemoteAccessSettings.tsx
 msgid "Send generic text instead of conversation titles through Apple's push service."
 msgstr "Enviar texto genérico em vez dos títulos das conversas pelo serviço push da Apple."
+
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Send into this turn"
+msgstr "Enviar neste turno"
 
 #: src/renderer/commands/shortcutCatalog.ts
 #: src/renderer/components/thread/ThreadComposerSection.tsx
@@ -12731,8 +12751,8 @@ msgid "Steer"
 msgstr "Direcionar"
 
 #: src/renderer/components/thread/ThreadComposerSection.tsx
-msgid "Steer current turn"
-msgstr "Direcionar o turno atual"
+#~ msgid "Steer current turn"
+#~ msgstr "Direcionar o turno atual"
 
 #: src/renderer/components/thread/ThreadFollowUpQueueItem.tsx
 msgid "Steer queued follow-up"
@@ -12757,6 +12777,10 @@ msgstr "Parar"
 #: src/renderer/views/MainView/parts/Sidebar/parts/useProjectMenu.tsx
 msgid "Stop {0}"
 msgstr "Parar {0}"
+
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Stop and send now"
+msgstr "Parar e enviar agora"
 
 #: src/mobile/views/PortsView.tsx
 msgid "Stop forwarding"

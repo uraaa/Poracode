@@ -3,7 +3,7 @@ import { toast } from "@heroui/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithI18n as render } from "@/renderer/testUtils/i18n";
-import type { AgentStatus, GitStatusResult, Thread } from "@/shared/contracts";
+import type { AgentStatus, FollowUpDelivery, GitStatusResult, Thread } from "@/shared/contracts";
 import "@/renderer/components/providers/bootstrap";
 import * as skills from "@/renderer/components/skills/useSkills";
 import { useAppStore } from "@/renderer/state/appStore";
@@ -116,6 +116,7 @@ vi.mock("./ThreadComposer", () => ({
     onStop?: () => void;
     onSubmit: () => void;
     submitDisabled?: boolean;
+    submitLabel?: string;
   }) => (
     <div>
       {props.fixedContent}
@@ -134,6 +135,7 @@ vi.mock("./ThreadComposer", () => ({
           stop
         </button>
       ) : null}
+      <output data-testid="submit-label">{props.submitLabel}</output>
       <button type="button" onClick={props.onSubmit}>
         send
       </button>
@@ -1587,6 +1589,124 @@ describe("ThreadComposerSection", () => {
     });
     // There is no turn to interrupt; the FIFO drains on its own.
     expect(bridgeMock.sendThreadFollowUpsNow).not.toHaveBeenCalled();
+  });
+
+  function renderWorkingWithDeliveries(deliveries?: FollowUpDelivery[]) {
+    useSharedSettings.setState({ followUpBehavior: "steer" });
+    renderComposer({
+      thread: { ...guiThread, status: "working", attention: "working" },
+      agentStatus: {
+        ...codexGuiStatus,
+        capabilities: {
+          ...codexGuiStatus.capabilities,
+          ...(deliveries ? { followUpDeliveries: deliveries } : {}),
+        },
+      },
+    });
+    return screen.getByTestId("submit-label");
+  }
+
+  it("names the delivery an agent can actually do while it works", () => {
+    expect(renderWorkingWithDeliveries(["mid-turn", "end-of-turn", "interrupt"])).toHaveTextContent(
+      "Send into this turn",
+    );
+  });
+
+  it("says a follow-up lands after the turn when the agent declares it holds one", () => {
+    expect(renderWorkingWithDeliveries(["end-of-turn", "interrupt"])).toHaveTextContent(
+      "Send after this turn",
+    );
+  });
+
+  it("says the turn stops when the agent can only be interrupted", () => {
+    // Without a native steer the supervisor cancels the running turn and
+    // drains the text as a fresh one. "after this turn" would name a turn
+    // that never finishes.
+    expect(renderWorkingWithDeliveries(["interrupt"])).toHaveTextContent("Stop and send now");
+  });
+
+  it("promises no timing at all for an agent that declared nothing", () => {
+    // Not probed yet, an older remote host, or an adapter that never
+    // declared. None of those is a licence to name a timing.
+    expect(renderWorkingWithDeliveries(undefined)).toHaveTextContent("Send message");
+  });
+
+  function renderWorkingWithQueue(queue: { paused: boolean; count: number }) {
+    useSharedSettings.setState({ followUpBehavior: "queue" });
+    useThreadFollowUpQueueStore.setState({
+      byThread: {
+        [guiThread.id]: {
+          queue: {
+            paused: queue.paused,
+            items: Array.from({ length: queue.count }, (_, index) => ({
+              id: `queued-${index}`,
+              prompt: `waiting ${index}`,
+              stagedAt: index,
+            })),
+          },
+        },
+      },
+    });
+    renderComposer({ thread: { ...guiThread, status: "working", attention: "working" } });
+    return screen.getByTestId("submit-label");
+  }
+
+  it("says the queue is paused rather than promising a delivery it will not make", () => {
+    // A paused record never reaches the pump, so the message sits there until
+    // something resumes it. "Queue message" reads like it will be sent.
+    expect(renderWorkingWithQueue({ paused: true, count: 1 })).toHaveTextContent(
+      "Add to paused queue",
+    );
+  });
+
+  it("counts the follow-ups already waiting ahead of this one", () => {
+    // A queue now survives a supervisor restart, so the user can arrive at a
+    // composer with messages already waiting that they never see staged.
+    expect(renderWorkingWithQueue({ paused: false, count: 2 })).toHaveTextContent(
+      "Queue behind 2 messages",
+    );
+  });
+
+  it("counts a single waiting follow-up in the singular", () => {
+    expect(renderWorkingWithQueue({ paused: false, count: 1 })).toHaveTextContent(
+      "Queue behind 1 message",
+    );
+  });
+
+  it("keeps the plain queue label when nothing is waiting", () => {
+    expect(renderWorkingWithQueue({ paused: false, count: 0 })).toHaveTextContent("Queue message");
+  });
+
+  function seedPendingApproval(threadId: string) {
+    useAppStore.setState({
+      runtimeRequestsByThread: {
+        [threadId]: [
+          {
+            requestId: "approval-label",
+            threadId,
+            requestType: "command_execution_approval",
+            payload: { summary: "Run first" },
+            receivedAt: new Date().toISOString(),
+          },
+        ],
+      },
+    });
+  }
+
+  it("says the approval is denied when submitting answers it instead of steering", () => {
+    // No turn is running, so there is nothing to steer into or wait out: the
+    // submit declines the approval and the text opens the next turn at once.
+    useSharedSettings.setState({ followUpBehavior: "steer" });
+    seedPendingApproval(guiThread.id);
+    renderComposer({ thread: { ...guiThread, status: "needs_approval" } });
+    expect(screen.getByTestId("submit-label")).toHaveTextContent("Deny and send");
+  });
+
+  it("keeps the queue label when a queued follow-up leaves the approval open", () => {
+    useSharedSettings.setState({ followUpBehavior: "queue" });
+    seedPendingApproval(guiThread.id);
+    renderComposer({ thread: { ...guiThread, status: "needs_approval" } });
+    expect(screen.getByTestId("submit-label")).toHaveTextContent("Queue message");
   });
 
   it("leaves a pending approval open when queueing a follow-up", async () => {

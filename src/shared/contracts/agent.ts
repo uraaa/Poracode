@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { agentEnvSchema, type AgentEnv } from "../machines";
+import { followUpDeliverySchema } from "./followUpDelivery";
 import {
   agentKindSchema,
   authStateSchema,
@@ -189,6 +190,7 @@ const agentPresentationCapabilityOverrideSchema = z
     defaultSandboxMode: z.string().optional(),
     supportsResume: z.boolean(),
     supportsDirectInput: z.boolean(),
+    followUpDeliveries: z.array(followUpDeliverySchema).optional(),
     liveInputMode: liveInputModeSchema,
     presentationMode: threadPresentationModeSchema,
     presentationModes: z.array(threadPresentationModeSchema).optional(),
@@ -284,6 +286,16 @@ export const agentCapabilitySchema = z.object({
   defaultSandboxMode: z.string().optional(),
   supportsResume: z.boolean().default(false),
   supportsDirectInput: z.boolean().default(true),
+  /**
+   * Which follow-up deliveries this agent can actually perform. Declared, not
+   * inferred: a provider whose native steer merely holds the prompt until the
+   * turn ends does not support "mid-turn", however capable its steer call is.
+   * Optional, and deliberately without a default: absent means "not known" —
+   * the agent has not been probed, the remote host predates the field, or the
+   * adapter has not declared — and callers must say nothing about timing
+   * rather than assume one. See {@link resolveFollowUpDelivery}.
+   */
+  followUpDeliveries: z.array(followUpDeliverySchema).optional(),
   /**
    * Whether the adapter can run a single-shot, non-interactive generation
    * (thread title / commit message). True iff the supervisor adapter implements

@@ -56,6 +56,10 @@ export const claudeCapabilities: AgentCapability = {
   supportsOneShot: true,
   supportsTextOnlyOneShot: true,
   supportsDirectInput: true,
+  // The SDK session queues a steered follow-up locally and submits it once the
+  // in-flight turn returns, so it lands as its own turn after this one — never
+  // inside it. See `sdkSession.steerTurn`.
+  followUpDeliveries: ["end-of-turn", "interrupt"],
   readsPdfAttachmentsFromHost: true,
   slashCommands: CLAUDE_BUILT_IN_SLASH_COMMANDS,
   liveInputMode: "terminal",

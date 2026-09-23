@@ -11,7 +11,14 @@ import {
 import { toast } from "@heroui/react";
 import { ChevronDown, Monitor, Settings2, Webhook } from "lucide-react";
 import { useLingui } from "@lingui/react/macro";
-import type { AgentStatus, ProjectLocation, PromptSegment, Thread } from "@/shared/contracts";
+import { plural } from "@lingui/core/macro";
+import {
+  resolveFollowUpDelivery,
+  type AgentStatus,
+  type ProjectLocation,
+  type PromptSegment,
+  type Thread,
+} from "@/shared/contracts";
 import { friendlyError } from "@/shared/messages";
 import type { FollowUpBehavior } from "@/shared/settings";
 import { useThreadFollowUpQueue } from "@/renderer/state/threadFollowUpQueueStore";
@@ -508,6 +515,15 @@ function ThreadComposerSectionInner(props: ThreadComposerSectionProps & { thread
   const visiblePendingSteer = useDelayedPendingSteer(pendingSteer);
   const usesPendingSteerPath =
     !isConnecting && !usesTerminalPresentation && thread.status === "working";
+  // What the submit button promises has to match what this agent does with a
+  // follow-up: the same "steer" reaches the model inside the running turn on
+  // one agent, only after it on another, and kills the turn on a third. Only
+  // the agent's own declaration can tell them apart, so an agent that has
+  // declared nothing resolves to "unknown" and the button stays non-committal.
+  const followUpDelivery = resolveFollowUpDelivery({
+    requested: "mid-turn",
+    declared: effectiveAgentStatus?.capabilities.followUpDeliveries,
+  });
   const runtimeRequests = useAppStore((s) => s.runtimeRequestsByThread[thread.id]);
   const activeRuntimeRequest = canShowRuntimeChrome ? runtimeRequests?.[0] : undefined;
   const approvalDenyOption = activeRuntimeRequest
@@ -539,6 +555,42 @@ function ThreadComposerSectionInner(props: ThreadComposerSectionProps & { thread
     s.projects.find((candidate) => candidate.id === thread.projectId),
   );
   const agentFallbackLabel = t`the agent`;
+
+  /**
+   * What the submit button promises. Every branch has to be something the
+   * runtime will actually do with this message: a timing may only be named
+   * when the agent declared it, and everything else says only that the message
+   * is sent.
+   */
+  function submitLabelText(): string {
+    const followUpPending =
+      usesPendingSteerPath || (!usesTerminalPresentation && activeRuntimeRequest !== undefined);
+    if (!followUpPending) return t`Send message`;
+    if (followUpBehavior === "queue") {
+      // A paused record never reaches the pump, and a queue outlives the
+      // supervisor now, so the user can meet one they never watched fill.
+      if (followUpQueue?.paused) return t`Add to paused queue`;
+      const waiting = followUpQueue?.items.length ?? 0;
+      if (waiting > 0) {
+        return t`${plural(waiting, { one: `Queue behind # message`, other: `Queue behind # messages` })}`;
+      }
+      return t`Queue message`;
+    }
+    // No turn is running, so there is nothing to interject into or wait out:
+    // submit declines the open approval and the text opens the next turn
+    // straight away, which is what the composer placeholder already offers.
+    if (!usesPendingSteerPath && approvalDenyOption) return t`Deny and send`;
+    switch (followUpDelivery) {
+      case "mid-turn":
+        return t`Send into this turn`;
+      case "end-of-turn":
+        return t`Send after this turn`;
+      case "interrupt":
+        return t`Stop and send now`;
+      default:
+        return t`Send message`;
+    }
+  }
 
   useEffect(() => {
     if (!showContextIndicator && contextDockOpen) {
@@ -1017,14 +1069,7 @@ function ThreadComposerSectionInner(props: ThreadComposerSectionProps & { thread
                   promptDisabled={!(showServerComposer || showTerminalComposer)}
                   stopPending={isInterrupting}
                   submitDisabled={!(hasContent || attachments.attachments.length > 0) || !canSubmit}
-                  submitLabel={
-                    usesPendingSteerPath ||
-                    (!usesTerminalPresentation && activeRuntimeRequest !== undefined)
-                      ? followUpBehavior === "queue"
-                        ? t`Queue message`
-                        : t`Steer current turn`
-                      : t`Send message`
-                  }
+                  submitLabel={submitLabelText()}
                   hideSubmitButton={
                     threadVoiceActive &&
                     !hasContent &&

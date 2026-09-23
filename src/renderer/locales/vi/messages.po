@@ -660,6 +660,10 @@ msgstr "{visibleCount} trong số {totalCount} hiển thị"
 #~ msgid "{visibleSidebarShortcutCount}/{0} selected"
 #~ msgstr "Đã chọn {visibleSidebarShortcutCount}/{0}"
 
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "{waiting, plural, one {Queue behind # message} other {Queue behind # messages}}"
+msgstr "{waiting, plural, other {Xếp hàng sau # tin nhắn}}"
+
 #: src/renderer/views/SettingsOverlay/parts/CursorSdkRuntimeSetup.tsx
 msgid "@cursor/sdk is not installed."
 msgstr "@cursor/sdk chưa được cài đặt."
@@ -1098,6 +1102,10 @@ msgstr "Thêm vào mục yêu thích"
 #: src/mobile/views/DesktopsView.tsx
 msgid "Add to Home Screen"
 msgstr "Thêm vào màn hình chính"
+
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Add to paused queue"
+msgstr "Thêm vào hàng đợi đang tạm dừng"
 
 #: src/renderer/views/MainView/parts/RightPanel/parts/NotesPanel/TodoList.tsx
 msgid "Add to-do"
@@ -4374,6 +4382,10 @@ msgstr "Đang xóa"
 #: src/renderer/components/thread/ThreadRuntimeRequestPanel/helpers.ts
 msgid "Deny"
 msgstr "Từ chối"
+
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Deny and send"
+msgstr "Từ chối và gửi"
 
 #: src/renderer/components/thread/ThreadComposerSection.tsx
 msgid "Deny and tell the agent what to do differently…"
@@ -11899,9 +11911,17 @@ msgstr "Chọn…"
 msgid "Send a message..."
 msgstr "Gửi tin nhắn..."
 
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Send after this turn"
+msgstr "Gửi sau lượt này"
+
 #: src/renderer/views/SettingsOverlay/parts/RemoteAccessSettings.tsx
 msgid "Send generic text instead of conversation titles through Apple's push service."
 msgstr "Gửi văn bản chung chung thay vì tiêu đề cuộc trò chuyện qua dịch vụ đẩy của Apple."
+
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Send into this turn"
+msgstr "Gửi vào lượt hiện tại"
 
 #: src/renderer/commands/shortcutCatalog.ts
 #: src/renderer/components/thread/ThreadComposerSection.tsx
@@ -12731,8 +12751,8 @@ msgid "Steer"
 msgstr "Điều hướng"
 
 #: src/renderer/components/thread/ThreadComposerSection.tsx
-msgid "Steer current turn"
-msgstr "Điều hướng lượt hiện tại"
+#~ msgid "Steer current turn"
+#~ msgstr "Điều hướng lượt hiện tại"
 
 #: src/renderer/components/thread/ThreadFollowUpQueueItem.tsx
 msgid "Steer queued follow-up"
@@ -12757,6 +12777,10 @@ msgstr "Dừng lại"
 #: src/renderer/views/MainView/parts/Sidebar/parts/useProjectMenu.tsx
 msgid "Stop {0}"
 msgstr "Dừng {0}"
+
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Stop and send now"
+msgstr "Dừng và gửi ngay"
 
 #: src/mobile/views/PortsView.tsx
 msgid "Stop forwarding"

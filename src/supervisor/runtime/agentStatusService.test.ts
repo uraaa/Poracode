@@ -210,7 +210,20 @@ HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Lxss\\{333}
         wsl: [],
       }),
     );
-    expect(STATUS_CACHE_VERSION).toBe(33);
+    expect(STATUS_CACHE_VERSION).toBe(34);
+    expect(service.getCachedCapabilities("codex")).toBeUndefined();
+  });
+
+  it("drops a cache written before agents declared their follow-up deliveries", () => {
+    const { service, statusCachePath } = makeService(vi.fn<AgentAdapter["detectInstall"]>());
+    writeFileSync(
+      statusCachePath,
+      JSON.stringify({
+        version: 33,
+        windows: [makeStatus()],
+        wsl: [],
+      }),
+    );
     expect(service.getCachedCapabilities("codex")).toBeUndefined();
   });
 

@@ -45,6 +45,32 @@ function reset() {
 beforeEach(reset);
 
 describe("persisted agent status cache", () => {
+  it("bumps the persisted version so v30 snapshots are migrated rather than restored", async () => {
+    // `migrate` discards unconditionally, so the version number is the whole
+    // mechanism: zustand only calls it when the persisted version differs.
+    // A v30 snapshot predates `followUpDeliveries` and would otherwise leave
+    // the composer unable to say what a follow-up does on every thread until
+    // something else forced a re-probe. This is the one place that pins the
+    // bump; the migrate cases below assert behaviour, not the constant.
+    const options = useAgentStatusesStore.persist.getOptions();
+    expect(options.version).toBe(31);
+    const stale = makeStatus({ kind: "example", label: "Example" });
+    const migrated = await options.migrate!(
+      {
+        agentStatuses: [stale],
+        wslAgentStatuses: [stale],
+        windowsLoaded: true,
+        wslLoaded: true,
+      },
+      30,
+    );
+    expect(migrated).toMatchObject({
+      agentStatuses: [],
+      wslAgentStatuses: [],
+      windowsLoaded: false,
+      wslLoaded: false,
+    });
+  });
   it("invalidates v28 snapshots so MCP capabilities are re-probed", async () => {
     const options = useAgentStatusesStore.persist.getOptions();
     const stale = makeStatus({ kind: "example", label: "Example" });
@@ -57,7 +83,6 @@ describe("persisted agent status cache", () => {
       },
       28,
     );
-    expect(options.version).toBe(30);
     expect(migrated).toMatchObject({
       agentStatuses: [],
       wslAgentStatuses: [],
@@ -79,7 +104,6 @@ describe("persisted agent status cache", () => {
       },
       29,
     );
-    expect(options.version).toBe(30);
     expect(migrated).toMatchObject({
       agentStatuses: [],
       wslAgentStatuses: [],
@@ -104,7 +128,6 @@ describe("persisted agent status cache", () => {
       },
       21,
     );
-    expect(options.version).toBe(30);
     expect(migrated).toMatchObject({
       agentStatuses: [],
       wslAgentStatuses: [],
@@ -148,7 +171,6 @@ describe("persisted agent status cache", () => {
       19,
     );
 
-    expect(options.version).toBe(30);
     expect(migrated).toMatchObject({
       agentStatuses: [],
       wslAgentStatuses: [],
@@ -178,7 +200,6 @@ describe("persisted agent status cache", () => {
       17,
     );
 
-    expect(options.version).toBe(30);
     expect(migrated).toMatchObject({
       agentStatuses: [],
       wslAgentStatuses: [],
@@ -189,7 +210,6 @@ describe("persisted agent status cache", () => {
 
   it("invalidates v15 statuses cached before Command Code's live-only model discovery", async () => {
     const options = useAgentStatusesStore.persist.getOptions();
-    expect(options.version).toBe(30);
     const staleCommandCode = makeStatus({
       kind: "commandcode",
       label: "Command Code",
@@ -221,7 +241,6 @@ describe("persisted agent status cache", () => {
 
   it("invalidates v10 statuses whose terminal auth methods lack baseSpawnEnv-derived env", async () => {
     const options = useAgentStatusesStore.persist.getOptions();
-    expect(options.version).toBe(30);
     const staleLogin = makeStatus({
       kind: "antigravity",
       label: "Antigravity",
@@ -248,7 +267,6 @@ describe("persisted agent status cache", () => {
 
   it("invalidates v14 statuses that grouped Cursor Grok under Other models", async () => {
     const options = useAgentStatusesStore.persist.getOptions();
-    expect(options.version).toBe(30);
     const staleCursor = makeStatus({
       kind: "cursor",
       label: "Cursor",
@@ -281,7 +299,6 @@ describe("persisted agent status cache", () => {
 
   it("invalidates v8 statuses cached before successful ACP sessions established auth", async () => {
     const options = useAgentStatusesStore.persist.getOptions();
-    expect(options.version).toBe(30);
     const staleAcp = makeStatus({
       kind: "acp-generic:example",
       label: "Example ACP",
@@ -308,7 +325,6 @@ describe("persisted agent status cache", () => {
 
   it("invalidates v6 statuses produced without the Grok login-shell environment", async () => {
     const options = useAgentStatusesStore.persist.getOptions();
-    expect(options.version).toBe(30);
     expect(options.migrate).toBeTypeOf("function");
 
     const grok = makeStatus({
@@ -353,7 +369,6 @@ it("invalidates v20 ACP labels in both persisted environments", async () => {
     },
     20,
   );
-  expect(options.version).toBe(30);
   expect(migrated).toMatchObject({
     agentStatuses: [],
     wslAgentStatuses: [],
@@ -868,7 +883,6 @@ it("invalidates v23 model catalogs in both persisted environments", async () => 
     },
     23,
   );
-  expect(options.version).toBe(30);
   expect(migrated).toMatchObject({
     agentStatuses: [],
     wslAgentStatuses: [],

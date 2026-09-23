@@ -201,6 +201,10 @@ export const codexDefaultCapabilities: AgentCapability = {
   supportsResume: true,
   supportsOneShot: true,
   supportsDirectInput: true,
+  // `turn/steer` appends to the in-flight turn on the app server, so a
+  // follow-up reaches the model at the next tool boundary without cancelling
+  // anything.
+  followUpDeliveries: ["mid-turn", "end-of-turn", "interrupt"],
   liveInputMode: "terminal",
   presentationMode: "terminal",
   presentationModes: ["terminal", "gui"],

@@ -2021,8 +2021,12 @@ describe("ThreadView", () => {
     expect(screen.queryByText("Creating worktree…")).toBeNull();
   });
 
+  // The agent status fixture below declares no `followUpDeliveries`, which is
+  // the state every thread is in until re-detection finishes after an upgrade
+  // and the permanent state of a PWA against a pre-capability host. "steer"
+  // must name no timing there.
   it.each([
-    ["steer", "Steer current turn"],
+    ["steer", "Send message"],
     ["queue", "Queue message"],
   ] as const)("allows %s and stop on a working GUI thread", async (behavior, label) => {
     useSharedSettings.setState({ followUpBehavior: behavior });

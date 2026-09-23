@@ -3190,6 +3190,17 @@ describe("mapCodexSlashCommands", () => {
     );
   });
 
+  it("declares that a follow-up can reach the model inside the running turn", () => {
+    // `turn/steer` appends to the in-flight turn on the app server, so the
+    // composer may promise a mid-turn delivery for Codex and for no one else
+    // until they declare it too.
+    expect(codexDefaultCapabilities.followUpDeliveries).toEqual([
+      "mid-turn",
+      "end-of-turn",
+      "interrupt",
+    ]);
+  });
+
   it("advertises 272k, 400k, and 1M context windows with a 400k default", () => {
     expect(codexDefaultCapabilities.defaultContextSize).toBe("400k");
     expect(codexDefaultCapabilities.contextSizes?.map((size) => size.id)).toEqual([
