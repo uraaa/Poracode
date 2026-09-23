@@ -28,24 +28,37 @@ git worktree add .poracode/worktrees/<name> -b feat/<name> master
 `.gitignore` already covers `**/worktrees/`, so the outer checkout never sees
 it as untracked files.
 
-Dependencies: link the main checkout's `node_modules` instead of installing a
-second copy.
+Dependencies: run `pnpm install` inside the worktree. `pnpm-workspace.yaml`
+shares the virtual store across checkouts, so this links packages rather than
+copying them, and it wires the repository's own workspace packages correctly.
 
-```bash
-# Windows
-cmd //c mklink /J "<repo>\.poracode\worktrees\<name>\node_modules" "<repo>\node_modules"
-# POSIX
-ln -s ../../../node_modules .poracode/worktrees/<name>/node_modules
+Linking `node_modules` from the main checkout by hand looks cheaper and is not
+worth it. On Windows `mklink /J` fails quietly often enough that half the
+worktrees in one session ended up with a real install regardless, and a link
+that does succeed points the worktree's tooling at a different set of resolved
+paths than pnpm would have produced.
+
+**Removing a worktree can break the main checkout.** pnpm links a workspace
+package from whichever checkout installed it last, so deleting a worktree can
+leave the main checkout holding a dangling link:
+
+```
+node_modules/@poracode/agents-usage -> .poracode/worktrees/<deleted>/packages/agents-usage
 ```
 
-`pnpm-workspace.yaml` is already configured to share the virtual store across
-worktrees, so this is a link, not a second install.
-
-When the branch is merged and the worktree is done:
+`pnpm typecheck` then fails with a hundred "Cannot find module" errors that have
+nothing to do with the change in front of you. So when the branch is merged and
+the worktree is done:
 
 ```bash
 git worktree remove .poracode/worktrees/<name>
+pnpm install        # in the main checkout, to repair the workspace links
 ```
+
+If the directory survives `git worktree remove`, it is usually its
+`node_modules` holding it. Check whether that directory is a link before
+deleting it recursively: deleting through a junction takes the target with it,
+and the target may be the main checkout's `node_modules`.
 
 ## 2. Branch names
 
