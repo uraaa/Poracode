@@ -15,8 +15,8 @@ import { BROWSER_SESSION_PARTITION } from "@/shared/browserPartition";
 import { resolveThemeMode } from "@/shared/themeMode";
 import { isThreadTurnActive, type RemoteThreadCommand } from "@/shared/contracts";
 import {
+  createFollowUpQueueSupervisorHooks,
   persistFollowUpQueueEvent,
-  restorePersistedFollowUpQueues,
 } from "./threads/followUpQueuePersistence";
 import {
   closeDatabase,
@@ -759,6 +759,14 @@ if (!hasSingleInstanceLock) {
       let scheduleRunCoordinator: ScheduleRunCoordinator | null = null;
       let prWatchService: PrWatchService | null = null;
       let gitStateService: GitStateService | null = null;
+      const followUpQueueHooks = createFollowUpQueueSupervisorHooks({
+        listThreadIds: () => dbGetThreads().map((thread) => thread.id),
+        getThreadConfig: (threadId) => dbGetThread(threadId)?.config,
+        restore: (input) => supervisorClient.call("restoreThreadFollowUpQueue", input),
+        emitToRenderer: (event) => {
+          mainWindow?.webContents.send(IPC_EVENT_CHANNELS.supervisorEvent, event);
+        },
+      });
       const supervisorClient = new SupervisorClient({
         appVersion: app.getVersion(),
         isDev,
@@ -840,16 +848,14 @@ if (!hasSingleInstanceLock) {
         onReset: () => {
           workingThreads.clear();
           remoteAccessController?.handleSupervisorReset();
-          // A crash/restart drops the supervisor's in-memory records without
-          // emitting per-thread events. The rows survive in the database, so
-          // hand them back instead of clearing the renderer caches: a queue
-          // the user filled must outlive the process that was holding it.
-          void restorePersistedFollowUpQueues(async ({ threadId, queue }) => {
-            const config = dbGetThread(threadId)?.config;
-            if (!config) return;
-            await supervisorClient.call("restoreThreadFollowUpQueue", { threadId, queue, config });
-          });
+          followUpQueueHooks.onSupervisorReset();
           updatePowerSaveBlocker();
+        },
+        onStarted: () => {
+          // The rows survive in the database, so hand them back to the fresh
+          // process: a queue the user filled must outlive the one that was
+          // holding it.
+          followUpQueueHooks.onSupervisorStarted();
         },
       });
       const scheduleCoordinator = new ScheduleRunCoordinator({
