@@ -660,6 +660,10 @@ msgstr "{totalCount} 中的 {visibleCount} 个可见"
 #~ msgid "{visibleSidebarShortcutCount}/{0} selected"
 #~ msgstr "已选择 {visibleSidebarShortcutCount}/{0} 项"
 
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "{waiting, plural, one {Queue behind # message} other {Queue behind # messages}}"
+msgstr "{waiting, plural, other {排在 # 条消息之后}}"
+
 #: src/renderer/views/SettingsOverlay/parts/CursorSdkRuntimeSetup.tsx
 msgid "@cursor/sdk is not installed."
 msgstr "@cursor/sdk 未安装。"
@@ -1098,6 +1102,10 @@ msgstr "添加到收藏夹"
 #: src/mobile/views/DesktopsView.tsx
 msgid "Add to Home Screen"
 msgstr "添加到主屏幕"
+
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Add to paused queue"
+msgstr "加入已暂停的队列"
 
 #: src/renderer/views/MainView/parts/RightPanel/parts/NotesPanel/TodoList.tsx
 msgid "Add to-do"

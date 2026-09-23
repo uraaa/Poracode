@@ -660,6 +660,10 @@ msgstr "{visibleCount} trong số {totalCount} hiển thị"
 #~ msgid "{visibleSidebarShortcutCount}/{0} selected"
 #~ msgstr "Đã chọn {visibleSidebarShortcutCount}/{0}"
 
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "{waiting, plural, one {Queue behind # message} other {Queue behind # messages}}"
+msgstr "{waiting, plural, other {Xếp hàng sau # tin nhắn}}"
+
 #: src/renderer/views/SettingsOverlay/parts/CursorSdkRuntimeSetup.tsx
 msgid "@cursor/sdk is not installed."
 msgstr "@cursor/sdk chưa được cài đặt."
@@ -1098,6 +1102,10 @@ msgstr "Thêm vào mục yêu thích"
 #: src/mobile/views/DesktopsView.tsx
 msgid "Add to Home Screen"
 msgstr "Thêm vào màn hình chính"
+
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Add to paused queue"
+msgstr "Thêm vào hàng đợi đang tạm dừng"
 
 #: src/renderer/views/MainView/parts/RightPanel/parts/NotesPanel/TodoList.tsx
 msgid "Add to-do"

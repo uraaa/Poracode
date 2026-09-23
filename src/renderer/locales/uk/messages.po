@@ -660,6 +660,10 @@ msgstr "{visibleCount} із {totalCount} видимих"
 #~ msgid "{visibleSidebarShortcutCount}/{0} selected"
 #~ msgstr "Вибрано {visibleSidebarShortcutCount}/{0}"
 
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "{waiting, plural, one {Queue behind # message} other {Queue behind # messages}}"
+msgstr "{waiting, plural, one {У чергу після # повідомлення} few {У чергу після # повідомлень} many {У чергу після # повідомлень} other {У чергу після # повідомлення}}"
+
 #: src/renderer/views/SettingsOverlay/parts/CursorSdkRuntimeSetup.tsx
 msgid "@cursor/sdk is not installed."
 msgstr "@cursor/sdk не встановлено."
@@ -1098,6 +1102,10 @@ msgstr "Додати до обраного"
 #: src/mobile/views/DesktopsView.tsx
 msgid "Add to Home Screen"
 msgstr "Додати на головний екран"
+
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Add to paused queue"
+msgstr "Додати до призупиненої черги"
 
 #: src/renderer/views/MainView/parts/RightPanel/parts/NotesPanel/TodoList.tsx
 msgid "Add to-do"

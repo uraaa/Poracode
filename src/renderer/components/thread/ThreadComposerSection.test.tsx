@@ -1631,6 +1631,52 @@ describe("ThreadComposerSection", () => {
     expect(renderWorkingWithDeliveries(undefined)).toHaveTextContent("Send message");
   });
 
+  function renderWorkingWithQueue(queue: { paused: boolean; count: number }) {
+    useSharedSettings.setState({ followUpBehavior: "queue" });
+    useThreadFollowUpQueueStore.setState({
+      byThread: {
+        [guiThread.id]: {
+          queue: {
+            paused: queue.paused,
+            items: Array.from({ length: queue.count }, (_, index) => ({
+              id: `queued-${index}`,
+              prompt: `waiting ${index}`,
+              stagedAt: index,
+            })),
+          },
+        },
+      },
+    });
+    renderComposer({ thread: { ...guiThread, status: "working", attention: "working" } });
+    return screen.getByTestId("submit-label");
+  }
+
+  it("says the queue is paused rather than promising a delivery it will not make", () => {
+    // A paused record never reaches the pump, so the message sits there until
+    // something resumes it. "Queue message" reads like it will be sent.
+    expect(renderWorkingWithQueue({ paused: true, count: 1 })).toHaveTextContent(
+      "Add to paused queue",
+    );
+  });
+
+  it("counts the follow-ups already waiting ahead of this one", () => {
+    // A queue now survives a supervisor restart, so the user can arrive at a
+    // composer with messages already waiting that they never see staged.
+    expect(renderWorkingWithQueue({ paused: false, count: 2 })).toHaveTextContent(
+      "Queue behind 2 messages",
+    );
+  });
+
+  it("counts a single waiting follow-up in the singular", () => {
+    expect(renderWorkingWithQueue({ paused: false, count: 1 })).toHaveTextContent(
+      "Queue behind 1 message",
+    );
+  });
+
+  it("keeps the plain queue label when nothing is waiting", () => {
+    expect(renderWorkingWithQueue({ paused: false, count: 0 })).toHaveTextContent("Queue message");
+  });
+
   function seedPendingApproval(threadId: string) {
     useAppStore.setState({
       runtimeRequestsByThread: {

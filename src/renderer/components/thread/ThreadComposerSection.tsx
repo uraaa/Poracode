@@ -11,6 +11,7 @@ import {
 import { toast } from "@heroui/react";
 import { ChevronDown, Monitor, Settings2, Webhook } from "lucide-react";
 import { useLingui } from "@lingui/react/macro";
+import { plural } from "@lingui/core/macro";
 import {
   resolveFollowUpDelivery,
   type AgentStatus,
@@ -565,7 +566,16 @@ function ThreadComposerSectionInner(props: ThreadComposerSectionProps & { thread
     const followUpPending =
       usesPendingSteerPath || (!usesTerminalPresentation && activeRuntimeRequest !== undefined);
     if (!followUpPending) return t`Send message`;
-    if (followUpBehavior === "queue") return t`Queue message`;
+    if (followUpBehavior === "queue") {
+      // A paused record never reaches the pump, and a queue outlives the
+      // supervisor now, so the user can meet one they never watched fill.
+      if (followUpQueue?.paused) return t`Add to paused queue`;
+      const waiting = followUpQueue?.items.length ?? 0;
+      if (waiting > 0) {
+        return t`${plural(waiting, { one: `Queue behind # message`, other: `Queue behind # messages` })}`;
+      }
+      return t`Queue message`;
+    }
     // No turn is running, so there is nothing to interject into or wait out:
     // submit declines the open approval and the text opens the next turn
     // straight away, which is what the composer placeholder already offers.

@@ -660,6 +660,10 @@ msgstr "Widoczne {visibleCount} z {totalCount}"
 #~ msgid "{visibleSidebarShortcutCount}/{0} selected"
 #~ msgstr "Wybrano {visibleSidebarShortcutCount}/{0}"
 
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "{waiting, plural, one {Queue behind # message} other {Queue behind # messages}}"
+msgstr "{waiting, plural, one {W kolejce za # wiadomością} few {W kolejce za # wiadomościami} many {W kolejce za # wiadomościami} other {W kolejce za # wiadomości}}"
+
 #: src/renderer/views/SettingsOverlay/parts/CursorSdkRuntimeSetup.tsx
 msgid "@cursor/sdk is not installed."
 msgstr "@cursor/sdk nie jest zainstalowany."
@@ -1098,6 +1102,10 @@ msgstr "Dodaj do ulubionych"
 #: src/mobile/views/DesktopsView.tsx
 msgid "Add to Home Screen"
 msgstr "Dodaj do ekranu głównego"
+
+#: src/renderer/components/thread/ThreadComposerSection.tsx
+msgid "Add to paused queue"
+msgstr "Dodaj do wstrzymanej kolejki"
 
 #: src/renderer/views/MainView/parts/RightPanel/parts/NotesPanel/TodoList.tsx
 msgid "Add to-do"
