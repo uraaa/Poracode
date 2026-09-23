@@ -936,6 +936,7 @@ const REQUIRED_COLUMNS = {
     "streams",
     "parent_item_id",
   ],
+  thread_follow_up_queue: ["thread_id", "item_id", "position", "staged_at", "paused", "payload"],
   thread_runtime_item_stream_chunks: ["thread_id", "item_id", "stream", "seq", "chars", "text"],
   thread_runtime_item_stream_state: [
     "thread_id",

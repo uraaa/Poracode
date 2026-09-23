@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import { describe, expect, it } from "vitest";
 import { HOME_PROJECT_ID } from "@/shared/homeScope";
 import {
+  assertRequiredDatabaseSchema,
   DATABASE_MIGRATIONS,
   LATEST_SCHEMA_VERSION,
   runDatabaseMigrations,
@@ -49,6 +50,20 @@ describe("database migration registry", () => {
         sqlite.prepare("SELECT thread_id FROM thread_follow_up_queue").all(),
       ).not.toThrow();
       expect(sqlite.prepare("SELECT id FROM threads").all()).toEqual([{ id: "thread-1" }]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("guards the follow-up queue table against drift", () => {
+    const sqlite = new Database(":memory:");
+    try {
+      sqlite.exec("CREATE TABLE threads (id TEXT PRIMARY KEY)");
+      // The table the branch adds has to be visible to the schema guard, or
+      // drift in it is the one kind of drift nothing can report.
+      expect(() => assertRequiredDatabaseSchema(sqlite)).toThrow(
+        /thread_follow_up_queue\.staged_at/,
+      );
     } finally {
       sqlite.close();
     }

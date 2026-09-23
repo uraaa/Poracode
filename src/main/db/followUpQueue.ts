@@ -65,7 +65,14 @@ function threadExistsInSqlite(sqlite: ReturnType<typeof getSqlite>, threadId: st
   return sqlite.prepare("SELECT 1 FROM threads WHERE id = ?").get(threadId) !== undefined;
 }
 
-/** Every stored queue, keyed by thread, rows in their queued order. */
+/**
+ * Every stored queue, keyed by thread, rows in their queued order.
+ *
+ * Deliberately uncapped. It is read once per supervisor start, and its size is
+ * bounded by what the user themselves typed and has not yet had delivered —
+ * tens of short prompts at the outside. A cap here would mean silently
+ * dropping exactly the messages this table exists to protect.
+ */
 export function dbGetThreadFollowUpQueues(): Map<string, ThreadFollowUpQueueState> {
   const rows = getSqlite()
     .prepare(

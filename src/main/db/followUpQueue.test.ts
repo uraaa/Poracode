@@ -4,7 +4,7 @@ import { join } from "node:path";
 import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Thread } from "@/shared/contracts";
-import { closeDatabase, initDatabase } from "./connection";
+import { closeDatabase, getSqlite, initDatabase } from "./connection";
 import { dbUpsertProject, dbUpsertThread } from "./projectsThreads";
 import { dbGetThreadFollowUpQueues, dbReplaceThreadFollowUpQueue } from "./followUpQueue";
 
@@ -120,6 +120,26 @@ describe.skipIf(!sqliteAvailable)("follow-up queue persistence", () => {
       }),
     ).not.toThrow();
     expect(dbGetThreadFollowUpQueues().has("thread-gone")).toBe(false);
+  });
+
+  it("recreates a dropped queue table on the next startup", () => {
+    const dbPath = join(dir, "state.sqlite");
+    // Migration 44 is stamped as applied and never runs again, so a table lost
+    // to an interrupted migration or a manual repair has to come back through
+    // the startup drift repair or it never comes back at all.
+    getSqlite().exec("DROP TABLE thread_follow_up_queue");
+    closeDatabase();
+
+    initDatabase(dbPath);
+
+    dbReplaceThreadFollowUpQueue("thread-1", {
+      paused: false,
+      items: [{ id: "a", prompt: "first", stagedAt: 10 }],
+    });
+    expect(dbGetThreadFollowUpQueues().get("thread-1")).toEqual({
+      paused: false,
+      items: [{ id: "a", prompt: "first", stagedAt: 10 }],
+    });
   });
 
   it("drops the row set when the queue is emptied", () => {
