@@ -341,11 +341,7 @@ export class ClaudeSdkSession implements StructuredSessionHandle {
     if (!this.currentTurnInFlight) return this.startTurn(prompt, config, segments, options);
     const userMessageItemId = options?.userMessageItemId ?? `user-${randomUUID()}`;
     this.pendingSteers.push([prompt, config, segments, { ...options, userMessageItemId }]);
-    this.emitRuntimeEvents(
-      steerClaudeTurn(this.mapperState, prompt, segments, userMessageItemId, {
-        pendingDelivery: true,
-      }),
-    );
+    this.emitRuntimeEvents(steerClaudeTurn(this.mapperState, prompt, segments, userMessageItemId));
   }
 
   /**
@@ -356,11 +352,9 @@ export class ClaudeSdkSession implements StructuredSessionHandle {
    */
   private releaseHeldSteers(): void {
     const held = this.pendingSteers.splice(0);
-    for (const [prompt, , segments, options] of held) {
+    for (const [, , , options] of held) {
       if (!options?.userMessageItemId) continue;
-      this.emitRuntimeEvents(
-        deliverClaudeSteer(this.mapperState, prompt, segments, options.userMessageItemId),
-      );
+      this.emitRuntimeEvents(deliverClaudeSteer(this.mapperState, options.userMessageItemId));
     }
   }
 
@@ -368,18 +362,15 @@ export class ClaudeSdkSession implements StructuredSessionHandle {
     const next = this.pendingSteers.shift();
     if (!next) return false;
     // The row has been sitting in the transcript flagged as undelivered since
-    // `steerTurn` painted it. It is reaching the model now, so clear the flag
-    // before the turn opens.
-    const [heldPrompt, , heldSegments, heldOptions] = next;
+    // it was painted. Clear the flag here, before `startTurn`'s awaits: this is
+    // our own hand-off to the provider, not an acknowledgement from it — the
+    // SDK never reports that the model received a prompt. A submission that
+    // aborts after this point therefore reads as delivered, which is the
+    // direction we want: an unanswerable message must never stay dimmed
+    // forever waiting on a signal that cannot arrive.
+    const [, , , heldOptions] = next;
     if (heldOptions?.userMessageItemId) {
-      this.emitRuntimeEvents(
-        deliverClaudeSteer(
-          this.mapperState,
-          heldPrompt,
-          heldSegments,
-          heldOptions.userMessageItemId,
-        ),
-      );
+      this.emitRuntimeEvents(deliverClaudeSteer(this.mapperState, heldOptions.userMessageItemId));
     }
     // startTurn opens the next lifecycle synchronously, before any idle update
     // can release the supervisor's FIFO queue. It also applies all live config.

@@ -371,7 +371,7 @@ describe("SteerCoordinator interrupt-backed steering", () => {
       "[thread mention] Source",
       [...displaySegments],
       undefined,
-      { includeTurn: false },
+      { includeTurn: false, pendingDelivery: true },
     );
     expect(steerTurn).toHaveBeenCalledWith(
       "[thread mention] Source",
@@ -400,7 +400,7 @@ describe("SteerCoordinator interrupt-backed steering", () => {
       "queued native steer",
       undefined,
       "user-queued",
-      { includeTurn: false },
+      { includeTurn: false, pendingDelivery: true },
     );
     expect(steerTurn).toHaveBeenCalledWith("queued native steer", { model: "model-2" }, undefined, {
       userMessageItemId: "user-queued",

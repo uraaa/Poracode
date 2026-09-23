@@ -101,12 +101,6 @@ export function steerClaudeTurn(
   prompt: string,
   segments: PromptSegment[] | undefined,
   userMessageItemId?: string,
-  options?: {
-    /** The row is painted now but the model only sees it when this turn ends
-     * and the held prompt opens the next one. A turn that starts immediately
-     * passes nothing: its message is delivered as it is painted. */
-    pendingDelivery?: boolean;
-  },
 ): RuntimeEvent[] {
   const userItemId = userMessageItemId ?? newItemId("user");
   return [
@@ -115,20 +109,25 @@ export function steerClaudeTurn(
       threadId: state.threadId,
       itemId: userItemId,
       itemType: "user_message",
-      payload: {
-        content: buildPromptContentBlocks(prompt, segments),
-        ...(options?.pendingDelivery ? { pendingDelivery: true } : {}),
-      },
+      payload: { content: buildPromptContentBlocks(prompt, segments) },
     },
     { type: "item.completed", threadId: state.threadId, itemId: userItemId },
   ];
 }
 
-/** Clear the undelivered flag once the held prompt is handed to the model. */
+/**
+ * Clear the undelivered flag on a row that already exists.
+ *
+ * The payload carries the flag and nothing else on purpose. `item.updated` is
+ * shallow merged by every reader, so any `content` here would overwrite the
+ * message the user is looking at — and the held prompt's content is not the
+ * user's: it is the provider-effective rewrite (remote-path mapping applied,
+ * image and PDF attachments already consumed, prompt re-formatted). Sending it
+ * would swap the visible message for the wire format and re-index the search
+ * row with words the user never typed.
+ */
 export function deliverClaudeSteer(
   state: ClaudeMapperState,
-  prompt: string,
-  segments: PromptSegment[] | undefined,
   userMessageItemId: string,
 ): RuntimeEvent[] {
   return [
@@ -136,7 +135,7 @@ export function deliverClaudeSteer(
       type: "item.updated",
       threadId: state.threadId,
       itemId: userMessageItemId,
-      payload: { content: buildPromptContentBlocks(prompt, segments), pendingDelivery: false },
+      payload: { pendingDelivery: false },
     },
   ];
 }

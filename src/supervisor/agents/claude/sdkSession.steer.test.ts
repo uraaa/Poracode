@@ -282,7 +282,7 @@ it("surfaces a failed follow-up attachment and discards later steers", async () 
   expect(h.events.filter((event) => event.type === "turn.started")).toHaveLength(2);
 });
 
-it("paints a held steer as undelivered until its turn starts", async () => {
+it("hands a held steer to the model without rewriting the painted message", async () => {
   const h = await createSession();
   await h.session.startTurn("first", config);
   await h.inputs.next();
@@ -291,20 +291,24 @@ it("paints a held steer as undelivered until its turn starts", async () => {
     userMessageItemId: "held-row",
   });
 
-  const painted = h.events.find(
-    (event) => event.type === "item.started" && event.itemId === "held-row",
-  );
-  expect(painted).toMatchObject({
-    payload: expect.objectContaining({ pendingDelivery: true }),
-  });
-
   h.output.write(resultMessage(h.id));
   await h.inputs.next();
   await flushSdkMessages();
 
+  // The row was painted by whoever created it, with the user's own segments.
+  // Delivery is a flag flip and nothing else: a payload carrying `content`
+  // would shallow-merge over that row and replace it with the provider's
+  // rewritten prompt (WSL paths, attachments dropped).
   expect(
     h.events.filter((event) => event.type === "item.updated" && event.itemId === "held-row"),
-  ).toMatchObject([{ payload: expect.objectContaining({ pendingDelivery: false }) }]);
+  ).toEqual([
+    {
+      type: "item.updated",
+      threadId: "claude-steer",
+      itemId: "held-row",
+      payload: { pendingDelivery: false },
+    },
+  ]);
 });
 
 it("clears the undelivered flag when a held steer is dropped", async () => {
@@ -319,5 +323,12 @@ it("clears the undelivered flag when a held steer is dropped", async () => {
 
   expect(
     h.events.filter((event) => event.type === "item.updated" && event.itemId === "dropped-row"),
-  ).toMatchObject([{ payload: expect.objectContaining({ pendingDelivery: false }) }]);
+  ).toEqual([
+    {
+      type: "item.updated",
+      threadId: "claude-steer",
+      itemId: "dropped-row",
+      payload: { pendingDelivery: false },
+    },
+  ]);
 });
