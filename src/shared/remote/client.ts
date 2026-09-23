@@ -800,8 +800,9 @@ export class RemoteDesktopClient {
       return result.result;
     } catch (error) {
       // The remote protocol stays additive: a host from before queued
-      // follow-ups (v9), or before send-now (v10), knows the passthrough
-      // endpoint but rejects these newer procedure names. Turn that capability
+      // follow-ups (v9), or one on v10 from before send-now was added to it,
+      // knows the passthrough endpoint but rejects these newer procedure
+      // names — send-now does not bump the version. Turn that capability
       // miss into a stable, actionable error. Never retry through
       // setPendingSteer: queue and steer have intentionally different
       // semantics.
