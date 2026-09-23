@@ -8775,6 +8775,10 @@ msgstr "На этом компьютере ещё не обнаружено."
 msgid "Not found"
 msgstr "Не найдено"
 
+#: src/renderer/components/thread/ChatPane/parts/items/UserMessage.tsx
+msgid "Not handed to the agent yet"
+msgstr "Ещё не передано агенту"
+
 #: src/renderer/views/SettingsOverlay/parts/nativeAgentRuntimes.ts
 #: src/renderer/views/SettingsOverlay/parts/SingleAgentSettings/SingleAgentSettings.tsx
 msgid "not installed"

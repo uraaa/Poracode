@@ -45,12 +45,15 @@ describe("UserMessage", () => {
     });
 
     expect(surface?.dataset.pendingDelivery).toBe("true");
+    // The dim alone says nothing to a screen reader.
+    expect(surface?.title).toBe("Not handed to the agent yet");
   });
 
   it("leaves a delivered message unmarked", () => {
     const surface = renderMessage({ content: [{ kind: "text", text: "already delivered" }] });
 
     expect(surface?.dataset.pendingDelivery).toBeUndefined();
+    expect(surface?.title).toBe("");
   });
 });
 
