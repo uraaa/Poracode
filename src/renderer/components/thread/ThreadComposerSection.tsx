@@ -931,10 +931,15 @@ function ThreadComposerSectionInner(props: ThreadComposerSectionProps & { thread
                             const overrideSegments = mentionRef.current?.serializeSegments() ?? [];
                             // Nothing to send makes the override meaningless, so the
                             // chord escalates the queue instead: interrupt the turn and
-                            // hand over everything waiting.
+                            // hand over everything waiting. With nothing queued or no
+                            // turn running there is nothing to escalate, and the chord
+                            // stays the no-op it was before send-now existed — a
+                            // reflexive Ctrl+Enter must never cancel the agent.
                             if (
                               overrideSegments.length === 0 &&
-                              attachments.attachments.length === 0
+                              attachments.attachments.length === 0 &&
+                              thread.status === "working" &&
+                              (followUpQueue?.items.length ?? 0) > 0
                             ) {
                               void readBridge()
                                 .sendThreadFollowUpsNow({ threadId: thread.id })
