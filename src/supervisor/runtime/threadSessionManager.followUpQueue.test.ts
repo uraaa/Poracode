@@ -593,3 +593,62 @@ it("lifts the pause after the paused queue is sent now", async () => {
     await manager.dispose();
   }
 });
+
+it("keeps the entries apart when the merged send-now follow-ups carry segments", async () => {
+  const { manager, session, startTurn, finish } = createHarness();
+  session.status = "working";
+  try {
+    await manager.queueThreadFollowUp({
+      threadId: session.threadId,
+      prompt: "fix the tests",
+      segments: [{ kind: "text", content: "fix the tests" }],
+      config: session.config,
+    });
+    await manager.queueThreadFollowUp({
+      threadId: session.threadId,
+      prompt: "update docs",
+      segments: [{ kind: "text", content: "update docs" }],
+      config: session.config,
+    });
+
+    const sending = manager.sendThreadFollowUpsNow({ threadId: session.threadId });
+    await vi.waitFor(() => expect(session.pendingSteer).toBeDefined());
+
+    // The composer serialises even plain text into segments, and the steer
+    // path rebuilds the prompt from them — so the separator has to live in
+    // the segments, not only in the joined `prompt`.
+    expect(session.pendingSteer).toMatchObject({ prompt: "fix the tests\n\nupdate docs" });
+
+    await drainForcedSteer({ manager, session, startTurn });
+    await sending;
+  } finally {
+    finish();
+    await manager.dispose();
+  }
+});
+
+/**
+ * Drive the interrupt-drain edge a forced steer waits on: the provider
+ * cancels, the slot drains into a fresh turn, and the canonical start admits
+ * it. Without this the harness never settles a `awaitCanonicalStart` steer.
+ */
+async function drainForcedSteer({
+  manager,
+  session,
+  startTurn,
+}: Pick<ReturnType<typeof createHarness>, "manager" | "session" | "startTurn">) {
+  const steerCoordinator = (
+    manager as unknown as {
+      steerCoordinator: {
+        maybeDrainPendingSteer(current: SessionRuntime): Promise<void> | undefined;
+        noteSteerTurnStarted(current: SessionRuntime): void;
+      };
+    }
+  ).steerCoordinator;
+  await vi.waitFor(() => expect(session.pendingSteer).toBeDefined());
+  const before = startTurn.mock.calls.length;
+  session.status = "idle";
+  void steerCoordinator.maybeDrainPendingSteer(session);
+  await vi.waitFor(() => expect(startTurn.mock.calls.length).toBe(before + 1));
+  steerCoordinator.noteSteerTurnStarted(session);
+}

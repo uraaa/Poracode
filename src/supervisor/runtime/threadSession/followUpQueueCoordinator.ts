@@ -2,6 +2,7 @@ import { FollowUpQueueDirectInput, type DirectInputReservation } from "./followU
 import { randomUUID } from "node:crypto";
 import type {
   EditQueuedThreadFollowUpPayload,
+  PromptSegment,
   ReorderQueuedThreadFollowUpPayload,
   RuntimeEvent,
   SetPendingSteerPayload,
@@ -34,6 +35,26 @@ function createAdmissionBarrier(): {
     resolve = done;
   });
   return { promise, resolve };
+}
+
+/**
+ * Merge the queued prompts into one segment list for a single steer.
+ * `setPendingSteer` rebuilds the prompt from `segments` whenever they are
+ * present, and the default formatter joins text segments with nothing at all —
+ * so the blank line that separates two follow-ups has to be a segment of its
+ * own. An entry the renderer staged without segments contributes its plain
+ * prompt as one, so a mixed queue still arrives whole and in order.
+ */
+function mergeSegments(payloads: SetPendingSteerPayload[]): PromptSegment[] {
+  if (!payloads.some((payload) => (payload.segments?.length ?? 0) > 0)) return [];
+  const separator: PromptSegment = { kind: "text", content: "\n\n" };
+  return payloads.flatMap((payload, index) => {
+    const own =
+      payload.segments && payload.segments.length > 0
+        ? payload.segments
+        : [{ kind: "text", content: payload.prompt } satisfies PromptSegment];
+    return index === 0 ? own : [separator, ...own];
+  });
 }
 
 export interface FollowUpQueueCoordinatorContext {
@@ -264,7 +285,7 @@ export class FollowUpQueueCoordinator {
         const last = entries[entries.length - 1];
         if (!first || !last) return;
         for (const entry of entries) this.cancelPreparation(record, entry);
-        const segments = entries.flatMap((entry) => snapshotPayload(entry.payload).segments ?? []);
+        const segments = mergeSegments(entries.map((entry) => snapshotPayload(entry.payload)));
         await this.ctx.steer(
           {
             threadId: input.threadId,
