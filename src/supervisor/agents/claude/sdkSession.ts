@@ -345,10 +345,12 @@ export class ClaudeSdkSession implements StructuredSessionHandle {
   }
 
   /**
-   * Un-flag every held steer row that will never reach the model. A message
-   * dropped with the session must stop claiming it is on its way; otherwise
-   * the transcript keeps a row greyed out forever, waiting for a delivery
-   * that cannot happen.
+   * Drop every held steer and un-flag its row. This is the only way the queue
+   * is allowed to be emptied without starting a turn — Stop, a forced close, a
+   * failed turn, a submission error and the end of the SDK stream all route
+   * here — because a row dropped silently keeps claiming it is on its way and
+   * stays greyed out for the rest of the app session, on a message the model
+   * will never answer.
    */
   private releaseHeldSteers(): void {
     const held = this.pendingSteers.splice(0);
@@ -495,7 +497,7 @@ export class ClaudeSdkSession implements StructuredSessionHandle {
   }
 
   async interruptTurn(): Promise<void> {
-    this.pendingSteers = [];
+    this.releaseHeldSteers();
     this.submissionGeneration++;
     this.interruptInFlight = true;
     try {
@@ -506,7 +508,7 @@ export class ClaudeSdkSession implements StructuredSessionHandle {
   }
 
   forceCompleteTurn(): void {
-    this.pendingSteers = [];
+    this.releaseHeldSteers();
     this.submissionGeneration++;
     this.deferredCompletion.clear();
     this.clearDeferredFlushTimer();
@@ -869,10 +871,10 @@ export class ClaudeSdkSession implements StructuredSessionHandle {
             if (this.disposed) break;
             this.handleSdkMessage(message);
           }
-          this.pendingSteers = [];
+          this.releaseHeldSteers();
           if (!this.disposed) this.flushDeferredCompletion();
         } catch (error) {
-          this.pendingSteers = [];
+          this.releaseHeldSteers();
           if (!this.disposed) {
             captureSupervisorException(error, {
               "poracode.feature_area": "provider-sdk",
@@ -1109,7 +1111,7 @@ export class ClaudeSdkSession implements StructuredSessionHandle {
         ...(errorMessage ? { errorMessage } : {}),
         ...(this.sessionId ? { sessionRef: createKnownSessionRef(this.sessionId) } : {}),
       };
-      if (failed || wasInterrupted) this.pendingSteers = [];
+      if (failed || wasInterrupted) this.releaseHeldSteers();
       if (this.startPendingSteer()) return;
       if (this.hasLiveBackgroundWork()) {
         this.deferredCompletion.defer(completion);
