@@ -433,6 +433,10 @@ msgstr "{agentLabel}: {statusLabel}. Наведіть для деталей ст
 msgid "{agentLead} needs your input to continue."
 msgstr "{agentLead} потребує вашого введення, щоб продовжити."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "{alreadyImported} session(s) were already imported."
+msgstr ""
+
 #: src/mobile/views/pr/PrOverviewPage.tsx
 msgid "{commitsCount, plural, one {# commit} other {# commits}}"
 msgstr "{commitsCount, plural, one {# коміт} few {# коміти} many {# комітів} other {# коміта}}"
@@ -7870,6 +7874,10 @@ msgstr "Перемістити панель"
 msgid "Move to clean worktree"
 msgstr "Перемістити в чистий worktree"
 
+#: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
+msgid "Move to Project"
+msgstr ""
+
 #: src/renderer/components/workspace/workspaceMenuItems.tsx
 msgid "Move to Workspace"
 msgstr "Перемістити до робочої області"
@@ -13373,6 +13381,10 @@ msgstr "цільовий провайдер"
 msgid "The thread session is not available for queued follow-ups."
 msgstr "Сесія треду недоступна для повідомлень у черзі."
 
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "The thread was stopped to move it — start it again in its new project."
+msgstr ""
+
 #: src/renderer/components/thread/MoveThreadToWorktreeDialog.tsx
 #~ msgid "The thread will run in a separate worktree on a new branch."
 #~ msgstr "Тред працюватиме в окремому worktree на новій гілці."
@@ -13637,6 +13649,10 @@ msgstr "Це загальносистемне сполучення клавіш 
 #: src/renderer/i18n/sharedMessages.ts
 msgid "This thread does not support queued follow-ups."
 msgstr "Цей тред не підтримує повідомлення в черзі."
+
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "This thread is hosted on another desktop; it can't be moved to a local project."
+msgstr ""
 
 #: src/renderer/i18n/sharedMessages.ts
 msgid "This thread is not ready for Steer."
@@ -14931,6 +14947,10 @@ msgstr "Зачекайте, доки всі кандидати завершат�
 #: src/renderer/actions/moveThreadToWorktreeActions.ts
 msgid "Wait for the thread to finish starting before moving it to a worktree."
 msgstr "Дочекайтеся завершення запуску треда, перш ніж переміщувати його в worktree."
+
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "Wait for the thread to finish starting before moving it to another project."
+msgstr ""
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Wait for the thread to finish starting."

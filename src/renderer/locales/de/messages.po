@@ -433,6 +433,10 @@ msgstr "{agentLabel}: {statusLabel}. Für Statusdetails den Mauszeiger darüber 
 msgid "{agentLead} needs your input to continue."
 msgstr "{agentLead} benötigt deine Eingabe, um fortzufahren."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "{alreadyImported} session(s) were already imported."
+msgstr ""
+
 #: src/mobile/views/pr/PrOverviewPage.tsx
 msgid "{commitsCount, plural, one {# commit} other {# commits}}"
 msgstr "{commitsCount, plural, one {# Commit} other {# Commits}}"
@@ -7870,6 +7874,10 @@ msgstr "Panel verschieben"
 msgid "Move to clean worktree"
 msgstr "In sauberen Arbeitsbaum verschieben"
 
+#: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
+msgid "Move to Project"
+msgstr ""
+
 #: src/renderer/components/workspace/workspaceMenuItems.tsx
 msgid "Move to Workspace"
 msgstr "In Arbeitsbereich verschieben"
@@ -13373,6 +13381,10 @@ msgstr "der Zielanbieter"
 msgid "The thread session is not available for queued follow-ups."
 msgstr "Die Thread-Sitzung ist für eingereihte Nachfragen nicht verfügbar."
 
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "The thread was stopped to move it — start it again in its new project."
+msgstr ""
+
 #: src/renderer/components/thread/MoveThreadToWorktreeDialog.tsx
 #~ msgid "The thread will run in a separate worktree on a new branch."
 #~ msgstr "Der Thread wird in einem separaten Arbeitsbaum auf einem neuen Zweig ausgeführt."
@@ -13637,6 +13649,10 @@ msgstr "Diese systemweite Tastenkombination ist nicht verfügbar. Wähle eine an
 #: src/renderer/i18n/sharedMessages.ts
 msgid "This thread does not support queued follow-ups."
 msgstr "Dieser Thread unterstützt keine eingereihten Nachfragen."
+
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "This thread is hosted on another desktop; it can't be moved to a local project."
+msgstr ""
 
 #: src/renderer/i18n/sharedMessages.ts
 msgid "This thread is not ready for Steer."
@@ -14931,6 +14947,10 @@ msgstr "Warten Sie, bis alle Kandidaten fertig sind, bevor Sie einen Pull Reques
 #: src/renderer/actions/moveThreadToWorktreeActions.ts
 msgid "Wait for the thread to finish starting before moving it to a worktree."
 msgstr "Warten Sie, bis der Thread vollständig gestartet ist, bevor Sie ihn in einen Arbeitsbaum verschieben."
+
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "Wait for the thread to finish starting before moving it to another project."
+msgstr ""
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Wait for the thread to finish starting."

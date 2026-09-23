@@ -433,6 +433,10 @@ msgstr "{agentLabel}: {statusLabel}. 상태 세부정보를 보려면 마우스�
 msgid "{agentLead} needs your input to continue."
 msgstr "{agentLead}가 계속하려면 입력이 필요합니다."
 
+#: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
+msgid "{alreadyImported} session(s) were already imported."
+msgstr ""
+
 #: src/mobile/views/pr/PrOverviewPage.tsx
 msgid "{commitsCount, plural, one {# commit} other {# commits}}"
 msgstr "{commitsCount, plural, one {커밋 #개} other {커밋 #개}}"
@@ -7870,6 +7874,10 @@ msgstr "패널 이동"
 msgid "Move to clean worktree"
 msgstr "클린 작업 트리로 이동"
 
+#: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
+msgid "Move to Project"
+msgstr ""
+
 #: src/renderer/components/workspace/workspaceMenuItems.tsx
 msgid "Move to Workspace"
 msgstr "작업 영역으로 이동"
@@ -13373,6 +13381,10 @@ msgstr "대상 공급자"
 msgid "The thread session is not available for queued follow-ups."
 msgstr "대기 중인 후속 메시지에 스레드 세션을 사용할 수 없습니다."
 
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "The thread was stopped to move it — start it again in its new project."
+msgstr ""
+
 #: src/renderer/components/thread/MoveThreadToWorktreeDialog.tsx
 #~ msgid "The thread will run in a separate worktree on a new branch."
 #~ msgstr "스레드가 새 브랜치의 별도 작업 트리에서 실행됩니다."
@@ -13637,6 +13649,10 @@ msgstr "이 시스템 전역 단축키를 사용할 수 없습니다. 다른 키
 #: src/renderer/i18n/sharedMessages.ts
 msgid "This thread does not support queued follow-ups."
 msgstr "이 스레드는 대기 중인 후속 메시지를 지원하지 않습니다."
+
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "This thread is hosted on another desktop; it can't be moved to a local project."
+msgstr ""
 
 #: src/renderer/i18n/sharedMessages.ts
 msgid "This thread is not ready for Steer."
@@ -14931,6 +14947,10 @@ msgstr "풀 리퀘스트를 열기 전에 모든 후보가 완료될 때까지 �
 #: src/renderer/actions/moveThreadToWorktreeActions.ts
 msgid "Wait for the thread to finish starting before moving it to a worktree."
 msgstr "작업 트리로 이동하기 전에 스레드 시작이 완료될 때까지 기다리세요."
+
+#: src/renderer/actions/moveThreadToProjectActions.ts
+msgid "Wait for the thread to finish starting before moving it to another project."
+msgstr ""
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Wait for the thread to finish starting."
