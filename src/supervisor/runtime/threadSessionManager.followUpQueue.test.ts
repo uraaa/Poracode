@@ -1,4 +1,5 @@
 import { expect, it, vi } from "vitest";
+import type { RuntimeEvent, ThreadStatus } from "@/shared/contracts";
 import type { StructuredSessionHandle } from "../agents/base";
 import type { SessionRuntime } from "./sessionTypes";
 import { createFollowUpQueueHarness as createHarness } from "./threadSessionManager.followUpQueueTestHarness";
@@ -725,6 +726,65 @@ it("retains the queue when the send-now steer is never admitted", async () => {
     expect(manager.getThreadFollowUpQueue(session.threadId)!.items).toMatchObject([
       { prompt: "do not lose me" },
     ]);
+  } finally {
+    finish();
+    await manager.dispose();
+  }
+});
+
+it("does not pause the queue over the turn its own send-now cancelled", async () => {
+  const { manager, session, startTurn, finish } = createHarness();
+  const queue = (
+    manager as unknown as {
+      followUpQueue: {
+        onStructuredRuntimeEvent(current: SessionRuntime, event: RuntimeEvent): void;
+        onStructuredUpdate(current: SessionRuntime, status: ThreadStatus): void;
+      };
+    }
+  ).followUpQueue;
+  try {
+    await manager.queueThreadFollowUp({
+      threadId: session.threadId,
+      prompt: "already running",
+      config: session.config,
+    });
+    await vi.waitFor(() => expect(startTurn).toHaveBeenCalledTimes(1));
+    queue.onStructuredRuntimeEvent(session, {
+      type: "turn.started",
+      threadId: session.threadId,
+      turnId: "dispatched-turn",
+    });
+    await manager.queueThreadFollowUp({
+      threadId: session.threadId,
+      prompt: "waiting",
+      config: session.config,
+    });
+
+    const sending = manager.sendThreadFollowUpsNow({ threadId: session.threadId });
+    await vi.waitFor(() => expect(session.pendingSteer).toBeDefined());
+
+    // The forced interrupt lands: the dispatched turn ends cancelled. Staging
+    // the steer already handed that entry to the direct path
+    // (`FollowUpQueueCoordinator`'s `onStarted` drops `record.active`), so the
+    // cancellation is a direct-turn completion and must not pause the queue.
+    queue.onStructuredRuntimeEvent(session, {
+      type: "turn.completed",
+      threadId: session.threadId,
+      turnId: "dispatched-turn",
+      state: "cancelled",
+    });
+    session.status = "idle";
+    queue.onStructuredUpdate(session, "idle");
+
+    await drainForcedSteer({ manager, session, startTurn });
+    await sending;
+
+    await manager.queueThreadFollowUp({
+      threadId: session.threadId,
+      prompt: "after send now",
+      config: session.config,
+    });
+    expect(manager.getThreadFollowUpQueue(session.threadId)).toMatchObject({ paused: false });
   } finally {
     finish();
     await manager.dispose();
