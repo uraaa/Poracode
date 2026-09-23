@@ -137,7 +137,7 @@ describe.skipIf(!sqliteAvailable)("follow-up queue persistence wiring", () => {
     });
   });
 
-  it("keeps the stored queue when one thread fails to restore", async () => {
+  it("offers a queue that failed to restore to the next attempt, unchanged", async () => {
     dbUpsertThread(thread("thread-2"), 1);
     dbReplaceThreadFollowUpQueue("thread-1", {
       paused: false,
@@ -152,10 +152,44 @@ describe.skipIf(!sqliteAvailable)("follow-up queue persistence wiring", () => {
       .mockRejectedValueOnce(new Error("thread is not running"))
       .mockResolvedValueOnce(undefined);
 
+    // One thread refusing must not stop the rest…
     await restorePersistedFollowUpQueues(restore);
-
     expect(restore).toHaveBeenCalledTimes(2);
-    expect(dbGetThreadFollowUpQueues().size).toBe(2);
+
+    // …and the refusal must leave the rows exactly as they were, so the next
+    // supervisor start hands the same messages back rather than losing them.
+    const retry = vi
+      .fn<(input: { threadId: string; queue: ThreadFollowUpQueueState }) => Promise<void>>()
+      .mockResolvedValue(undefined);
+    await restorePersistedFollowUpQueues(retry);
+
+    expect(retry.mock.calls.map(([input]) => input)).toEqual([
+      {
+        threadId: "thread-1",
+        queue: { paused: false, items: [{ id: "a", prompt: "first", stagedAt: 1 }] },
+      },
+      {
+        threadId: "thread-2",
+        queue: { paused: false, items: [{ id: "b", prompt: "second", stagedAt: 2 }] },
+      },
+    ]);
+  });
+
+  it("tells the renderer about a queue it could not hand back", async () => {
+    dbReplaceThreadFollowUpQueue("thread-1", {
+      paused: false,
+      items: [{ id: "a", prompt: "first", stagedAt: 1 }],
+    });
+    const failed: string[] = [];
+
+    await restorePersistedFollowUpQueues(
+      async () => {
+        throw new Error("thread is not running");
+      },
+      (threadId) => failed.push(threadId),
+    );
+
+    expect(failed).toEqual(["thread-1"]);
   });
 });
 
@@ -259,6 +293,33 @@ describe.skipIf(!sqliteAvailable)("follow-up queue supervisor hooks", () => {
         config: { model: "gpt-5.6" },
       },
     });
+    client.dispose();
+  });
+
+  it("leaves the renderer showing no queue when the replay is refused", async () => {
+    dbReplaceThreadFollowUpQueue("thread-1", {
+      paused: false,
+      items: [{ id: "kept", prompt: "survived restart", stagedAt: 42 }],
+    });
+    const { client, rendererEvents } = wire();
+    const child = makeFakeChild();
+    forkMock.mockReturnValue(child);
+    client.start("/base");
+    await vi.waitFor(() => expect(child.send).toHaveBeenCalled());
+    const request = child.send.mock.calls[0]![0] as { id: string };
+
+    child.emit("message", { replyTo: request.id, ok: false, error: "thread is not running" });
+
+    // The supervisor does not hold this queue, so the renderer must not show
+    // it. The rows stay for the next start rather than being dropped.
+    await vi.waitFor(() =>
+      expect(rendererEvents).toContainEqual({
+        type: "thread-follow-up-queue",
+        threadId: "thread-1",
+        queue: null,
+      }),
+    );
+    expect(dbGetThreadFollowUpQueues().has("thread-1")).toBe(true);
     client.dispose();
   });
 

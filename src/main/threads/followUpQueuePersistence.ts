@@ -25,15 +25,20 @@ export function persistFollowUpQueueEvent(event: SupervisorEvent): void {
  * are restored independently: one that refuses — its session may be gone —
  * must not stop the rest, and its rows stay in the database for the next
  * attempt rather than being dropped on the floor.
+ *
+ * `onFailed` is how the caller keeps the renderer honest about a thread whose
+ * queue is not live anywhere.
  */
 export async function restorePersistedFollowUpQueues(
   restore: (input: { threadId: string; queue: ThreadFollowUpQueueState }) => Promise<void>,
+  onFailed?: (threadId: string) => void,
 ): Promise<void> {
   for (const [threadId, queue] of dbGetThreadFollowUpQueues()) {
     try {
       await restore({ threadId, queue });
     } catch (error) {
       console.error("[main] failed to restore the follow-up queue for", threadId, error);
+      onFailed?.(threadId);
     }
   }
 }
@@ -69,12 +74,21 @@ export interface FollowUpQueueSupervisorHooks {
 export function createFollowUpQueueSupervisorHooks(
   deps: FollowUpQueueSupervisorHooksDeps,
 ): FollowUpQueueSupervisorHooks {
+  const clearInRenderer = (threadId: string): void => {
+    deps.emitToRenderer({ type: "thread-follow-up-queue", threadId, queue: null });
+  };
+
   const replay = (): void => {
-    void restorePersistedFollowUpQueues(async ({ threadId, queue }) => {
-      const config = deps.getThreadConfig(threadId);
-      if (!config) return;
-      await deps.restore({ threadId, queue, config });
-    });
+    void restorePersistedFollowUpQueues(
+      async ({ threadId, queue }) => {
+        const config = deps.getThreadConfig(threadId);
+        if (!config) return;
+        await deps.restore({ threadId, queue, config });
+      },
+      // The rows stay for the next start, but nothing holds this queue right
+      // now, so the renderer must not offer actions on it that can only fail.
+      clearInRenderer,
+    );
   };
 
   return {
@@ -84,9 +98,7 @@ export function createFollowUpQueueSupervisorHooks(
     // edit, remove or steer on them would fail with item-not-found until the
     // replay lands on the next spawn.
     onSupervisorReset: () => {
-      for (const threadId of deps.listThreadIds()) {
-        deps.emitToRenderer({ type: "thread-follow-up-queue", threadId, queue: null });
-      }
+      for (const threadId of deps.listThreadIds()) clearInRenderer(threadId);
     },
     // `onStarted` is the first moment requests can be sent, so this is where
     // the stored rows go back — including on the very first spawn, which
