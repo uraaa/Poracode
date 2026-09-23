@@ -498,7 +498,64 @@ function eventAffectsStructuralVersion(event: RuntimeEvent): boolean {
   }
 }
 
+/**
+ * Events after which no user message in the thread can still be waiting: the
+ * agent either took it into the turn that just opened, answered it in the turn
+ * that just settled, or will never see it because the session is gone.
+ */
+function settlesPendingDelivery(event: RuntimeEvent): boolean {
+  return (
+    event.type === "turn.started" ||
+    event.type === "turn.completed" ||
+    event.type === "session.exited" ||
+    event.type === "error"
+  );
+}
+
+/**
+ * Un-dim every user message still marked as undelivered.
+ *
+ * The mark is set optimistically, at paint time, by a caller that can only
+ * guess whether the agent will be handed the message now or when the running
+ * turn ends — and no provider is obliged to ever report the hand-off. So the
+ * renderer bounds the guess with facts it can observe by itself. A dim that
+ * outlives the question it was asked about is worse than no dim at all: it
+ * accuses the agent of ignoring a message it already answered.
+ */
+function clearPendingDeliveryMarks(
+  state: RuntimeEventState,
+  threadId: string,
+): Partial<RuntimeEventState> {
+  const items = state.runtimeItemsByIdByThread[threadId];
+  if (!items) return {};
+  let nextItems: Record<string, RuntimeChatItem> | undefined;
+  for (const itemId of Object.keys(items)) {
+    const item = items[itemId]!;
+    const payload = item.payload as { pendingDelivery?: unknown } | undefined;
+    if (!payload || payload.pendingDelivery !== true) continue;
+    nextItems ??= { ...items };
+    nextItems[itemId] = { ...item, payload: { ...payload, pendingDelivery: false } };
+  }
+  if (!nextItems) return {};
+  return {
+    runtimeItemsByIdByThread: { ...state.runtimeItemsByIdByThread, [threadId]: nextItems },
+  };
+}
+
 function applyRuntimeEventToRuntimeState(
+  state: RuntimeEventState,
+  threadId: string,
+  event: RuntimeEvent,
+): Partial<RuntimeEventState> {
+  if (!settlesPendingDelivery(event)) {
+    return applyRuntimeEventToSettledState(state, threadId, event);
+  }
+  const cleared = clearPendingDeliveryMarks(state, threadId);
+  const settled = Object.keys(cleared).length > 0 ? { ...state, ...cleared } : state;
+  return { ...cleared, ...applyRuntimeEventToSettledState(settled, threadId, event) };
+}
+
+function applyRuntimeEventToSettledState(
   state: RuntimeEventState,
   threadId: string,
   event: RuntimeEvent,
@@ -528,7 +585,8 @@ function applyRuntimeEventToRuntimeState(
 
     case "turn.started":
       // Mark the runtime turn open so live activity may (re)open the GUI turn.
-      // No item state to mutate; status flows through the thread-state channel.
+      // Item state is handled by the caller (see settlesPendingDelivery);
+      // status flows through the thread-state channel.
       if (state.runtimeOpenTurnByThread[threadId] === true) return {};
       return {
         runtimeOpenTurnByThread: { ...state.runtimeOpenTurnByThread, [threadId]: true },

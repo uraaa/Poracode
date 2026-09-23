@@ -1096,4 +1096,83 @@ describe("runtimeEventSlice background tasks", () => {
     apply("t1", { type: "session.exited", threadId: "t1" });
     expect("t1" in store.getState().runtimeBackgroundTasksByThread).toBe(false);
   });
+  /**
+   * The undelivered mark is the renderer's own guess, and no provider is
+   * obliged to ever report a hand-off. These are the facts the renderer can
+   * see for itself that end the guess.
+   */
+  describe("undelivered user messages", () => {
+    function paintHeldMessage() {
+      apply("t1", {
+        type: "item.started",
+        threadId: "t1",
+        itemId: "held",
+        itemType: "user_message",
+        payload: { content: [{ kind: "text", text: "wait for me" }], pendingDelivery: true },
+      });
+      expect(heldPayload()).toEqual({
+        content: [{ kind: "text", text: "wait for me" }],
+        pendingDelivery: true,
+      });
+    }
+
+    function heldPayload() {
+      return store.getState().runtimeItemsByIdByThread.t1?.held?.payload;
+    }
+
+    it.each<[string, RuntimeEvent]>([
+      ["the next turn opens", { type: "turn.started", threadId: "t1", turnId: "turn-2" }],
+      [
+        "the turn settles",
+        { type: "turn.completed", threadId: "t1", turnId: "turn-1", state: "completed" },
+      ],
+      ["the session goes away", { type: "session.exited", threadId: "t1" }],
+      ["the thread errors", { type: "error", threadId: "t1", message: "gone" }],
+    ])("stops dimming a held message once %s", (_label, settling) => {
+      paintHeldMessage();
+
+      apply("t1", settling);
+
+      // The message itself is untouched — only the delivery promise expires.
+      expect(heldPayload()).toEqual({
+        content: [{ kind: "text", text: "wait for me" }],
+        pendingDelivery: false,
+      });
+    });
+
+    it("keeps dimming while the turn the message is waiting on runs", () => {
+      paintHeldMessage();
+
+      apply("t1", {
+        type: "item.started",
+        threadId: "t1",
+        itemId: "a1",
+        itemType: "assistant_message",
+      });
+      apply("t1", {
+        type: "content.delta",
+        threadId: "t1",
+        itemId: "a1",
+        stream: "assistant_text",
+        delta: "still working",
+      });
+
+      expect(heldPayload()).toMatchObject({ pendingDelivery: true });
+    });
+
+    it("leaves a delivered message's identity alone", () => {
+      apply("t1", {
+        type: "item.started",
+        threadId: "t1",
+        itemId: "plain",
+        itemType: "user_message",
+        payload: { content: [{ kind: "text", text: "delivered" }] },
+      });
+      const before = store.getState().runtimeItemsByIdByThread.t1?.plain;
+
+      apply("t1", { type: "turn.started", threadId: "t1", turnId: "turn-2" });
+
+      expect(store.getState().runtimeItemsByIdByThread.t1?.plain).toBe(before);
+    });
+  });
 });
