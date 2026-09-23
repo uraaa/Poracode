@@ -6,8 +6,16 @@ import { safeParse } from "./rowMappers";
 //
 // The supervisor owns the live queue; this table is its durable shadow. It
 // exists so a crash or a restart does not silently drop messages the user
-// already handed over: the rows are written before delivery is attempted and
-// replayed into a fresh supervisor.
+// already handed over: every queue change is mirrored here as its event
+// passes through the main process, and the rows are replayed into a fresh
+// supervisor.
+//
+// What it does not cover: the item currently being dispatched. The coordinator
+// removes it from the public queue and emits — which deletes its row — before
+// the turn is started, so a crash in that window loses it. That ordering is
+// what keeps the table from ever redelivering a message the agent already
+// received; the window is the price. Durability here means "queued", not
+// "queued or in flight".
 
 interface FollowUpQueueRow {
   thread_id: string;
