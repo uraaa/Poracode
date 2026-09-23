@@ -9,7 +9,15 @@ import { dbGetThreadFollowUpQueues, dbReplaceThreadFollowUpQueue } from "@/main/
  */
 export function persistFollowUpQueueEvent(event: SupervisorEvent): void {
   if (event.type !== "thread-follow-up-queue") return;
-  dbReplaceThreadFollowUpQueue(event.threadId, event.queue);
+  try {
+    dbReplaceThreadFollowUpQueue(event.threadId, event.queue);
+  } catch (error) {
+    // This runs inside the supervisor child's "message" handler, which has no
+    // guard of its own: a throw here would crash the main process and take the
+    // window with it, and would also stop the event reaching the renderer and
+    // every other observer. Losing durability is bad; losing the app is worse.
+    console.error("[main] failed to persist the follow-up queue for", event.threadId, error);
+  }
 }
 
 /**

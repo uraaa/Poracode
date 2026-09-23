@@ -108,6 +108,20 @@ describe.skipIf(!sqliteAvailable)("follow-up queue persistence", () => {
     });
   });
 
+  it("ignores a queue for a thread that is already gone", () => {
+    // `dbDeleteThread` runs before the supervisor's closeThread reaches
+    // `emitQueueState`, so a queue event for a deleted thread is ordinary. The
+    // insert would violate the thread_id foreign key and throw out of the
+    // main-process event handler, taking the window down with it.
+    expect(() =>
+      dbReplaceThreadFollowUpQueue("thread-gone", {
+        paused: false,
+        items: [{ id: "a", prompt: "orphan", stagedAt: 10 }],
+      }),
+    ).not.toThrow();
+    expect(dbGetThreadFollowUpQueues().has("thread-gone")).toBe(false);
+  });
+
   it("drops the row set when the queue is emptied", () => {
     dbReplaceThreadFollowUpQueue("thread-1", {
       paused: false,

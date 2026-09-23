@@ -95,6 +95,19 @@ describe.skipIf(!sqliteAvailable)("follow-up queue persistence wiring", () => {
     });
   });
 
+  it("never lets a persistence failure escape into the event handler", () => {
+    // The main process forwards this event to the renderer and to every other
+    // observer after persisting it. A throw here is not contained anywhere:
+    // it escapes the supervisor child's "message" handler and crashes main.
+    expect(() =>
+      persistFollowUpQueueEvent({
+        type: "thread-follow-up-queue",
+        threadId: "thread-deleted",
+        queue: { paused: false, items: [{ id: "a", prompt: "orphan", stagedAt: 1 }] },
+      }),
+    ).not.toThrow();
+  });
+
   it("ignores every other supervisor event", () => {
     persistFollowUpQueueEvent({
       type: "thread-state",

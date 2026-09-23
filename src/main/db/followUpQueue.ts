@@ -24,6 +24,11 @@ export function dbReplaceThreadFollowUpQueue(
 ): void {
   const sqlite = getSqlite();
   const replace = sqlite.transaction(() => {
+    // A queue event can outlive its thread: `dbDeleteThread` runs before the
+    // supervisor's closeThread reaches `emitQueueState`. The rows went with
+    // the thread via ON DELETE CASCADE, so there is nothing left to write —
+    // and the insert would fail the thread_id foreign key.
+    if (!threadExistsInSqlite(sqlite, threadId)) return;
     sqlite.prepare("DELETE FROM thread_follow_up_queue WHERE thread_id = ?").run(threadId);
     if (!queue || queue.items.length === 0) return;
     const insert = sqlite.prepare(
@@ -45,6 +50,11 @@ export function dbReplaceThreadFollowUpQueue(
     });
   });
   replace();
+}
+
+/** Same guard the runtime-item writer uses: never write for a vanished thread. */
+function threadExistsInSqlite(sqlite: ReturnType<typeof getSqlite>, threadId: string): boolean {
+  return sqlite.prepare("SELECT 1 FROM threads WHERE id = ?").get(threadId) !== undefined;
 }
 
 /** Every stored queue, keyed by thread, rows in their queued order. */
