@@ -98,12 +98,19 @@ function runtimeItemState(state: string): PersistedRuntimeItem["state"] {
 }
 
 /**
- * Delivery state belongs to a live session. A process that died between the
- * optimistic paint and the hand-off to the model would otherwise leave the
- * message muted in every future open of the thread, waiting for a delivery
- * that can no longer happen.
+ * Hydrate every user message as delivered, whatever the row says.
+ *
+ * Delivery state belongs to a live session, and this is deliberately a read
+ * boundary, not a write one: the stored row keeps whatever flag the live
+ * session wrote, and every read of it degrades to "delivered". That direction
+ * is chosen, and it costs something — a thread evicted and reopened while its
+ * follow-up is genuinely still held comes back undimmed, losing the signal.
+ * The other direction costs more: a supervisor killed between the paint and
+ * the hand-off would leave the message muted in every future open of the
+ * thread, waiting for a delivery that can no longer happen. A missing signal
+ * is recoverable; a permanent false accusation is not.
  */
-function deliveredPayload(payload: unknown): unknown {
+function hydrateAsDelivered(payload: unknown): unknown {
   if (
     !payload ||
     typeof payload !== "object" ||
@@ -124,7 +131,7 @@ function mapRuntimeItemRow(
     id: row.item_id,
     type: row.type,
     state: runtimeItemState(row.state),
-    payload: row.payload ? deliveredPayload(safeParse(row.payload)) : undefined,
+    payload: row.payload ? hydrateAsDelivered(safeParse(row.payload)) : undefined,
     streams: assembleItemStreams(head, tails),
     ...(row.parent_item_id ? { parentItemId: row.parent_item_id } : {}),
   };

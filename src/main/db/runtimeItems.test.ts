@@ -82,7 +82,9 @@ describe.skipIf(!sqliteAvailable)("runtimeItems incremental persistence", () => 
     delete process.env.PORACODE_BETTER_SQLITE3_NATIVE_BINDING;
   });
 
-  it("never restores a user message as still undelivered", () => {
+  // Deliberate: a reopened thread loses a genuinely-held message's dim rather
+  // than risking one that no live session is left to clear.
+  it("hydrates a held user message as delivered", () => {
     dbReplaceThreadRuntimeItems("thread-1", [
       {
         id: "user-1",
