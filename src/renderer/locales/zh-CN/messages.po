@@ -8774,6 +8774,10 @@ msgstr "尚未在此设备上检测到。"
 msgid "Not found"
 msgstr "未找到"
 
+#: src/renderer/components/thread/ChatPane/parts/items/UserMessage.tsx
+msgid "Not handed to the agent yet"
+msgstr "尚未交给智能体"
+
 #: src/renderer/views/SettingsOverlay/parts/nativeAgentRuntimes.ts
 #: src/renderer/views/SettingsOverlay/parts/SingleAgentSettings/SingleAgentSettings.tsx
 msgid "not installed"

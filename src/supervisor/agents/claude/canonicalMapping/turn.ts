@@ -115,6 +115,31 @@ export function steerClaudeTurn(
   ];
 }
 
+/**
+ * Clear the undelivered flag on a row that already exists.
+ *
+ * The payload carries the flag and nothing else on purpose. `item.updated` is
+ * shallow merged by every reader, so any `content` here would overwrite the
+ * message the user is looking at — and the held prompt's content is not the
+ * user's: it is the provider-effective rewrite (remote-path mapping applied,
+ * image and PDF attachments already consumed, prompt re-formatted). Sending it
+ * would swap the visible message for the wire format and re-index the search
+ * row with words the user never typed.
+ */
+export function deliverClaudeSteer(
+  state: ClaudeMapperState,
+  userMessageItemId: string,
+): RuntimeEvent[] {
+  return [
+    {
+      type: "item.updated",
+      threadId: state.threadId,
+      itemId: userMessageItemId,
+      payload: { pendingDelivery: false },
+    },
+  ];
+}
+
 function isManualCompactPrompt(prompt: string): boolean {
   return /^\/compact(?:\s|$)/.test(prompt.trimStart());
 }

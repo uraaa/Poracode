@@ -8775,6 +8775,10 @@ msgstr "Bu makinede henüz algılanmadı."
 msgid "Not found"
 msgstr "Bulunamadı"
 
+#: src/renderer/components/thread/ChatPane/parts/items/UserMessage.tsx
+msgid "Not handed to the agent yet"
+msgstr "Henüz aracıya iletilmedi"
+
 #: src/renderer/views/SettingsOverlay/parts/nativeAgentRuntimes.ts
 #: src/renderer/views/SettingsOverlay/parts/SingleAgentSettings/SingleAgentSettings.tsx
 msgid "not installed"

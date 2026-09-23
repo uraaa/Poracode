@@ -8773,6 +8773,10 @@ msgstr "このマシンではまだ検出されていません。"
 msgid "Not found"
 msgstr "見つかりません"
 
+#: src/renderer/components/thread/ChatPane/parts/items/UserMessage.tsx
+msgid "Not handed to the agent yet"
+msgstr "まだエージェントに渡されていません"
+
 #: src/renderer/views/SettingsOverlay/parts/nativeAgentRuntimes.ts
 #: src/renderer/views/SettingsOverlay/parts/SingleAgentSettings/SingleAgentSettings.tsx
 msgid "not installed"

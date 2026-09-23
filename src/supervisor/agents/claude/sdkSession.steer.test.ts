@@ -281,3 +281,115 @@ it("surfaces a failed follow-up attachment and discards later steers", async () 
   expect(h.updates.at(-1)?.status).toBe("error");
   expect(h.events.filter((event) => event.type === "turn.started")).toHaveLength(2);
 });
+
+it("hands a held steer to the model without rewriting the painted message", async () => {
+  const h = await createSession();
+  await h.session.startTurn("first", config);
+  await h.inputs.next();
+
+  await h.session.steerTurn("wait for me", config, undefined, {
+    userMessageItemId: "held-row",
+  });
+
+  h.output.write(resultMessage(h.id));
+  await h.inputs.next();
+  await flushSdkMessages();
+
+  // The row was painted by whoever created it, with the user's own segments.
+  // Delivery is a flag flip and nothing else: a payload carrying `content`
+  // would shallow-merge over that row and replace it with the provider's
+  // rewritten prompt (WSL paths, attachments dropped).
+  expect(
+    h.events.filter((event) => event.type === "item.updated" && event.itemId === "held-row"),
+  ).toEqual([
+    {
+      type: "item.updated",
+      threadId: "claude-steer",
+      itemId: "held-row",
+      payload: { pendingDelivery: false },
+    },
+  ]);
+});
+
+it("clears the undelivered flag when a held steer is dropped", async () => {
+  const h = await createSession();
+  await h.session.startTurn("first", config);
+  await h.inputs.next();
+  await h.session.steerTurn("never delivered", config, undefined, {
+    userMessageItemId: "dropped-row",
+  });
+
+  await h.session.dispose();
+
+  expect(
+    h.events.filter((event) => event.type === "item.updated" && event.itemId === "dropped-row"),
+  ).toEqual([
+    {
+      type: "item.updated",
+      threadId: "claude-steer",
+      itemId: "dropped-row",
+      payload: { pendingDelivery: false },
+    },
+  ]);
+});
+
+/** Every way a held follow-up can be thrown away must un-dim its row: a
+ * message the model will never answer that still reads as "on its way" is the
+ * exact lie the flag exists to prevent. */
+function clearedRows(events: RuntimeEvent[]): string[] {
+  return events
+    .filter(
+      (event) =>
+        event.type === "item.updated" &&
+        (event.payload as { pendingDelivery?: boolean } | undefined)?.pendingDelivery === false,
+    )
+    .map((event) => (event as { itemId: string }).itemId);
+}
+
+async function sessionWithHeldSteer() {
+  const h = await createSession();
+  await h.session.startTurn("first", config);
+  await h.inputs.next();
+  await h.session.steerTurn("held", config, undefined, { userMessageItemId: "held-row" });
+  expect(clearedRows(h.events)).toEqual([]);
+  return h;
+}
+
+it("un-dims a held follow-up dropped by Stop", async () => {
+  const h = await sessionWithHeldSteer();
+
+  await h.session.interruptTurn();
+
+  expect(clearedRows(h.events)).toEqual(["held-row"]);
+});
+
+it("un-dims a held follow-up dropped by a forced turn close", async () => {
+  const h = await sessionWithHeldSteer();
+
+  h.session.forceCompleteTurn();
+
+  expect(clearedRows(h.events)).toEqual(["held-row"]);
+});
+
+it("un-dims a held follow-up dropped by a failed turn", async () => {
+  const h = await sessionWithHeldSteer();
+
+  h.output.write({
+    ...resultMessage(h.id),
+    subtype: "error_during_execution",
+    errors: ["upstream failure"],
+    is_error: true,
+  } as SDKMessage);
+  await flushSdkMessages();
+
+  expect(clearedRows(h.events)).toEqual(["held-row"]);
+});
+
+it("un-dims a held follow-up dropped when the SDK stream ends", async () => {
+  const h = await sessionWithHeldSteer();
+
+  h.close();
+  await flushSdkMessages();
+
+  expect(clearedRows(h.events)).toEqual(["held-row"]);
+});

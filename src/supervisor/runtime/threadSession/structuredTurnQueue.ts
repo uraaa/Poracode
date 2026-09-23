@@ -97,7 +97,18 @@ export class StructuredTurnQueue {
     prompt: string,
     segments?: PromptSegment[],
     requestedItemId?: string,
-    options?: { includeTurn?: boolean },
+    options?: {
+      includeTurn?: boolean;
+      /**
+       * The message is painted now but the agent will only be handed it when
+       * the turn currently running ends. Callers that open a turn immediately
+       * leave this unset: their message is delivered as it is painted. The
+       * flag has to be set here, where the row is born, because a later
+       * `item.started` for the same id is dropped by the renderer's per-id
+       * dedupe and by the database's `INSERT OR IGNORE`.
+       */
+      pendingDelivery?: boolean;
+    },
   ): string {
     const turnId = `turn-${randomUUID()}`;
     const itemId = requestedItemId ?? `user-${randomUUID()}`;
@@ -116,7 +127,10 @@ export class StructuredTurnQueue {
         threadId,
         itemId,
         itemType: "user_message",
-        payload: { content: buildPromptContentBlocks(prompt, segments) },
+        payload: {
+          content: buildPromptContentBlocks(prompt, segments),
+          ...(options?.pendingDelivery ? { pendingDelivery: true } : {}),
+        },
       },
     });
     this.ctx.emit({

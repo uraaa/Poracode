@@ -118,7 +118,7 @@ export interface SteerCoordinatorContext {
     prompt: string,
     segments?: PromptSegment[],
     requestedItemId?: string,
-    options?: { includeTurn?: boolean },
+    options?: { includeTurn?: boolean; pendingDelivery?: boolean },
   ): string;
   failStructuredSession(session: SessionRuntime, error: unknown): void;
   /** Optional queue barrier hook; native steer keeps the same turn boundary. */
@@ -486,7 +486,9 @@ export class SteerCoordinator {
               turn.prompt,
               turn.displaySegments ?? turn.segments,
               turn.userMessageItemId,
-              { includeTurn: false },
+              // This row joins a turn that is already running, so the agent
+              // does not have it yet; it is handed over when that turn ends.
+              { includeTurn: false, pendingDelivery: true },
             )
           : turn.userMessageItemId
         : undefined;

@@ -82,6 +82,25 @@ describe.skipIf(!sqliteAvailable)("runtimeItems incremental persistence", () => 
     delete process.env.PORACODE_BETTER_SQLITE3_NATIVE_BINDING;
   });
 
+  // Deliberate: a reopened thread loses a genuinely-held message's dim rather
+  // than risking one that no live session is left to clear.
+  it("hydrates a held user message as delivered", () => {
+    dbReplaceThreadRuntimeItems("thread-1", [
+      {
+        id: "user-1",
+        type: "user_message",
+        state: "completed",
+        payload: { content: [{ kind: "text", text: "stuck" }], pendingDelivery: true },
+        streams: {},
+      },
+    ]);
+
+    expect(dbGetThreadRuntimeItems("thread-1")[0]?.payload).toEqual({
+      content: [{ kind: "text", text: "stuck" }],
+      pendingDelivery: false,
+    });
+  });
+
   it("replaces pre-snapshot chunked streams and preserves other streams", () => {
     const threadId = "thread-1",
       itemId = "recovery";

@@ -37,6 +37,16 @@ function resolveThreadProjectLocation(
   return { thread, projectLocation: resolveProjectLocation(project.location, thread.worktreePath) };
 }
 
+/**
+ * True when a prompt submitted right now cannot reach the agent yet because a
+ * turn is mid-flight. "needs_reply" and "error" are excluded on purpose: the
+ * supervisor drains a steer straight into those, so the message is delivered
+ * as soon as it is sent.
+ */
+function isHeldOnRunningTurn(status: Thread["status"]): boolean {
+  return status === "working" || status === "needs_approval";
+}
+
 /** Minimal transport a prompt submit needs; the desktop injects the local IPC
  * bridge, the mobile PWA injects the remote desktop client. */
 export interface ThreadInputTransport {
@@ -90,7 +100,18 @@ export async function performThreadInputSubmit(input: {
       threadId: thread.id,
       itemId: optimisticUserMessageItemId,
       itemType: "user_message",
-      payload: { content: buildPromptContentBlocks(prompt, segments) },
+      payload: {
+        content: buildPromptContentBlocks(prompt, segments),
+        // A turn is already running, so this prompt is held until that turn
+        // ends — paint it muted rather than letting it read as a message the
+        // agent has seen and is ignoring. The flag must be set here: the
+        // supervisor's own paint for the same item id is dropped by the
+        // per-id dedupe in `applyRuntimeEvent`, so nothing it sends later can
+        // introduce it. Turn boundaries clear it again (see
+        // `applyRuntimeEvent`), which keeps a mis-guessed flag from outliving
+        // the turn it was guessed against.
+        ...(isHeldOnRunningTurn(thread.status) ? { pendingDelivery: true } : {}),
+      },
     });
     store.applyRuntimeEvent(thread.id, {
       type: "item.completed",

@@ -63,6 +63,7 @@ import {
   parseClaudeQuestions,
   readParentToolUseId,
   startClaudeTurn,
+  deliverClaudeSteer,
   steerClaudeTurn,
   type ClaudeMapperState,
 } from "./sdkCanonicalMapping";
@@ -343,16 +344,43 @@ export class ClaudeSdkSession implements StructuredSessionHandle {
     this.emitRuntimeEvents(steerClaudeTurn(this.mapperState, prompt, segments, userMessageItemId));
   }
 
+  /**
+   * Drop every held steer and un-flag its row. This is the only way the queue
+   * is allowed to be emptied without starting a turn — Stop, a forced close, a
+   * failed turn, a submission error and the end of the SDK stream all route
+   * here — because a row dropped silently keeps claiming it is on its way and
+   * stays greyed out for the rest of the app session, on a message the model
+   * will never answer.
+   */
+  private releaseHeldSteers(): void {
+    const held = this.pendingSteers.splice(0);
+    for (const [, , , options] of held) {
+      if (!options?.userMessageItemId) continue;
+      this.emitRuntimeEvents(deliverClaudeSteer(this.mapperState, options.userMessageItemId));
+    }
+  }
+
   private startPendingSteer(): boolean {
     const next = this.pendingSteers.shift();
     if (!next) return false;
+    // The row has been sitting in the transcript flagged as undelivered since
+    // it was painted. Clear the flag here, before `startTurn`'s awaits: this is
+    // our own hand-off to the provider, not an acknowledgement from it — the
+    // SDK never reports that the model received a prompt. A submission that
+    // aborts after this point therefore reads as delivered, which is the
+    // direction we want: an unanswerable message must never stay dimmed
+    // forever waiting on a signal that cannot arrive.
+    const [, , , heldOptions] = next;
+    if (heldOptions?.userMessageItemId) {
+      this.emitRuntimeEvents(deliverClaudeSteer(this.mapperState, heldOptions.userMessageItemId));
+    }
     // startTurn opens the next lifecycle synchronously, before any idle update
     // can release the supervisor's FIFO queue. It also applies all live config.
     const submission = this.startTurn(...next);
     const generation = this.submissionGeneration;
     void submission.catch((error: unknown) => {
       if (this.disposed || generation !== this.submissionGeneration) return;
-      this.pendingSteers = [];
+      this.releaseHeldSteers();
       const message = error instanceof Error ? error.message : String(error);
       this.reportError(message);
       this.emitRuntimeEvents([{ type: "error", threadId: this.input.threadId, message }]);
@@ -469,7 +497,7 @@ export class ClaudeSdkSession implements StructuredSessionHandle {
   }
 
   async interruptTurn(): Promise<void> {
-    this.pendingSteers = [];
+    this.releaseHeldSteers();
     this.submissionGeneration++;
     this.interruptInFlight = true;
     try {
@@ -480,7 +508,7 @@ export class ClaudeSdkSession implements StructuredSessionHandle {
   }
 
   forceCompleteTurn(): void {
-    this.pendingSteers = [];
+    this.releaseHeldSteers();
     this.submissionGeneration++;
     this.deferredCompletion.clear();
     this.clearDeferredFlushTimer();
@@ -614,8 +642,8 @@ export class ClaudeSdkSession implements StructuredSessionHandle {
 
   async dispose(): Promise<void> {
     if (this.disposed) return;
+    this.releaseHeldSteers();
     this.disposed = true;
-    this.pendingSteers = [];
     this.submissionGeneration++;
     this.stopGoalTracking();
     this.flushDeferredCompletion();
@@ -843,10 +871,10 @@ export class ClaudeSdkSession implements StructuredSessionHandle {
             if (this.disposed) break;
             this.handleSdkMessage(message);
           }
-          this.pendingSteers = [];
+          this.releaseHeldSteers();
           if (!this.disposed) this.flushDeferredCompletion();
         } catch (error) {
-          this.pendingSteers = [];
+          this.releaseHeldSteers();
           if (!this.disposed) {
             captureSupervisorException(error, {
               "poracode.feature_area": "provider-sdk",
@@ -1083,7 +1111,7 @@ export class ClaudeSdkSession implements StructuredSessionHandle {
         ...(errorMessage ? { errorMessage } : {}),
         ...(this.sessionId ? { sessionRef: createKnownSessionRef(this.sessionId) } : {}),
       };
-      if (failed || wasInterrupted) this.pendingSteers = [];
+      if (failed || wasInterrupted) this.releaseHeldSteers();
       if (this.startPendingSteer()) return;
       if (this.hasLiveBackgroundWork()) {
         this.deferredCompletion.defer(completion);

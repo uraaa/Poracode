@@ -8775,6 +8775,10 @@ msgstr "이 기기에서 아직 감지되지 않았습니다."
 msgid "Not found"
 msgstr "찾을 수 없음"
 
+#: src/renderer/components/thread/ChatPane/parts/items/UserMessage.tsx
+msgid "Not handed to the agent yet"
+msgstr "아직 에이전트에 전달되지 않음"
+
 #: src/renderer/views/SettingsOverlay/parts/nativeAgentRuntimes.ts
 #: src/renderer/views/SettingsOverlay/parts/SingleAgentSettings/SingleAgentSettings.tsx
 msgid "not installed"
