@@ -37,6 +37,12 @@ export function extractMessageText(item: ItemForExtraction): ExtractedMessage | 
     // Through the shared helper, so the index holds exactly the text the
     // transcript shows: an authoritative payload overrides the stream, and an
     // authoritative empty payload suppresses the message everywhere at once.
+    //
+    // `item.streams` only ever holds the head of the stream (HEAD_CHARS,
+    // runtimeStreamCap.ts — 256,000 characters); text past the head lives in
+    // `thread_runtime_item_stream_chunks` and is never read here. A very long
+    // answer is therefore only searchable up to its head — undocumented
+    // elsewhere, so noted at the point it takes effect.
     const text = assistantDisplayText({
       state: item.state,
       payload: item.payload,

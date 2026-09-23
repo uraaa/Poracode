@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { readBridge } from "@/renderer/bridge";
 import {
+  MIN_SEARCH_QUERY_CHARS,
   SNIPPET_MARK_END,
   SNIPPET_MARK_START,
   type ThreadMessageSearchHit,
 } from "@/shared/contracts";
 
 const DEBOUNCE_MS = 150;
-/** Mirrors MIN_SEARCH_QUERY_CHARS in the main process. */
-const MIN_QUERY_CHARS = 2;
 
 export type MessageSearchStatus = "idle" | "loading" | "ready" | "failed";
 
@@ -44,7 +43,7 @@ export function useMessageSearch(query: string): {
   hits: ThreadMessageSearchHit[];
   status: MessageSearchStatus;
 } {
-  const enabled = query.trim().length >= MIN_QUERY_CHARS;
+  const enabled = query.trim().length >= MIN_SEARCH_QUERY_CHARS;
   const [answer, setAnswer] = useState<{
     query: string;
     hits: ThreadMessageSearchHit[];

@@ -662,7 +662,17 @@ function applyThreadRuntimeEventsNow(threadId: string, events: readonly RuntimeE
         case "content.delta": {
           const row = readItem(event.itemId);
           if (!row) break;
-          touched.add(event.itemId);
+          // Only touched when the item is already `completed`: a delta on a
+          // still-streaming item can't make it newly indexable by itself —
+          // `item.started`, `item.updated` and `item.completed` already cover
+          // every transition into an indexable state — so adding it to
+          // `touched` here would just pay indexThreadMessages's full-row read
+          // (streams included, up to 256 KB) on every flush of a streaming
+          // answer, only to find the item still isn't `completed`. Once it
+          // *is* completed, though, a further delta (e.g. a non-append-only
+          // rewrite) can still change or erase its indexed text, so that case
+          // still needs to re-touch it.
+          if (row.state === "completed") touched.add(event.itemId);
           const head = row.streams ? (safeParse(row.streams) as Record<string, string>) : {};
           if (event.replace) {
             clearItemStream(sqlite, threadId, event.itemId, event.stream);

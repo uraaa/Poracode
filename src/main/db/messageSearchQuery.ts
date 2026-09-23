@@ -1,5 +1,6 @@
-/** Below this, a query matches so much that the result list is noise. */
-export const MIN_SEARCH_QUERY_CHARS = 2;
+import { MIN_SEARCH_QUERY_CHARS } from "@/shared/contracts";
+
+export { MIN_SEARCH_QUERY_CHARS };
 
 /**
  * C0 controls and DEL. A NUL truncates the bound string on its way into SQLite

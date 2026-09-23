@@ -2,9 +2,10 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Database from "better-sqlite3";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Thread } from "@/shared/contracts";
 import { closeDatabase, getSqlite, initDatabase } from "./connection";
+import * as messageSearchStore from "./messageSearchStore";
 import { LATEST_SCHEMA_VERSION } from "./migrations";
 import { dbDeleteThread, dbUpsertProject, dbUpsertThread } from "./projectsThreads";
 import {
@@ -1060,6 +1061,43 @@ describe.skipIf(!sqliteAvailable)("runtimeItems incremental persistence", () => 
     ]);
     dbFlushThreadRuntimeWrites("thread-1");
     expect(indexedRows("thread-1")).toEqual([{ item_id: "a1", role: "assistant", text: "Готово" }]);
+  });
+
+  it("does not re-check a streaming item's index state on every delta", () => {
+    dbApplyThreadRuntimeEvents("thread-1", [
+      { type: "item.started", threadId: "thread-1", itemId: "a1", itemType: "assistant_message" },
+    ]);
+    dbFlushThreadRuntimeWrites("thread-1");
+
+    const indexSpy = vi.spyOn(messageSearchStore, "indexThreadMessages");
+    try {
+      // A streaming item is already `started`; a delta batch that touches
+      // only it must not ask indexThreadMessages to look at it again — that
+      // read pulls the whole row, including the stream head, only to find
+      // the item still isn't `completed`.
+      dbApplyThreadRuntimeEvents("thread-1", [
+        {
+          type: "content.delta",
+          threadId: "thread-1",
+          itemId: "a1",
+          stream: "assistant_text",
+          delta: "Го",
+        },
+        {
+          type: "content.delta",
+          threadId: "thread-1",
+          itemId: "a1",
+          stream: "assistant_text",
+          delta: "тово",
+        },
+      ]);
+      dbFlushThreadRuntimeWrites("thread-1");
+
+      expect(indexSpy).toHaveBeenCalledTimes(1);
+      expect(indexSpy).toHaveBeenLastCalledWith(expect.anything(), "thread-1", []);
+    } finally {
+      indexSpy.mockRestore();
+    }
   });
 
   it("drops an indexed message from the index when its text is rewritten away", () => {

@@ -6,13 +6,12 @@ import { useAppStore } from "@/renderer/state/appStore";
 import { usePanelStore } from "@/renderer/state/panelStore";
 import { useDragSource } from "@/renderer/dnd";
 import { openThread } from "@/renderer/actions/threadActions";
+import { MIN_SEARCH_QUERY_CHARS } from "@/shared/contracts";
 import { MessageSearchResultRow } from "./parts/MessageSearchResultRow";
 import { ThreadSearchResultRow } from "./parts/ThreadSearchResultRow";
 import { useMessageSearch } from "./parts/useMessageSearch";
 
 const RESULT_LIMIT = 50;
-/** Mirrors MIN_SEARCH_QUERY_CHARS in the main process. */
-const MIN_QUERY_CHARS = 2;
 
 export function ThreadSearchOverlay(props: { onClose: () => void }) {
   const { onClose } = props;
@@ -80,10 +79,7 @@ export function ThreadSearchOverlay(props: { onClose: () => void }) {
 
   // Titles first, message matches after: one selection space, so ArrowDown
   // walks out of the title list straight into the message list.
-  const selectable = useMemo(
-    () => [...results.map((thread) => thread.id), ...hits.map((hit) => hit.threadId)],
-    [results, hits],
-  );
+  const selectable = [...results.map((thread) => thread.id), ...hits.map((hit) => hit.threadId)];
 
   function activateAt(index: number) {
     const threadId = selectable[index];
@@ -166,7 +162,7 @@ export function ThreadSearchOverlay(props: { onClose: () => void }) {
               ))}
             </div>
           )}
-          {query.trim().length >= MIN_QUERY_CHARS ? (
+          {query.trim().length >= MIN_SEARCH_QUERY_CHARS ? (
             <div className="mt-1 flex flex-col gap-0.5 border-t border-[var(--hairline)] pt-1">
               <div className="px-3 pb-0.5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted/70">
                 <Trans>In messages</Trans>

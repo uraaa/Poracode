@@ -3,6 +3,13 @@ import { z } from "zod";
 export const MAX_MESSAGE_SEARCH_RESULTS = 200;
 export const DEFAULT_MESSAGE_SEARCH_RESULTS = 50;
 
+/**
+ * Below this, a query matches so much that the result list is noise. Shared
+ * by the main process (buildPhraseQuery) and the renderer (ThreadSearchOverlay,
+ * useMessageSearch) so the "keep typing" threshold can't drift between them.
+ */
+export const MIN_SEARCH_QUERY_CHARS = 2;
+
 export const searchThreadMessagesPayloadSchema = z.object({
   /** Raw user input; the main process decides what is too short to run. */
   query: z.string(),
