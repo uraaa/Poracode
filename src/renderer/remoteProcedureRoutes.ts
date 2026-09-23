@@ -107,6 +107,10 @@ export const NON_ROUTER_PROJECT_PROCEDURES = {
   // the local scan just falls back to the app-global roots.
   listPlugins: "remote-projects-scan-locally",
   refreshPlugins: "remote-projects-scan-locally",
+  // Replaying the persisted follow-up queue is a desktop-to-supervisor repair
+  // after a supervisor restart. The rows live in the desktop's database, so a
+  // remote client has nothing to replay and no queue of its own to restore.
+  restoreThreadFollowUpQueue: "host-only-queue-restore",
 } as const satisfies Partial<Record<IpcProcedureName, string>>;
 
 export type RemoteRoutableProcedureName = keyof typeof REMOTE_PROCEDURE_ROUTES;

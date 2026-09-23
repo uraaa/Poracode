@@ -110,6 +110,17 @@ export function initDatabase(dbPath: string) {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS thread_follow_up_queue (
+      thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+      item_id TEXT NOT NULL,
+      position INTEGER NOT NULL,
+      staged_at INTEGER NOT NULL,
+      paused INTEGER NOT NULL DEFAULT 0,
+      payload TEXT NOT NULL,
+      PRIMARY KEY (thread_id, item_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_follow_up_queue_thread_pos
+      ON thread_follow_up_queue (thread_id, position);
     CREATE TABLE IF NOT EXISTS thread_runtime_items (
       thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
       item_id TEXT NOT NULL,

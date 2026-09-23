@@ -15,6 +15,10 @@ import { BROWSER_SESSION_PARTITION } from "@/shared/browserPartition";
 import { resolveThemeMode } from "@/shared/themeMode";
 import { isThreadTurnActive, type RemoteThreadCommand } from "@/shared/contracts";
 import {
+  createFollowUpQueueSupervisorHooks,
+  persistFollowUpQueueEvent,
+} from "./threads/followUpQueuePersistence";
+import {
   closeDatabase,
   dbDeleteThread,
   dbGetProject,
@@ -755,6 +759,14 @@ if (!hasSingleInstanceLock) {
       let scheduleRunCoordinator: ScheduleRunCoordinator | null = null;
       let prWatchService: PrWatchService | null = null;
       let gitStateService: GitStateService | null = null;
+      const followUpQueueHooks = createFollowUpQueueSupervisorHooks({
+        listThreadIds: () => dbGetThreads().map((thread) => thread.id),
+        getThreadConfig: (threadId) => dbGetThread(threadId)?.config,
+        restore: (input) => supervisorClient.call("restoreThreadFollowUpQueue", input),
+        emitToRenderer: (event) => {
+          mainWindow?.webContents.send(IPC_EVENT_CHANNELS.supervisorEvent, event);
+        },
+      });
       const supervisorClient = new SupervisorClient({
         appVersion: app.getVersion(),
         isDev,
@@ -823,6 +835,7 @@ if (!hasSingleInstanceLock) {
             return;
           }
           persistSupervisorEvent(event);
+          persistFollowUpQueueEvent(event);
           handleSupervisorEventForSleep(event);
           appControlsMcpIngress?.observeSupervisorEvent(event);
           scheduleRunCoordinator?.observeSupervisorEvent(event);
@@ -835,18 +848,14 @@ if (!hasSingleInstanceLock) {
         onReset: () => {
           workingThreads.clear();
           remoteAccessController?.handleSupervisorReset();
-          // Queue state belongs to the supervisor process. A crash/restart
-          // drops its in-memory records without emitting per-thread events,
-          // so clear every renderer cache at the same boundary instead of
-          // leaving rows whose actions can only fail with item-not-found.
-          for (const thread of dbGetThreads()) {
-            mainWindow?.webContents.send(IPC_EVENT_CHANNELS.supervisorEvent, {
-              type: "thread-follow-up-queue",
-              threadId: thread.id,
-              queue: null,
-            } satisfies SupervisorEvent);
-          }
+          followUpQueueHooks.onSupervisorReset();
           updatePowerSaveBlocker();
+        },
+        onStarted: () => {
+          // The rows survive in the database, so hand them back to the fresh
+          // process: a queue the user filled must outlive the one that was
+          // holding it.
+          followUpQueueHooks.onSupervisorStarted();
         },
       });
       const scheduleCoordinator = new ScheduleRunCoordinator({
