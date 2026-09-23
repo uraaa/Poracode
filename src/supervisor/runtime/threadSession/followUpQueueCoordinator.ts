@@ -192,10 +192,11 @@ export class FollowUpQueueCoordinator {
   }
 
   /**
-   * Adopt a queue restored from disk after a supervisor (re)start. The live
-   * queue wins whenever it already holds anything: the user may have typed
-   * while the restore was in flight, and their newer message must not be
-   * replaced by the snapshot that produced it.
+   * Adopt a queue restored from disk after a supervisor (re)start. The restore
+   * merges rather than replaces: the user can type while it is in flight, and
+   * both their new message and the ones that waited through the restart have
+   * to survive. Restored messages were typed first, so they go in front, in
+   * their own `stagedAt` order; anything already present by id is left alone.
    */
   async restoreThreadFollowUpQueue(input: {
     threadId: string;
@@ -203,11 +204,16 @@ export class FollowUpQueueCoordinator {
     config: ThreadConfig;
   }): Promise<void> {
     await this.mutate(input.threadId, () => {
-      if (input.queue.items.length === 0) return;
-      const record = this.records.get(input.threadId) ?? this.createRecord(input.threadId);
-      if (record.items.length > 0) return;
-      for (const item of input.queue.items) {
-        record.items.push({
+      const existing = this.records.get(input.threadId);
+      const known = new Set(existing?.items.map((entry) => entry.id) ?? []);
+      const restored = input.queue.items
+        .filter((item) => !known.has(item.id))
+        .sort((a, b) => a.stagedAt - b.stagedAt);
+      if (restored.length === 0) return;
+      const record = existing ?? this.createRecord(input.threadId);
+      const hadLiveItems = record.items.length > 0;
+      record.items.unshift(
+        ...restored.map((item) => ({
           id: item.id,
           stagedAt: item.stagedAt,
           payload: snapshotPayload({
@@ -220,11 +226,15 @@ export class FollowUpQueueCoordinator {
             ...(item.segments ? { segments: item.segments } : {}),
           }),
           userMessageItemId: `user-${randomUUID()}`,
-        });
-      }
-      // A thread with no live session has nothing to deliver into yet. Keep
-      // the rows visible but gated, exactly like a queue paused by a Stop.
-      if (input.queue.paused || !this.ctx.sessions.has(input.threadId)) {
+        })),
+      );
+      // Gating is deliberate, and it applies only to a queue that comes back
+      // to a thread with nothing live of its own: there is no session to
+      // deliver into yet, and messages that survived a crash should not fire
+      // themselves off the moment one attaches — the user resumes them, just
+      // like a queue paused by a Stop. A queue the user is actively filling
+      // keeps its own pause state; a stale flag must not stop it.
+      if (!hadLiveItems && (input.queue.paused || !this.ctx.sessions.has(input.threadId))) {
         record.paused = true;
         this.pausedThreads.add(input.threadId);
       }

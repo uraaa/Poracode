@@ -394,7 +394,7 @@ it("restores a persisted queue into an empty thread queue", async () => {
   }
 });
 
-it("leaves a live queue alone when a restore arrives late", async () => {
+it("merges a late restore in front of what the user typed while it was in flight", async () => {
   const { manager, session, finish } = createHarness();
   session.status = "working";
   try {
@@ -406,13 +406,81 @@ it("leaves a live queue alone when a restore arrives late", async () => {
 
     await manager.restoreThreadFollowUpQueue({
       threadId: session.threadId,
-      queue: { paused: false, items: [{ id: "stale", prompt: "from disk", stagedAt: 1 }] },
+      queue: {
+        paused: false,
+        items: [
+          { id: "stale-b", prompt: "from disk, second", stagedAt: 2 },
+          { id: "stale-a", prompt: "from disk, first", stagedAt: 1 },
+        ],
+      },
+      config: session.config,
+    });
+
+    // Restored messages were typed before the live one, so they keep their
+    // place in front of it and their own stagedAt order among themselves.
+    expect(manager.getThreadFollowUpQueue(session.threadId)!.items).toMatchObject([
+      { prompt: "from disk, first" },
+      { prompt: "from disk, second" },
+      { prompt: "typed just now" },
+    ]);
+  } finally {
+    finish();
+    await manager.dispose();
+  }
+});
+
+it("does not duplicate an item the live queue already holds", async () => {
+  const { manager, session, finish } = createHarness();
+  session.status = "working";
+  try {
+    await manager.queueThreadFollowUp({
+      threadId: session.threadId,
+      prompt: "typed just now",
+      config: session.config,
+    });
+    const live = manager.getThreadFollowUpQueue(session.threadId)!.items[0]!;
+
+    await manager.restoreThreadFollowUpQueue({
+      threadId: session.threadId,
+      queue: {
+        paused: false,
+        items: [
+          { id: live.id, prompt: "typed just now", stagedAt: live.stagedAt },
+          { id: "stale", prompt: "from disk", stagedAt: 1 },
+        ],
+      },
       config: session.config,
     });
 
     expect(manager.getThreadFollowUpQueue(session.threadId)!.items).toMatchObject([
-      { prompt: "typed just now" },
+      { prompt: "from disk" },
+      { id: live.id, prompt: "typed just now" },
     ]);
+  } finally {
+    finish();
+    await manager.dispose();
+  }
+});
+
+it("does not gate a live queue it merges into", async () => {
+  const { manager, session, finish } = createHarness();
+  session.status = "working";
+  try {
+    await manager.queueThreadFollowUp({
+      threadId: session.threadId,
+      prompt: "typed just now",
+      config: session.config,
+    });
+
+    await manager.restoreThreadFollowUpQueue({
+      threadId: session.threadId,
+      queue: { paused: true, items: [{ id: "stale", prompt: "from disk", stagedAt: 1 }] },
+      config: session.config,
+    });
+
+    // The live queue is draining into a live session; a pause flag recovered
+    // from before the restart must not silently stop it.
+    expect(manager.getThreadFollowUpQueue(session.threadId)!.paused).toBe(false);
   } finally {
     finish();
     await manager.dispose();
