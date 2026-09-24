@@ -3747,6 +3747,7 @@ html[data-platform="darwin"] .poracode-sidebar-project-nudge {
   padding-top: 0;
   padding-bottom: 0;
   white-space: normal;
+  overflow-wrap: anywhere;
 }
 .lc-chat-markdown ol > li + li {
   margin-top: 0.3em;
