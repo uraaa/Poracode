@@ -840,14 +840,15 @@ export const MentionInput = forwardRef<
 
     if (!modifiedEnter && onInterceptKey?.(e)) return;
 
-    // Enter without popover = submit
+    // Enter without popover = submit. What the editor holds is not the whole
+    // submission: attachments live beside it, so an empty editor can still
+    // have a screenshot to send. Report the typed segments and let the
+    // composer's submit handler decide whether there is anything to send —
+    // it is the one that can see the attachments.
     if (submitOnEnter && e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (!editorRef.current) return;
-      const segments = serializeToSegments(editorRef.current);
-      if (flattenSegments(segments).length > 0) {
-        onSubmit(segments);
-      }
+      onSubmit(serializeToSegments(editorRef.current));
       return;
     }
 
