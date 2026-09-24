@@ -814,4 +814,23 @@ describe("structured segment insertion", () => {
     expect(outside).toHaveFocus();
     outside.remove();
   });
+
+  it("submits on Enter with an empty editor, so an attachment alone can be sent", () => {
+    // Attachments live outside the editor, so the editor's own text cannot
+    // decide whether there is anything to send. The composer's submit handler
+    // owns that call; Enter only reports what was typed.
+    const onSubmit = vi.fn<(segments: PromptSegment[]) => void>();
+    render(
+      createElement(MentionInput, {
+        placeholder: "Send a message...",
+        projectLocation: undefined,
+        onTextChange: vi.fn<(hasText: boolean) => void>(),
+        onSubmit,
+      }),
+    );
+
+    fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter" });
+
+    expect(onSubmit).toHaveBeenCalledWith([]);
+  });
 });
