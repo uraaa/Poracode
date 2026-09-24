@@ -71,6 +71,10 @@ describe("ItemMarkdownInner", () => {
 
     expect(screen.queryByTestId("code-block")).not.toBeInTheDocument();
     expect(container.querySelector("pre > code")).toHaveTextContent("plain block");
+    expect(container.querySelector("pre > code")?.parentElement).toHaveClass(
+      "whitespace-pre-wrap",
+      "break-words",
+    );
   });
 
   it("falls back to a plain pre/code block for unsupported fence languages", () => {
@@ -82,6 +86,10 @@ describe("ItemMarkdownInner", () => {
 
     expect(screen.queryByTestId("code-block")).not.toBeInTheDocument();
     expect(container.querySelector("pre > code")).toHaveTextContent("plain block");
+    expect(container.querySelector("pre > code")?.parentElement).toHaveClass(
+      "whitespace-pre-wrap",
+      "break-words",
+    );
   });
 
   it("treats range/path fence info as a code fence header, not visible body text", () => {

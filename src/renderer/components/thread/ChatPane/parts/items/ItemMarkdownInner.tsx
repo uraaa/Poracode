@@ -218,7 +218,7 @@ const MD_COMPONENTS: StreamdownComponents = {
     }
     return (
       <MdCodeBlockFrame text={flattenMdChildren(children).replace(/\r?\n$/, "")}>
-        <pre>{markCodeChildAsBlock(children)}</pre>
+        <pre className="whitespace-pre-wrap break-words">{markCodeChildAsBlock(children)}</pre>
       </MdCodeBlockFrame>
     );
   },
