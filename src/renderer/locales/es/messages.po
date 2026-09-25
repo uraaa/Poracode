@@ -435,7 +435,7 @@ msgstr "{agentLead} necesita tu respuesta para continuar."
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "{alreadyImported} session(s) were already imported."
-msgstr ""
+msgstr "Ya se habían importado {alreadyImported} sesiones."
 
 #: src/mobile/views/pr/PrOverviewPage.tsx
 msgid "{commitsCount, plural, one {# commit} other {# commits}}"
@@ -2371,6 +2371,10 @@ msgstr "Cambios solicitados"
 msgid "Changes unavailable"
 msgstr "Cambios no disponibles"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Changing tools reconnects this conversation and keeps its history."
+msgstr "Cambiar las herramientas vuelve a conectar esta conversación y conserva su historial."
+
 #. About page label: release channel (stable/nightly)
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
 msgid "Channel"
@@ -3667,7 +3671,7 @@ msgstr "No se pudo leer el archivo."
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "Could not search messages."
-msgstr ""
+msgstr "No se pudieron buscar mensajes."
 
 #: src/renderer/components/mcp/useMcpServerOauth.ts
 msgid "Could not sign in to {serverName}: {message}"
@@ -6471,7 +6475,7 @@ msgstr "Mejorado"
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "In messages"
-msgstr ""
+msgstr "En los mensajes"
 
 #: src/renderer/views/GitHubActionsView/GitHubActionsRunList.tsx
 msgid "In progress"
@@ -7304,6 +7308,14 @@ msgstr "Administra las configuraciones de servidores MCP que Poracode añade al 
 #~ msgid "Manage the skills Poracode makes available to supported agents. Project skills can be managed in each project's settings."
 #~ msgstr "Gestiona los skills que Poracode pone a disposición de los agentes compatibles. Los skills de proyecto se pueden gestionar en la configuración de cada proyecto."
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Manage tools in the provider settings."
+msgstr "Gestiona las herramientas en la configuración del proveedor."
+
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Manage tools on the paired desktop."
+msgstr "Gestiona las herramientas en el equipo vinculado."
+
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarWorkspaceSwitcher.tsx
 #~ msgid "Manage workspaces"
 #~ msgstr "Gestionar espacios de trabajo"
@@ -7897,7 +7909,7 @@ msgstr "Mover a worktree limpio"
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Move to Project"
-msgstr ""
+msgstr "Mover al proyecto"
 
 #: src/renderer/components/workspace/workspaceMenuItems.tsx
 msgid "Move to Workspace"
@@ -8528,7 +8540,7 @@ msgstr "Aún no se han usado herramientas MCP."
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "No messages match."
-msgstr ""
+msgstr "No hay mensajes que coincidan."
 
 #: src/renderer/components/thread/ChatPane/ChatPane.tsx
 msgid "No messages yet"
@@ -10480,6 +10492,10 @@ msgstr "Reconectando"
 msgid "Reconnecting to your desktop…"
 msgstr "Reconectando con tu escritorio…"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Reconnecting tools…"
+msgstr "Reconectando las herramientas…"
+
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
 #: src/renderer/views/SettingsOverlay/parts/UsageSettings.tsx
 msgid "Reconstructed from local logs at public API rates — it does not reflect your real bill on subscription plans. Shown only in the usage panel."
@@ -11777,7 +11793,7 @@ msgstr "Buscar hilos"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "Search title or folder everywhere, message text in what's shown"
-msgstr ""
+msgstr "Busca por título o carpeta en todo, y por texto de mensajes en lo que se muestra"
 
 #: src/renderer/components/sessionImport/SearchableSelect.tsx
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
@@ -12221,7 +12237,7 @@ msgstr "Mostrando {0, plural, one {# skill} other {# skills}}"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "Showing the 200 most recent — narrow the filters to see more"
-msgstr ""
+msgstr "Se muestran los 200 más recientes — ajusta los filtros para ver más"
 
 #: src/mobile/views/HostFolderPicker.tsx
 #: src/renderer/views/SettingsOverlay/parts/RemoteHostFolderPicker.tsx
@@ -13429,7 +13445,7 @@ msgstr "La sesión del hilo no está disponible para los seguimientos en cola."
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "The thread was stopped to move it — start it again in its new project."
-msgstr ""
+msgstr "El hilo se detuvo para moverlo — inícialo de nuevo en su nuevo proyecto."
 
 #: src/renderer/components/thread/MoveThreadToWorktreeDialog.tsx
 #~ msgid "The thread will run in a separate worktree on a new branch."
@@ -13646,7 +13662,7 @@ msgstr "El servidor remoto de este proyecto está sin conexión. Vuelve a conect
 
 #: src/renderer/components/thread/ThreadAccountLabel.tsx
 msgid "This provider reports no signed-in account."
-msgstr ""
+msgstr "Este proveedor indica que no hay ninguna cuenta con sesión iniciada."
 
 #: src/renderer/components/thread/ThreadFollowUpQueue.tsx
 #: src/renderer/i18n/sharedMessages.ts
@@ -13698,7 +13714,7 @@ msgstr "Este hilo no admite seguimientos en cola."
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "This thread is hosted on another desktop; it can't be moved to a local project."
-msgstr ""
+msgstr "Este hilo está alojado en otro equipo; no se puede mover a un proyecto local."
 
 #: src/renderer/i18n/sharedMessages.ts
 msgid "This thread is not ready for Steer."
@@ -13943,6 +13959,10 @@ msgstr "Búsqueda de herramientas"
 #: src/mobile/views/DesktopWorkspacePanel.tsx
 msgid "Tools"
 msgstr "Herramientas"
+
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Tools can only be changed in a new thread for this provider."
+msgstr "Con este proveedor, las herramientas solo se pueden cambiar en un hilo nuevo."
 
 #: src/renderer/components/skills/SkillMarketplaceModal.tsx
 msgid "Total installs"
@@ -14989,6 +15009,12 @@ msgstr "Espera a que todos los candidatos terminen antes de fusionar a un ganado
 msgid "Wait for every candidate to finish before opening a pull request."
 msgstr "Espera a que todos los candidatos terminen antes de abrir una pull request."
 
+#: src/renderer/actions/threadMcpActions.ts
+#: src/renderer/components/thread/useThreadMcpControls.ts
+#: src/renderer/i18n/sharedMessages.ts
+msgid "Wait for the current reply to finish before changing tools."
+msgstr "Espera a que termine la respuesta actual antes de cambiar las herramientas."
+
 #: src/mobile/useRemoteDesktop.ts
 #: src/renderer/actions/moveThreadToWorktreeActions.ts
 msgid "Wait for the thread to finish starting before moving it to a worktree."
@@ -14996,7 +15022,7 @@ msgstr "Espera a que el hilo termine de iniciarse antes de moverlo a un worktree
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "Wait for the thread to finish starting before moving it to another project."
-msgstr ""
+msgstr "Espera a que el hilo termine de iniciarse antes de moverlo a otro proyecto."
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Wait for the thread to finish starting."
@@ -15456,7 +15482,7 @@ msgstr "WSL: {distro}"
 
 #: src/renderer/views/ThreadSearchOverlay/parts/MessageSearchResultRow.tsx
 msgid "You"
-msgstr ""
+msgstr "Tú"
 
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CommitSyncPanel.tsx
 msgid "Your local changes are stashed and will be re-applied when you commit or abort this merge."

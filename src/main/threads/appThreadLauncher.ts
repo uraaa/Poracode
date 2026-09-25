@@ -15,7 +15,7 @@ import { isHomeProjectId } from "@/shared/homeScope";
 import { makeThreadTitle } from "@/shared/threadTitle";
 import { buildWorktreeLocation, resolveWorktreePlacement } from "@/shared/worktree";
 import { generateWorktreeBranch } from "@/shared/worktreeBranch";
-import { resolveUnrestrictedThreadPermissions } from "./threadLaunchConfig";
+import { resolveAutomatedThreadConfig, type AutomatedThreadMcpConfig } from "./threadLaunchConfig";
 
 /** Host surface the launcher needs — the same main-side seams schedules use. */
 export interface AppThreadLauncherDeps {
@@ -50,7 +50,7 @@ export interface AppThreadLauncherDeps {
 }
 
 /** Arguments accepted by the app-controls `create_thread` tool. */
-export interface CreateAppThreadRequest {
+export interface CreateAppThreadRequest extends AutomatedThreadMcpConfig {
   projectId: string;
   prompt: string;
   agentKind: AgentKind;
@@ -112,10 +112,12 @@ export async function createAppThread(
     model: request.model,
     ...(request.effort ? { effort: request.effort } : {}),
     ...(request.fast !== undefined ? { fast: request.fast } : {}),
-    ...(await resolveUnrestrictedThreadPermissions(
+    ...(await resolveAutomatedThreadConfig(
       deps.getAgentStatuses,
       request.agentKind,
       threadLocation,
+      settings,
+      request,
     )),
   };
 

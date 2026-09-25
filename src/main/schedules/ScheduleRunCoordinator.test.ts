@@ -152,6 +152,27 @@ function flush(): Promise<void> {
 }
 
 describe("ScheduleRunCoordinator", () => {
+  it("applies current built-in MCP defaults to old schedules without MCP fields", async () => {
+    const getSharedSettings = vi
+      .fn<ScheduleRunCoordinatorDeps["getSharedSettings"]>()
+      .mockReturnValue({
+        ...defaultSharedSettings,
+        enabledMcpServers: { browser: true, chrome: true, crossagents: true, "computer-use": true },
+      });
+    const { coordinator, threads, sent, startThread } = makeHarness({ getSharedSettings });
+    const settled = coordinator.runScheduleAsThread(task);
+    await flush();
+    const expected = { browserMcp: true, chromeMcp: true, crossagentMcp: true, computerUse: true };
+    expect(threads.get("thread-1")?.config).toMatchObject(expected);
+    expect(sent[0]).toMatchObject({ config: expected });
+    expect(startThread).toHaveBeenCalledWith(
+      expect.objectContaining({ config: expect.objectContaining(expected) }),
+    );
+    expect(getSharedSettings).toHaveBeenCalledTimes(1);
+    coordinator.observeSupervisorEvent(threadState("thread-1", "idle"));
+    await settled;
+  });
+
   it("creates a real GUI thread, records a running run, then settles succeeded", async () => {
     const { coordinator, threads, runs, sent, startThread } = makeHarness();
 
@@ -315,6 +336,7 @@ describe("ScheduleRunCoordinator", () => {
     const expectedConfig = {
       model: "claude-fable-5",
       effort: "high",
+      crossagentMcp: true,
       approvalPolicy: "never",
       sandboxMode: "danger-full-access",
     };
@@ -342,7 +364,12 @@ describe("ScheduleRunCoordinator", () => {
 
     expect(startThread).toHaveBeenCalledWith(
       expect.objectContaining({
-        config: { model: "claude-fable-5", effort: "high", approvalPolicy: "bypassPermissions" },
+        config: {
+          model: "claude-fable-5",
+          effort: "high",
+          approvalPolicy: "bypassPermissions",
+          crossagentMcp: true,
+        },
       }),
     );
 
@@ -361,7 +388,9 @@ describe("ScheduleRunCoordinator", () => {
     await flush();
 
     expect(startThread).toHaveBeenCalledWith(
-      expect.objectContaining({ config: { model: "claude-fable-5", effort: "high" } }),
+      expect.objectContaining({
+        config: { model: "claude-fable-5", effort: "high", crossagentMcp: true },
+      }),
     );
 
     coordinator.observeSupervisorEvent(threadState("thread-1", "working"));

@@ -164,6 +164,13 @@ export class ThreadOutputPipeline {
       agentKind: session.agentKind,
       config: session.config,
       ...(session.launchConfig ? { launchConfig: session.launchConfig } : {}),
+      ...(session.mcpLaunchSnapshot
+        ? {
+            mcpLaunchCustomServerNames: session.mcpLaunchSnapshot.mcpServers.map(
+              (server) => server.name,
+            ),
+          }
+        : {}),
       ...(session.sessionRef ? { sessionRef: session.sessionRef } : {}),
       ...(session.slashCommands ? { slashCommands: session.slashCommands } : {}),
       // Ride along on every state change so the renderer learns whether this

@@ -85,6 +85,10 @@ export function ComposerAddMenu(props: {
    */
   readOnly?: boolean;
   readOnlyCaption?: ReactNode;
+  /** Explanation for this surface, shared by the built-in and custom server lists. */
+  caption?: ReactNode;
+  customReadOnly?: boolean;
+  customCaption?: ReactNode;
   /**
    * Display name per built-in MCP server id for the servers a first-party
    * plugin packages, from `pluginLabelsForMcpServers`. The row then reads the
@@ -160,18 +164,23 @@ export function ComposerAddMenu(props: {
     }
   };
 
-  const pluginsCaption = readOnly ? (
-    (props.readOnlyCaption ?? (
-      <Trans>Set when this session started — start a new thread to change plugins</Trans>
-    ))
-  ) : (
-    <Trans>Enabled plugins stay on for new threads</Trans>
-  );
+  const pluginsCaption =
+    props.caption ??
+    (readOnly ? (
+      (props.readOnlyCaption ?? (
+        <Trans>Set when this session started — start a new thread to change plugins</Trans>
+      ))
+    ) : (
+      <Trans>Enabled plugins stay on for new threads</Trans>
+    ));
   const emptyPluginsNote = <Trans>No plugins are enabled for this run</Trans>;
 
   const mcpServersMenuProps = {
     servers: customMcpServers,
-    readOnly,
+    readOnly: props.customReadOnly ?? readOnly,
+    ...((props.customCaption ?? props.caption) !== undefined
+      ? { caption: props.customCaption ?? props.caption }
+      : {}),
     ...(props.readOnlyCaption !== undefined ? { readOnlyCaption: props.readOnlyCaption } : {}),
     ...(onManageMcpServers ? { onManage: onManageMcpServers } : {}),
   };

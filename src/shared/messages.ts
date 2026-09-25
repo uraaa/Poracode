@@ -15,6 +15,8 @@ const messages = {
   "voice.connectionFailed": "The voice connection failed. Try again.",
   "voice.cancelled": "The voice connection was cancelled.",
   "supervisor.sendTerminalInput": "Send terminal input",
+  "supervisor.threadNotIdleResumable":
+    "Wait for the current reply to finish before changing tools.",
   // ── Git: general ──────────────────────────────────────────
   "git.commandFailed": "Git {command} failed: {detail}",
   "github.accountUnavailable":

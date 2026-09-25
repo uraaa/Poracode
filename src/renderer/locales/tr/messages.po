@@ -435,7 +435,7 @@ msgstr "{agentLead} devam etmek için girişinizi bekliyor."
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "{alreadyImported} session(s) were already imported."
-msgstr ""
+msgstr "{alreadyImported} oturum zaten içe aktarılmıştı."
 
 #: src/mobile/views/pr/PrOverviewPage.tsx
 msgid "{commitsCount, plural, one {# commit} other {# commits}}"
@@ -2371,6 +2371,10 @@ msgstr "Talep edilen değişiklikler"
 msgid "Changes unavailable"
 msgstr "Değişikliklere erişilemiyor"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Changing tools reconnects this conversation and keeps its history."
+msgstr "Araçları değiştirmek bu görüşmeyi yeniden bağlar ve geçmişini korur."
+
 #. About page label: release channel (stable/nightly)
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
 msgid "Channel"
@@ -3667,7 +3671,7 @@ msgstr "Dosya okunamadı."
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "Could not search messages."
-msgstr ""
+msgstr "Mesajlar aranamadı."
 
 #: src/renderer/components/mcp/useMcpServerOauth.ts
 msgid "Could not sign in to {serverName}: {message}"
@@ -6471,7 +6475,7 @@ msgstr "İyileştirildi"
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "In messages"
-msgstr ""
+msgstr "Mesajlarda"
 
 #: src/renderer/views/GitHubActionsView/GitHubActionsRunList.tsx
 msgid "In progress"
@@ -7304,6 +7308,14 @@ msgstr "Poracode'un desteklenen aracıları başlatırken eklediği MCP sunucusu
 #~ msgid "Manage the skills Poracode makes available to supported agents. Project skills can be managed in each project's settings."
 #~ msgstr "Poracode'un desteklenen aracılara sunduğu becerileri yönetin. Proje becerileri her projenin ayarlarından yönetilebilir."
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Manage tools in the provider settings."
+msgstr "Araçları sağlayıcı ayarlarından yönetin."
+
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Manage tools on the paired desktop."
+msgstr "Araçları eşleştirilmiş masaüstünde yönetin."
+
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarWorkspaceSwitcher.tsx
 #~ msgid "Manage workspaces"
 #~ msgstr "Çalışma alanlarını yönet"
@@ -7897,7 +7909,7 @@ msgstr "Temiz çalışma ağacına taşı"
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Move to Project"
-msgstr ""
+msgstr "Projeye taşı"
 
 #: src/renderer/components/workspace/workspaceMenuItems.tsx
 msgid "Move to Workspace"
@@ -8528,7 +8540,7 @@ msgstr "Henüz MCP aracı kullanılmadı."
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "No messages match."
-msgstr ""
+msgstr "Eşleşen mesaj yok."
 
 #: src/renderer/components/thread/ChatPane/ChatPane.tsx
 msgid "No messages yet"
@@ -10480,6 +10492,10 @@ msgstr "Yeniden bağlanıyor"
 msgid "Reconnecting to your desktop…"
 msgstr "Masaüstünüze yeniden bağlanılıyor…"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Reconnecting tools…"
+msgstr "Araçlar yeniden bağlanıyor…"
+
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
 #: src/renderer/views/SettingsOverlay/parts/UsageSettings.tsx
 msgid "Reconstructed from local logs at public API rates — it does not reflect your real bill on subscription plans. Shown only in the usage panel."
@@ -11777,7 +11793,7 @@ msgstr "Konuları Ara"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "Search title or folder everywhere, message text in what's shown"
-msgstr ""
+msgstr "Başlık veya klasörü her yerde, mesaj metnini görüntülenenlerde ara"
 
 #: src/renderer/components/sessionImport/SearchableSelect.tsx
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
@@ -12221,7 +12237,7 @@ msgstr "{0, plural, one {# beceri} other {# beceri}} gösteriliyor"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "Showing the 200 most recent — narrow the filters to see more"
-msgstr ""
+msgstr "En yeni 200 öğe gösteriliyor — daha fazlasını görmek için filtreleri daraltın"
 
 #: src/mobile/views/HostFolderPicker.tsx
 #: src/renderer/views/SettingsOverlay/parts/RemoteHostFolderPicker.tsx
@@ -13429,7 +13445,7 @@ msgstr "Kuyruğa alınan takip mesajları için konu oturumu kullanılamıyor."
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "The thread was stopped to move it — start it again in its new project."
-msgstr ""
+msgstr "Konu taşınmak üzere durduruldu — yeni projesinde tekrar başlatın."
 
 #: src/renderer/components/thread/MoveThreadToWorktreeDialog.tsx
 #~ msgid "The thread will run in a separate worktree on a new branch."
@@ -13646,7 +13662,7 @@ msgstr "Bu projenin uzak sunucusu çevrimdışı. Bir iş parçacığı başlatm
 
 #: src/renderer/components/thread/ThreadAccountLabel.tsx
 msgid "This provider reports no signed-in account."
-msgstr ""
+msgstr "Bu sağlayıcı, oturum açmış bir hesap olmadığını bildiriyor."
 
 #: src/renderer/components/thread/ThreadFollowUpQueue.tsx
 #: src/renderer/i18n/sharedMessages.ts
@@ -13698,7 +13714,7 @@ msgstr "Bu konu, kuyruğa alınan takip mesajlarını desteklemiyor."
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "This thread is hosted on another desktop; it can't be moved to a local project."
-msgstr ""
+msgstr "Bu konu başka bir masaüstünde barındırılıyor; yerel bir projeye taşınamaz."
 
 #: src/renderer/i18n/sharedMessages.ts
 msgid "This thread is not ready for Steer."
@@ -13943,6 +13959,10 @@ msgstr "Araç arama"
 #: src/mobile/views/DesktopWorkspacePanel.tsx
 msgid "Tools"
 msgstr "Araçlar"
+
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Tools can only be changed in a new thread for this provider."
+msgstr "Bu sağlayıcıda araçlar yalnızca yeni bir konuda değiştirilebilir."
 
 #: src/renderer/components/skills/SkillMarketplaceModal.tsx
 msgid "Total installs"
@@ -14989,6 +15009,12 @@ msgstr "Kazananı birleştirmeden önce tüm adayların çalışmasını tamamla
 msgid "Wait for every candidate to finish before opening a pull request."
 msgstr "Pull request açmadan önce tüm adayların çalışmasını tamamlamasını bekleyin."
 
+#: src/renderer/actions/threadMcpActions.ts
+#: src/renderer/components/thread/useThreadMcpControls.ts
+#: src/renderer/i18n/sharedMessages.ts
+msgid "Wait for the current reply to finish before changing tools."
+msgstr "Araçları değiştirmeden önce mevcut yanıtın tamamlanmasını bekleyin."
+
 #: src/mobile/useRemoteDesktop.ts
 #: src/renderer/actions/moveThreadToWorktreeActions.ts
 msgid "Wait for the thread to finish starting before moving it to a worktree."
@@ -14996,7 +15022,7 @@ msgstr "Çalışma ağacına taşımadan önce konunun başlamasının bitmesini
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "Wait for the thread to finish starting before moving it to another project."
-msgstr ""
+msgstr "Konuyu başka bir projeye taşımadan önce başlatılmasının tamamlanmasını bekleyin."
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Wait for the thread to finish starting."
@@ -15456,7 +15482,7 @@ msgstr "WSL: {distro}"
 
 #: src/renderer/views/ThreadSearchOverlay/parts/MessageSearchResultRow.tsx
 msgid "You"
-msgstr ""
+msgstr "Siz"
 
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CommitSyncPanel.tsx
 msgid "Your local changes are stashed and will be re-applied when you commit or abort this merge."

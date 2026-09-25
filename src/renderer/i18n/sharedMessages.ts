@@ -20,6 +20,9 @@ const SHARED_MESSAGE_DESCRIPTORS: Record<MessageKey, MessageDescriptor> = {
   "voice.connectionFailed": msg({ message: "The voice connection failed. Try again." }),
   "voice.cancelled": msg({ message: "The voice connection was cancelled." }),
   "supervisor.sendTerminalInput": msg({ message: "Send terminal input" }),
+  "supervisor.threadNotIdleResumable": msg({
+    message: "Wait for the current reply to finish before changing tools.",
+  }),
   "supervisor.followUpQueue.guiOnly": msg({
     message: "Queued follow-ups are only supported for chat threads.",
   }),

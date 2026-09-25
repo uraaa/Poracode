@@ -2375,6 +2375,10 @@ msgstr "Changes requested"
 msgid "Changes unavailable"
 msgstr "Changes unavailable"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Changing tools reconnects this conversation and keeps its history."
+msgstr "Changing tools reconnects this conversation and keeps its history."
+
 #. About page label: release channel (stable/nightly)
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
 msgid "Channel"
@@ -7308,6 +7312,14 @@ msgstr "Manage the MCP server configurations Poracode adds when starting support
 #~ msgid "Manage the skills Poracode makes available to supported agents. Project skills can be managed in each project's settings."
 #~ msgstr "Manage the skills Poracode makes available to supported agents. Project skills can be managed in each project's settings."
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Manage tools in the provider settings."
+msgstr "Manage tools in the provider settings."
+
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Manage tools on the paired desktop."
+msgstr "Manage tools on the paired desktop."
+
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarWorkspaceSwitcher.tsx
 #~ msgid "Manage workspaces"
 #~ msgstr "Manage workspaces"
@@ -10483,6 +10495,10 @@ msgstr "Reconnecting"
 #: src/mobile/components.tsx
 msgid "Reconnecting to your desktop…"
 msgstr "Reconnecting to your desktop…"
+
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Reconnecting tools…"
+msgstr "Reconnecting tools…"
 
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
 #: src/renderer/views/SettingsOverlay/parts/UsageSettings.tsx
@@ -13948,6 +13964,10 @@ msgstr "Tool search"
 msgid "Tools"
 msgstr "Tools"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Tools can only be changed in a new thread for this provider."
+msgstr "Tools can only be changed in a new thread for this provider."
+
 #: src/renderer/components/skills/SkillMarketplaceModal.tsx
 msgid "Total installs"
 msgstr "Total installs"
@@ -14996,6 +15016,12 @@ msgstr "Wait for every candidate to finish before merging a winner."
 #: src/renderer/actions/experimentDecisionActions.ts
 msgid "Wait for every candidate to finish before opening a pull request."
 msgstr "Wait for every candidate to finish before opening a pull request."
+
+#: src/renderer/actions/threadMcpActions.ts
+#: src/renderer/components/thread/useThreadMcpControls.ts
+#: src/renderer/i18n/sharedMessages.ts
+msgid "Wait for the current reply to finish before changing tools."
+msgstr "Wait for the current reply to finish before changing tools."
 
 #: src/mobile/useRemoteDesktop.ts
 #: src/renderer/actions/moveThreadToWorktreeActions.ts

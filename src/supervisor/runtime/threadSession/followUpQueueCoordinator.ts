@@ -417,6 +417,32 @@ export class FollowUpQueueCoordinator {
   beginDirectInput(threadId: string): DirectInputReservation {
     return this.directInput.beginDirectInput(threadId);
   }
+
+  /**
+   * Provider status can remain idle during preparation/admission, or turn idle
+   * before canonical completion. A session must not be unloaded in either
+   * window: these reservations still own accepted user input. Queued steers
+   * retain their direct reservation through replacement admission; ordinary
+   * steers retain the direct lifecycle while their pending slot drains.
+   */
+  hasPendingInputForSession(session: SessionRuntime): boolean {
+    const threadId = session.threadId;
+    const record = this.records.get(threadId);
+    const lifecycle = this.lifecycles.get(threadId);
+    return (
+      this.directInput.hasReservation(threadId) ||
+      this.mutationTails.has(threadId) ||
+      session.pendingSteer !== undefined ||
+      record?.active?.session.instanceId === session.instanceId ||
+      record?.replacing === true ||
+      record?.restarting === true ||
+      (lifecycle?.instanceId === session.instanceId &&
+        (lifecycle.direct ||
+          lifecycle.pendingRequestIds.size > 0 ||
+          (lifecycle.turnId !== undefined && !lifecycle.turnCompleted)))
+    );
+  }
+
   noteDirectTurnSubmitted(session: SessionRuntime): void {
     this.directInput.noteDirectTurnSubmitted(session);
   }
