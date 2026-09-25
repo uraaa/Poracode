@@ -435,7 +435,7 @@ msgstr "{agentLead} cần bạn nhập thông tin để tiếp tục."
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "{alreadyImported} session(s) were already imported."
-msgstr ""
+msgstr "Đã có {alreadyImported} phiên được nhập trước đó."
 
 #: src/mobile/views/pr/PrOverviewPage.tsx
 msgid "{commitsCount, plural, one {# commit} other {# commits}}"
@@ -2371,6 +2371,10 @@ msgstr "Đã yêu cầu thay đổi"
 msgid "Changes unavailable"
 msgstr "Không thể xem các thay đổi"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Changing tools reconnects this conversation and keeps its history."
+msgstr "Việc thay đổi công cụ sẽ kết nối lại cuộc trò chuyện này và giữ nguyên lịch sử."
+
 #. About page label: release channel (stable/nightly)
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
 msgid "Channel"
@@ -3667,7 +3671,7 @@ msgstr "Không thể đọc tập tin."
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "Could not search messages."
-msgstr ""
+msgstr "Không thể tìm kiếm tin nhắn."
 
 #: src/renderer/components/mcp/useMcpServerOauth.ts
 msgid "Could not sign in to {serverName}: {message}"
@@ -6471,7 +6475,7 @@ msgstr "Cải thiện"
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "In messages"
-msgstr ""
+msgstr "Trong tin nhắn"
 
 #: src/renderer/views/GitHubActionsView/GitHubActionsRunList.tsx
 msgid "In progress"
@@ -7304,6 +7308,14 @@ msgstr "Quản lý cấu hình máy chủ MCP mà Poracode thêm khi khởi đ�
 #~ msgid "Manage the skills Poracode makes available to supported agents. Project skills can be managed in each project's settings."
 #~ msgstr "Quản lý các skill mà Poracode cung cấp cho những tác tử được hỗ trợ. Có thể quản lý skill dự án trong phần cài đặt của từng dự án."
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Manage tools in the provider settings."
+msgstr "Quản lý công cụ trong phần cài đặt nhà cung cấp."
+
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Manage tools on the paired desktop."
+msgstr "Quản lý công cụ trên máy tính đã ghép nối."
+
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarWorkspaceSwitcher.tsx
 #~ msgid "Manage workspaces"
 #~ msgstr "Quản lý không gian làm việc"
@@ -7897,7 +7909,7 @@ msgstr "Chuyển sang cây làm việc sạch"
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Move to Project"
-msgstr ""
+msgstr "Chuyển sang dự án"
 
 #: src/renderer/components/workspace/workspaceMenuItems.tsx
 msgid "Move to Workspace"
@@ -8528,7 +8540,7 @@ msgstr "Chưa dùng công cụ MCP nào."
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "No messages match."
-msgstr ""
+msgstr "Không có tin nhắn nào khớp."
 
 #: src/renderer/components/thread/ChatPane/ChatPane.tsx
 msgid "No messages yet"
@@ -10480,6 +10492,10 @@ msgstr "Đang kết nối lại"
 msgid "Reconnecting to your desktop…"
 msgstr "Đang kết nối lại với desktop…"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Reconnecting tools…"
+msgstr "Đang kết nối lại công cụ…"
+
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
 #: src/renderer/views/SettingsOverlay/parts/UsageSettings.tsx
 msgid "Reconstructed from local logs at public API rates — it does not reflect your real bill on subscription plans. Shown only in the usage panel."
@@ -11777,7 +11793,7 @@ msgstr "Tìm kiếm luồng"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "Search title or folder everywhere, message text in what's shown"
-msgstr ""
+msgstr "Tìm tiêu đề hoặc thư mục trong toàn bộ dữ liệu, tìm nội dung tin nhắn trong các mục đang hiển thị"
 
 #: src/renderer/components/sessionImport/SearchableSelect.tsx
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
@@ -12221,7 +12237,7 @@ msgstr "Đang hiển thị {0, plural, other {# skill}}"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "Showing the 200 most recent — narrow the filters to see more"
-msgstr ""
+msgstr "Đang hiển thị 200 mục gần đây nhất — thu hẹp bộ lọc để xem thêm"
 
 #: src/mobile/views/HostFolderPicker.tsx
 #: src/renderer/views/SettingsOverlay/parts/RemoteHostFolderPicker.tsx
@@ -13429,7 +13445,7 @@ msgstr "Không có phiên của cuộc trò chuyện để xử lý tin nhắn t
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "The thread was stopped to move it — start it again in its new project."
-msgstr ""
+msgstr "Luồng đã được dừng để di chuyển — hãy khởi động lại luồng trong dự án mới."
 
 #: src/renderer/components/thread/MoveThreadToWorktreeDialog.tsx
 #~ msgid "The thread will run in a separate worktree on a new branch."
@@ -13646,7 +13662,7 @@ msgstr "Máy chủ từ xa của dự án này đang ngoại tuyến. Hãy kết
 
 #: src/renderer/components/thread/ThreadAccountLabel.tsx
 msgid "This provider reports no signed-in account."
-msgstr ""
+msgstr "Nhà cung cấp này báo không có tài khoản nào đang đăng nhập."
 
 #: src/renderer/components/thread/ThreadFollowUpQueue.tsx
 #: src/renderer/i18n/sharedMessages.ts
@@ -13698,7 +13714,7 @@ msgstr "Cuộc trò chuyện này không hỗ trợ tin nhắn tiếp theo trong
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "This thread is hosted on another desktop; it can't be moved to a local project."
-msgstr ""
+msgstr "Luồng này được lưu trữ trên một máy tính khác; không thể chuyển sang dự án cục bộ."
 
 #: src/renderer/i18n/sharedMessages.ts
 msgid "This thread is not ready for Steer."
@@ -13943,6 +13959,10 @@ msgstr "Tìm kiếm công cụ"
 #: src/mobile/views/DesktopWorkspacePanel.tsx
 msgid "Tools"
 msgstr "Công cụ"
+
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Tools can only be changed in a new thread for this provider."
+msgstr "Với nhà cung cấp này, chỉ có thể thay đổi công cụ trong một luồng mới."
 
 #: src/renderer/components/skills/SkillMarketplaceModal.tsx
 msgid "Total installs"
@@ -14989,6 +15009,12 @@ msgstr "Hãy đợi tất cả ứng viên hoàn tất trước khi hợp nhất
 msgid "Wait for every candidate to finish before opening a pull request."
 msgstr "Hãy đợi tất cả ứng viên hoàn tất trước khi mở pull request."
 
+#: src/renderer/actions/threadMcpActions.ts
+#: src/renderer/components/thread/useThreadMcpControls.ts
+#: src/renderer/i18n/sharedMessages.ts
+msgid "Wait for the current reply to finish before changing tools."
+msgstr "Hãy đợi câu trả lời hiện tại hoàn tất trước khi thay đổi công cụ."
+
 #: src/mobile/useRemoteDesktop.ts
 #: src/renderer/actions/moveThreadToWorktreeActions.ts
 msgid "Wait for the thread to finish starting before moving it to a worktree."
@@ -14996,7 +15022,7 @@ msgstr "Đợi luồng khởi động xong trước khi chuyển nó sang cây l
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "Wait for the thread to finish starting before moving it to another project."
-msgstr ""
+msgstr "Hãy đợi luồng khởi động xong trước khi chuyển sang dự án khác."
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Wait for the thread to finish starting."
@@ -15456,7 +15482,7 @@ msgstr "WSL: {distro}"
 
 #: src/renderer/views/ThreadSearchOverlay/parts/MessageSearchResultRow.tsx
 msgid "You"
-msgstr ""
+msgstr "Bạn"
 
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CommitSyncPanel.tsx
 msgid "Your local changes are stashed and will be re-applied when you commit or abort this merge."

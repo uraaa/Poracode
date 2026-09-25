@@ -133,6 +133,31 @@ describe("ContinueInProviderDialog handoff flow", () => {
     } as never);
   });
 
+  it.each([false, true])(
+    "carries opt-outs only to composer-config destinations (provider-owned: %s)",
+    async (providerOwned) => {
+      const onContinue = renderDialog({
+        thread: {
+          agentKind: "source",
+          config: { model: "source", browserMcp: false, disabledBuiltInMcpServerIds: ["browser"] },
+        },
+        installedAgents: [
+          agent("source", "Source", "gui"),
+          agent(
+            "target",
+            "Target",
+            "gui",
+            providerOwned ? { mcpConfigSource: "agentSettings" } : {},
+          ),
+        ],
+      });
+      await pressSwitch();
+      expect(onContinue.mock.calls[0]?.[1].disabledBuiltInMcpServerIds).toEqual(
+        providerOwned ? undefined : ["browser"],
+      );
+    },
+  );
+
   it("hands the stored chat history over without costing an extraction run", async () => {
     seedRuntimeItems([
       {

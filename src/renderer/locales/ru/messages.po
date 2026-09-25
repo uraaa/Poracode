@@ -435,7 +435,7 @@ msgstr "{agentLead} требуется ваш ввод, чтобы продол�
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "{alreadyImported} session(s) were already imported."
-msgstr ""
+msgstr "Уже импортировано сеансов: {alreadyImported}."
 
 #: src/mobile/views/pr/PrOverviewPage.tsx
 msgid "{commitsCount, plural, one {# commit} other {# commits}}"
@@ -2370,6 +2370,10 @@ msgstr "Запрошены изменения"
 #: src/renderer/views/ExperimentView/parts/ExperimentCandidateCard.tsx
 msgid "Changes unavailable"
 msgstr "Изменения недоступны"
+
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Changing tools reconnects this conversation and keeps its history."
+msgstr "При изменении инструментов разговор переподключается с сохранением истории."
 
 #. About page label: release channel (stable/nightly)
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
@@ -7304,6 +7308,14 @@ msgstr "Управляйте конфигурациями серверов MCP, 
 #~ msgid "Manage the skills Poracode makes available to supported agents. Project skills can be managed in each project's settings."
 #~ msgstr "Управляйте навыками, которые Poracode предоставляет поддерживаемым агентам. Навыками проекта можно управлять в настройках каждого проекта."
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Manage tools in the provider settings."
+msgstr "Управляйте инструментами в настройках провайдера."
+
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Manage tools on the paired desktop."
+msgstr "Управляйте инструментами на сопряжённом компьютере."
+
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarWorkspaceSwitcher.tsx
 #~ msgid "Manage workspaces"
 #~ msgstr "Управление рабочими областями"
@@ -10480,6 +10492,10 @@ msgstr "Переподключение"
 msgid "Reconnecting to your desktop…"
 msgstr "Переподключение к десктопу…"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Reconnecting tools…"
+msgstr "Переподключение инструментов…"
+
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
 #: src/renderer/views/SettingsOverlay/parts/UsageSettings.tsx
 msgid "Reconstructed from local logs at public API rates — it does not reflect your real bill on subscription plans. Shown only in the usage panel."
@@ -13646,7 +13662,7 @@ msgstr "Удалённый сервер этого проекта офлайн. 
 
 #: src/renderer/components/thread/ThreadAccountLabel.tsx
 msgid "This provider reports no signed-in account."
-msgstr ""
+msgstr "Этот провайдер сообщает, что вход в аккаунт не выполнен."
 
 #: src/renderer/components/thread/ThreadFollowUpQueue.tsx
 #: src/renderer/i18n/sharedMessages.ts
@@ -13943,6 +13959,10 @@ msgstr "Поиск инструментов"
 #: src/mobile/views/DesktopWorkspacePanel.tsx
 msgid "Tools"
 msgstr "Инструменты"
+
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Tools can only be changed in a new thread for this provider."
+msgstr "Для этого провайдера инструменты можно изменить только в новом треде."
 
 #: src/renderer/components/skills/SkillMarketplaceModal.tsx
 msgid "Total installs"
@@ -14988,6 +15008,12 @@ msgstr "Дождитесь завершения работы всех канди
 #: src/renderer/actions/experimentDecisionActions.ts
 msgid "Wait for every candidate to finish before opening a pull request."
 msgstr "Дождитесь завершения работы всех кандидатов перед созданием pull request."
+
+#: src/renderer/actions/threadMcpActions.ts
+#: src/renderer/components/thread/useThreadMcpControls.ts
+#: src/renderer/i18n/sharedMessages.ts
+msgid "Wait for the current reply to finish before changing tools."
+msgstr "Дождитесь завершения текущего ответа, прежде чем менять инструменты."
 
 #: src/mobile/useRemoteDesktop.ts
 #: src/renderer/actions/moveThreadToWorktreeActions.ts

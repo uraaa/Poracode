@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { agentKindSchema, threadModeSchema } from "./common";
 import { threadImportedFromSchema } from "./sessionImport";
+import { BUILT_IN_MCP_SERVER_IDS } from "./mcpServer";
 
 const threadConfigShape = {
   model: z.string().min(1),
@@ -16,6 +17,9 @@ const threadConfigShape = {
   crossagentMcp: z.boolean().optional(),
   computerUse: z.boolean().optional(),
   chromeMcp: z.boolean().optional(),
+  /** Explicit per-thread opt-outs, including tools contributed by enabled plugins.
+   * Absent on older threads: their existing plugin/default semantics remain valid. */
+  disabledBuiltInMcpServerIds: z.array(z.enum(BUILT_IN_MCP_SERVER_IDS)).optional(),
   /** Runtime environment selected for a provider that cannot execute natively. */
   executionEnvironment: z.object({ kind: z.literal("wsl"), distro: z.string().min(1) }).optional(),
   /**
@@ -69,6 +73,8 @@ export function isThreadConfigEqual(
     left.crossagentMcp === right.crossagentMcp &&
     left.computerUse === right.computerUse &&
     left.chromeMcp === right.chromeMcp &&
+    [...(left.disabledBuiltInMcpServerIds ?? [])].sort().join(",") ===
+      [...(right.disabledBuiltInMcpServerIds ?? [])].sort().join(",") &&
     left.executionEnvironment?.kind === right.executionEnvironment?.kind &&
     left.executionEnvironment?.distro === right.executionEnvironment?.distro
   );

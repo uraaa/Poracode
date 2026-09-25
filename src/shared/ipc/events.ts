@@ -103,6 +103,8 @@ export type SupervisorEvent =
       config?: ThreadConfig;
       /** Effective launch-time config after plugin and global MCP policy is applied. */
       launchConfig?: ThreadConfig;
+      /** Custom MCP names resolved at launch; absent on older hosts. */
+      mcpLaunchCustomServerNames?: string[];
       /**
        * Whether the emitting session launched with Poracode's `read_thread`
        * tool available. Mirrors the snapshot field so clients learn it from

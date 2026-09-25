@@ -435,7 +435,7 @@ msgstr "{agentLead}가 계속하려면 입력이 필요합니다."
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "{alreadyImported} session(s) were already imported."
-msgstr ""
+msgstr "{alreadyImported}개의 세션은 이미 가져온 상태입니다."
 
 #: src/mobile/views/pr/PrOverviewPage.tsx
 msgid "{commitsCount, plural, one {# commit} other {# commits}}"
@@ -2371,6 +2371,10 @@ msgstr "변경 요청됨"
 msgid "Changes unavailable"
 msgstr "변경 사항을 확인할 수 없음"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Changing tools reconnects this conversation and keeps its history."
+msgstr "도구를 변경하면 이 대화에 다시 연결되며 기록은 유지됩니다."
+
 #. About page label: release channel (stable/nightly)
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
 msgid "Channel"
@@ -3667,7 +3671,7 @@ msgstr "파일을 읽을 수 없습니다."
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "Could not search messages."
-msgstr ""
+msgstr "메시지를 검색하지 못했습니다."
 
 #: src/renderer/components/mcp/useMcpServerOauth.ts
 msgid "Could not sign in to {serverName}: {message}"
@@ -6471,7 +6475,7 @@ msgstr "개선됨"
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "In messages"
-msgstr ""
+msgstr "메시지에서"
 
 #: src/renderer/views/GitHubActionsView/GitHubActionsRunList.tsx
 msgid "In progress"
@@ -7304,6 +7308,14 @@ msgstr "지원되는 에이전트를 시작할 때 Poracode에서 추가하는 M
 #~ msgid "Manage the skills Poracode makes available to supported agents. Project skills can be managed in each project's settings."
 #~ msgstr "Poracode가 지원되는 에이전트에 제공하는 스킬을 관리합니다. 프로젝트 스킬은 각 프로젝트의 설정에서 관리할 수 있습니다."
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Manage tools in the provider settings."
+msgstr "공급자 설정에서 도구를 관리하세요."
+
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Manage tools on the paired desktop."
+msgstr "페어링된 데스크톱에서 도구를 관리하세요."
+
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarWorkspaceSwitcher.tsx
 #~ msgid "Manage workspaces"
 #~ msgstr "작업 영역 관리"
@@ -7897,7 +7909,7 @@ msgstr "클린 작업 트리로 이동"
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Move to Project"
-msgstr ""
+msgstr "프로젝트로 이동"
 
 #: src/renderer/components/workspace/workspaceMenuItems.tsx
 msgid "Move to Workspace"
@@ -8528,7 +8540,7 @@ msgstr "아직 사용한 MCP 도구가 없습니다."
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "No messages match."
-msgstr ""
+msgstr "일치하는 메시지가 없습니다."
 
 #: src/renderer/components/thread/ChatPane/ChatPane.tsx
 msgid "No messages yet"
@@ -10480,6 +10492,10 @@ msgstr "다시 연결 중"
 msgid "Reconnecting to your desktop…"
 msgstr "데스크톱에 다시 연결 중…"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Reconnecting tools…"
+msgstr "도구에 다시 연결하는 중…"
+
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
 #: src/renderer/views/SettingsOverlay/parts/UsageSettings.tsx
 msgid "Reconstructed from local logs at public API rates — it does not reflect your real bill on subscription plans. Shown only in the usage panel."
@@ -11777,7 +11793,7 @@ msgstr "스레드 검색"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "Search title or folder everywhere, message text in what's shown"
-msgstr ""
+msgstr "제목이나 폴더는 전체에서, 메시지 본문은 표시된 항목에서 검색"
 
 #: src/renderer/components/sessionImport/SearchableSelect.tsx
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
@@ -12221,7 +12237,7 @@ msgstr "{0, plural, other {#개 스킬 표시 중}}"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "Showing the 200 most recent — narrow the filters to see more"
-msgstr ""
+msgstr "최근 200개 표시 중 — 필터 범위를 좁히면 더 많은 결과를 볼 수 있습니다"
 
 #: src/mobile/views/HostFolderPicker.tsx
 #: src/renderer/views/SettingsOverlay/parts/RemoteHostFolderPicker.tsx
@@ -13429,7 +13445,7 @@ msgstr "대기 중인 후속 메시지에 스레드 세션을 사용할 수 없�
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "The thread was stopped to move it — start it again in its new project."
-msgstr ""
+msgstr "이동을 위해 스레드를 중지했습니다 — 새 프로젝트에서 다시 시작하세요."
 
 #: src/renderer/components/thread/MoveThreadToWorktreeDialog.tsx
 #~ msgid "The thread will run in a separate worktree on a new branch."
@@ -13646,7 +13662,7 @@ msgstr "이 프로젝트의 원격 서버가 오프라인입니다. 스레드를
 
 #: src/renderer/components/thread/ThreadAccountLabel.tsx
 msgid "This provider reports no signed-in account."
-msgstr ""
+msgstr "이 공급자는 로그인된 계정이 없다고 보고합니다."
 
 #: src/renderer/components/thread/ThreadFollowUpQueue.tsx
 #: src/renderer/i18n/sharedMessages.ts
@@ -13698,7 +13714,7 @@ msgstr "이 스레드는 대기 중인 후속 메시지를 지원하지 않습�
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "This thread is hosted on another desktop; it can't be moved to a local project."
-msgstr ""
+msgstr "이 스레드는 다른 데스크톱에서 호스팅되므로 로컬 프로젝트로 이동할 수 없습니다."
 
 #: src/renderer/i18n/sharedMessages.ts
 msgid "This thread is not ready for Steer."
@@ -13943,6 +13959,10 @@ msgstr "도구 검색"
 #: src/mobile/views/DesktopWorkspacePanel.tsx
 msgid "Tools"
 msgstr "도구"
+
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Tools can only be changed in a new thread for this provider."
+msgstr "이 공급자에서는 새 스레드에서만 도구를 변경할 수 있습니다."
 
 #: src/renderer/components/skills/SkillMarketplaceModal.tsx
 msgid "Total installs"
@@ -14989,6 +15009,12 @@ msgstr "우승자를 병합하기 전에 모든 후보가 완료될 때까지 �
 msgid "Wait for every candidate to finish before opening a pull request."
 msgstr "풀 리퀘스트를 열기 전에 모든 후보가 완료될 때까지 기다리세요."
 
+#: src/renderer/actions/threadMcpActions.ts
+#: src/renderer/components/thread/useThreadMcpControls.ts
+#: src/renderer/i18n/sharedMessages.ts
+msgid "Wait for the current reply to finish before changing tools."
+msgstr "현재 답변이 완료된 후 도구를 변경하세요."
+
 #: src/mobile/useRemoteDesktop.ts
 #: src/renderer/actions/moveThreadToWorktreeActions.ts
 msgid "Wait for the thread to finish starting before moving it to a worktree."
@@ -14996,7 +15022,7 @@ msgstr "작업 트리로 이동하기 전에 스레드 시작이 완료될 때�
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "Wait for the thread to finish starting before moving it to another project."
-msgstr ""
+msgstr "스레드 시작이 완료된 후 다른 프로젝트로 이동하세요."
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Wait for the thread to finish starting."
@@ -15456,7 +15482,7 @@ msgstr "WSL: {distro}"
 
 #: src/renderer/views/ThreadSearchOverlay/parts/MessageSearchResultRow.tsx
 msgid "You"
-msgstr ""
+msgstr "나"
 
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CommitSyncPanel.tsx
 msgid "Your local changes are stashed and will be re-applied when you commit or abort this merge."

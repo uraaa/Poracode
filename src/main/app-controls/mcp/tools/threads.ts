@@ -408,6 +408,10 @@ export const threadTools: ToolDomain = {
         model,
         ...(effort ? { effort } : {}),
         ...(sourceThread?.config.fast !== undefined ? { fast: sourceThread.config.fast } : {}),
+        ...(sourceThread?.config.browserMcp === true ? { browserMcp: true } : {}),
+        ...(sourceThread?.config.chromeMcp === true ? { chromeMcp: true } : {}),
+        ...(sourceThread?.config.crossagentMcp === true ? { crossagentMcp: true } : {}),
+        ...(sourceThread?.config.computerUse === true ? { computerUse: true } : {}),
         ...(parsed.title ? { title: parsed.title } : {}),
         ...(parsed.worktree?.enabled
           ? { worktree: parsed.worktree.branch ? { branch: parsed.worktree.branch } : {} }

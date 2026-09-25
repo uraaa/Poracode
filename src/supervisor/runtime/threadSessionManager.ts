@@ -10,6 +10,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { spawn } from "node-pty";
 import type { McpThreadIdentity } from "@/shared/browserMcpThread";
 import {
+  isThreadTurnActive,
   type ClearPendingSteerPayload,
   type ControlThreadGoalPayload,
   type AgentEventEnvelope,
@@ -286,6 +287,7 @@ export class ThreadSessionManager {
       attention: session.attention,
       config: session.config,
       ...(session.launchConfig ? { launchConfig: session.launchConfig } : {}),
+      mcpLaunchCustomServerNames: session.mcpLaunchSnapshot.mcpServers.map((server) => server.name),
       threadMentionToolsAvailable: session.threadMentionToolsAvailable === true,
       ...(session.sessionRef ? { sessionRef: session.sessionRef } : {}),
       ...(session.slashCommands ? { slashCommands: session.slashCommands } : {}),
@@ -1280,6 +1282,20 @@ export class ThreadSessionManager {
   }
 
   async closeThread(payload: CloseThreadPayload): Promise<void> {
+    const existing = this.sessions.get(payload.threadId);
+    // Validate before teardown mutates any session or awaits disposal. The
+    // renderer's idle check may already be stale when this request arrives.
+    if (
+      payload.onlyIfIdle &&
+      (this.startLocks.has(payload.threadId) ||
+        !existing ||
+        isThreadTurnActive(existing.status) ||
+        this.followUpQueue.hasPendingInputForSession(existing) ||
+        !existing.sessionRef?.providerSessionId ||
+        !existing.adapter.capabilities.supportsResume)
+    ) {
+      throw new Error(msg("supervisor.threadNotIdleResumable"));
+    }
     const shell = this.shellSessions.get(payload.threadId);
     if (shell) {
       shell.ignoreExit = true;
@@ -1290,7 +1306,6 @@ export class ThreadSessionManager {
       return;
     }
 
-    const existing = this.sessions.get(payload.threadId);
     if (!existing) {
       if (this.startLocks.has(payload.threadId)) {
         this.pendingStartAborts.add(payload.threadId);

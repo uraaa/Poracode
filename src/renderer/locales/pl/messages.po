@@ -435,7 +435,7 @@ msgstr "{agentLead} potrzebuje Twojej odpowiedzi, aby kontynuować."
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "{alreadyImported} session(s) were already imported."
-msgstr ""
+msgstr "Liczba sesji, które zostały już zaimportowane: {alreadyImported}."
 
 #: src/mobile/views/pr/PrOverviewPage.tsx
 msgid "{commitsCount, plural, one {# commit} other {# commits}}"
@@ -2371,6 +2371,10 @@ msgstr "Zażądano zmian"
 msgid "Changes unavailable"
 msgstr "Zmiany są niedostępne"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Changing tools reconnects this conversation and keeps its history."
+msgstr "Zmiana narzędzi ponownie łączy tę rozmowę i zachowuje jej historię."
+
 #. About page label: release channel (stable/nightly)
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
 msgid "Channel"
@@ -3667,7 +3671,7 @@ msgstr "Nie można odczytać pliku."
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "Could not search messages."
-msgstr ""
+msgstr "Nie udało się przeszukać wiadomości."
 
 #: src/renderer/components/mcp/useMcpServerOauth.ts
 msgid "Could not sign in to {serverName}: {message}"
@@ -6471,7 +6475,7 @@ msgstr "Ulepszono"
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "In messages"
-msgstr ""
+msgstr "W wiadomościach"
 
 #: src/renderer/views/GitHubActionsView/GitHubActionsRunList.tsx
 msgid "In progress"
@@ -7304,6 +7308,14 @@ msgstr "Zarządzaj konfiguracjami serwerów MCP dodawanymi przez Poracode podcza
 #~ msgid "Manage the skills Poracode makes available to supported agents. Project skills can be managed in each project's settings."
 #~ msgstr "Zarządzaj umiejętnościami udostępnianymi przez Poracode obsługiwanym agentom. Umiejętnościami projektu można zarządzać w ustawieniach każdego projektu."
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Manage tools in the provider settings."
+msgstr "Zarządzaj narzędziami w ustawieniach dostawcy."
+
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Manage tools on the paired desktop."
+msgstr "Zarządzaj narzędziami na sparowanym komputerze."
+
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarWorkspaceSwitcher.tsx
 #~ msgid "Manage workspaces"
 #~ msgstr "Zarządzaj obszarami roboczymi"
@@ -7897,7 +7909,7 @@ msgstr "Przenieś do czystego drzewa roboczego"
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Move to Project"
-msgstr ""
+msgstr "Przenieś do projektu"
 
 #: src/renderer/components/workspace/workspaceMenuItems.tsx
 msgid "Move to Workspace"
@@ -8528,7 +8540,7 @@ msgstr "Nie użyto jeszcze żadnych narzędzi MCP."
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "No messages match."
-msgstr ""
+msgstr "Brak pasujących wiadomości."
 
 #: src/renderer/components/thread/ChatPane/ChatPane.tsx
 msgid "No messages yet"
@@ -10480,6 +10492,10 @@ msgstr "Ponowne łączenie"
 msgid "Reconnecting to your desktop…"
 msgstr "Ponowne łączenie z desktopem…"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Reconnecting tools…"
+msgstr "Ponowne łączenie narzędzi…"
+
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
 #: src/renderer/views/SettingsOverlay/parts/UsageSettings.tsx
 msgid "Reconstructed from local logs at public API rates — it does not reflect your real bill on subscription plans. Shown only in the usage panel."
@@ -11777,7 +11793,7 @@ msgstr "Przeszukaj wątki"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "Search title or folder everywhere, message text in what's shown"
-msgstr ""
+msgstr "Szukaj tytułu lub folderu wszędzie, a tekstu wiadomości w wyświetlonych wynikach"
 
 #: src/renderer/components/sessionImport/SearchableSelect.tsx
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
@@ -12221,7 +12237,7 @@ msgstr "Wyświetlanie {0, plural, one {# umiejętności} few {# umiejętności} 
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "Showing the 200 most recent — narrow the filters to see more"
-msgstr ""
+msgstr "Wyświetlono 200 najnowszych — zawęź filtry, aby zobaczyć więcej"
 
 #: src/mobile/views/HostFolderPicker.tsx
 #: src/renderer/views/SettingsOverlay/parts/RemoteHostFolderPicker.tsx
@@ -13429,7 +13445,7 @@ msgstr "Sesja wątku jest niedostępna dla wiadomości uzupełniających w kolej
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "The thread was stopped to move it — start it again in its new project."
-msgstr ""
+msgstr "Wątek został zatrzymany w celu przeniesienia — uruchom go ponownie w nowym projekcie."
 
 #: src/renderer/components/thread/MoveThreadToWorktreeDialog.tsx
 #~ msgid "The thread will run in a separate worktree on a new branch."
@@ -13646,7 +13662,7 @@ msgstr "Serwer zdalny tego projektu jest offline. Połącz ponownie, aby rozpocz
 
 #: src/renderer/components/thread/ThreadAccountLabel.tsx
 msgid "This provider reports no signed-in account."
-msgstr ""
+msgstr "Ten dostawca zgłasza brak zalogowanego konta."
 
 #: src/renderer/components/thread/ThreadFollowUpQueue.tsx
 #: src/renderer/i18n/sharedMessages.ts
@@ -13698,7 +13714,7 @@ msgstr "Ten wątek nie obsługuje wiadomości uzupełniających w kolejce."
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "This thread is hosted on another desktop; it can't be moved to a local project."
-msgstr ""
+msgstr "Ten wątek jest uruchomiony na innym komputerze; nie można go przenieść do lokalnego projektu."
 
 #: src/renderer/i18n/sharedMessages.ts
 msgid "This thread is not ready for Steer."
@@ -13943,6 +13959,10 @@ msgstr "Wyszukiwanie narzędzi"
 #: src/mobile/views/DesktopWorkspacePanel.tsx
 msgid "Tools"
 msgstr "Narzędzia"
+
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Tools can only be changed in a new thread for this provider."
+msgstr "W przypadku tego dostawcy narzędzia można zmieniać tylko w nowym wątku."
 
 #: src/renderer/components/skills/SkillMarketplaceModal.tsx
 msgid "Total installs"
@@ -14989,6 +15009,12 @@ msgstr "Przed scaleniem zmian zwycięzcy zaczekaj, aż wszyscy kandydaci zakońc
 msgid "Wait for every candidate to finish before opening a pull request."
 msgstr "Przed otwarciem pull requesta zaczekaj, aż wszyscy kandydaci zakończą pracę."
 
+#: src/renderer/actions/threadMcpActions.ts
+#: src/renderer/components/thread/useThreadMcpControls.ts
+#: src/renderer/i18n/sharedMessages.ts
+msgid "Wait for the current reply to finish before changing tools."
+msgstr "Poczekaj na zakończenie bieżącej odpowiedzi, zanim zmienisz narzędzia."
+
 #: src/mobile/useRemoteDesktop.ts
 #: src/renderer/actions/moveThreadToWorktreeActions.ts
 msgid "Wait for the thread to finish starting before moving it to a worktree."
@@ -14996,7 +15022,7 @@ msgstr "Poczekaj, aż wątek zakończy uruchamianie, przed przeniesieniem go do 
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "Wait for the thread to finish starting before moving it to another project."
-msgstr ""
+msgstr "Poczekaj na zakończenie uruchamiania wątku, zanim przeniesiesz go do innego projektu."
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Wait for the thread to finish starting."
@@ -15456,7 +15482,7 @@ msgstr "WSL: {distro}"
 
 #: src/renderer/views/ThreadSearchOverlay/parts/MessageSearchResultRow.tsx
 msgid "You"
-msgstr ""
+msgstr "Ty"
 
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CommitSyncPanel.tsx
 msgid "Your local changes are stashed and will be re-applied when you commit or abort this merge."

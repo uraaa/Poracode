@@ -31,12 +31,17 @@ export type ComposerMcpServersMenuProps = {
   readOnly: boolean;
   /** Overrides the default read-only caption (e.g. provider-owned MCP). */
   readOnlyCaption?: ReactNode;
+  caption?: ReactNode;
   /** Opens the MCP Servers settings page. Omitted — the manage row is hidden. */
   onManage?: () => void;
 };
 
 /** Shared by both surfaces so captions read identically. */
-function useMcpServersMenuText(readOnly: boolean, readOnlyCaption: ReactNode | undefined) {
+function useMcpServersMenuText(
+  readOnly: boolean,
+  readOnlyCaption: ReactNode | undefined,
+  captionOverride?: ReactNode,
+) {
   const caption = readOnly ? (
     (readOnlyCaption ?? (
       <Trans>Set when this session started — start a new thread to change MCP servers</Trans>
@@ -49,7 +54,7 @@ function useMcpServersMenuText(readOnly: boolean, readOnlyCaption: ReactNode | u
   ) : (
     <Trans>No MCP servers configured</Trans>
   );
-  return { caption, emptyNote };
+  return { caption: captionOverride ?? caption, emptyNote };
 }
 
 /**
@@ -60,7 +65,11 @@ function useMcpServersMenuText(readOnly: boolean, readOnlyCaption: ReactNode | u
 export function ComposerMcpServersSubmenuContent(props: ComposerMcpServersMenuProps) {
   const { servers, readOnly, onManage } = props;
   const { t } = useLingui();
-  const { caption, emptyNote } = useMcpServersMenuText(readOnly, props.readOnlyCaption);
+  const { caption, emptyNote } = useMcpServersMenuText(
+    readOnly,
+    props.readOnlyCaption,
+    props.caption,
+  );
   const selectedKeys = new Set(
     servers.filter((server) => server.enabled).map((server) => server.id),
   );
@@ -104,7 +113,12 @@ export function ComposerMcpServersSubmenuContent(props: ComposerMcpServersMenuPr
           className="poracode-menu max-h-72 min-w-56 overflow-y-auto"
         >
           {servers.map((server) => (
-            <Dropdown.Item key={server.id} id={server.id} textValue={server.name}>
+            <Dropdown.Item
+              key={server.id}
+              id={server.id}
+              textValue={server.name}
+              isDisabled={!server.onToggle}
+            >
               <Settings2 className="size-4 text-muted" />
               <Label className="flex-1 truncate">{server.name}</Label>
               <MenuSwitch checked={server.enabled} />
@@ -149,7 +163,11 @@ export function ComposerMcpServersMobileList(
 ) {
   const { servers, readOnly, onManage, onBack, onManaged } = props;
   const { t } = useLingui();
-  const { caption, emptyNote } = useMcpServersMenuText(readOnly, props.readOnlyCaption);
+  const { caption, emptyNote } = useMcpServersMenuText(
+    readOnly,
+    props.readOnlyCaption,
+    props.caption,
+  );
 
   return (
     <div className="m-sheet-list">
@@ -172,6 +190,7 @@ export function ComposerMcpServersMobileList(
             type="button"
             className="m-sheet-action"
             aria-pressed={server.enabled}
+            disabled={!server.onToggle}
             onClick={() => server.onToggle?.(!server.enabled)}
           >
             <Settings2 className="size-4 text-muted" />
