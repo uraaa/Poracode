@@ -1,6 +1,40 @@
 {
   "releases": [
     {
+      "version": "1.9.1",
+      "tagline": "Connected Tools",
+      "date": "2026-09-25",
+      "title": "Browser tools in every conversation",
+      "summary": "New automated threads inherit your enabled browser tools, and existing desktop conversations can reconnect their tools without losing history.",
+      "changes": [
+        {
+          "kind": "improved",
+          "label": "MCP",
+          "text": "Change browser and configured MCP tools from an existing desktop thread once its current reply finishes, keeping the same conversation and history when the provider supports resume."
+        },
+        {
+          "kind": "fixed",
+          "label": "Threads",
+          "text": "Threads created by agents and schedules inherit enabled browser defaults, and agent-created threads retain the caller's one-off tool selections."
+        },
+        {
+          "kind": "fixed",
+          "label": "MCP",
+          "text": "The tool menu shows the servers attached to the running session after a reload, including tools supplied by plugins."
+        },
+        {
+          "kind": "fixed",
+          "label": "Provider switch",
+          "text": "Tools explicitly disabled for a conversation stay disabled when its session reconnects or continues with another provider."
+        },
+        {
+          "kind": "fixed",
+          "label": "Translations",
+          "text": "Previously untranslated tool, session import, thread search, and thread management messages follow the selected interface language."
+        }
+      ]
+    },
+    {
       "version": "1.9.0",
       "tagline": "Queue Truth",
       "date": "2026-09-23",
