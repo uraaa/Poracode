@@ -1,6 +1,30 @@
 {
   "releases": [
     {
+      "version": "1.9.2",
+      "tagline": "Chrome Companion",
+      "date": "2026-09-25",
+      "title": "Install Chrome tools without guesswork",
+      "summary": "The Chrome companion extension ships with the desktop app, with a local installation folder and clear setup instructions in Browser settings.",
+      "changes": [
+        {
+          "kind": "improved",
+          "label": "Chrome",
+          "text": "Browser settings show the extension's connection status, the exact folder to load, and the steps for connecting your chosen Chrome profile."
+        },
+        {
+          "kind": "fixed",
+          "label": "Chrome",
+          "text": "Desktop installers include the companion extension and prepare it in a stable local folder, so setup no longer requires finding the source repository or a Chrome Web Store listing."
+        },
+        {
+          "kind": "fixed",
+          "label": "MCP",
+          "text": "When Chrome is disconnected, agents receive the installation folder and concrete setup instructions instead of a generic request to install an extension."
+        }
+      ]
+    },
+    {
       "version": "1.9.1",
       "tagline": "Connected Tools",
       "date": "2026-09-25",

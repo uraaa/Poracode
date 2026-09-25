@@ -2447,6 +2447,10 @@ msgstr "Kontrol ediliyor"
 msgid "Checking {serverName}"
 msgstr "{serverName} kontrol ediliyor"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Checking connection..."
+msgstr "Bağlantı kontrol ediliyor..."
+
 #: src/mobile/views/DesktopsView.tsx
 msgid "Checking host…"
 msgstr "Ana makine kontrol ediliyor…"
@@ -2610,6 +2614,15 @@ msgstr "Chrome"
 msgid "Chrome Control"
 msgstr "Chrome Denetimi"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Chrome extension"
+msgstr "Chrome uzantısı"
+
+#: src/renderer/i18n/sharedMessages.ts
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Chrome extension files are unavailable. Reinstall or update Poracode to restore them."
+msgstr "Chrome uzantısı dosyaları kullanılamıyor. Dosyaları geri yüklemek için Poracode'u yeniden yükleyin veya güncelleyin."
+
 #: src/renderer/components/composer/composerMcpServers.ts
 msgid "Chrome MCP enabled for this thread"
 msgstr "Bu konu için Chrome MCP etkinleştirildi"
@@ -2708,6 +2721,10 @@ msgstr "CLI kancaları"
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "Click a shortcut to record a new key, or ＋ to add another."
 msgstr "Yeni bir tuş kaydetmek için bir kısayola tıklayın veya başka bir tane eklemek için ＋ simgesine tıklayın."
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Click Load unpacked and select the extension folder shown below."
+msgstr "Paketlenmemiş öğe yükle'ye tıklayın ve aşağıda gösterilen uzantı klasörünü seçin."
 
 #: src/mobile/views/ManageProjectsView.tsx
 #: src/renderer/views/MainView/parts/CreateProject/CloneProjectModal.tsx
@@ -3331,6 +3348,10 @@ msgstr "Bağlan"
 #~ msgid "Connect a server"
 #~ msgstr "Bir sunucuya bağlan"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Connect agents to your existing Chrome tabs and signed-in sessions."
+msgstr "Ajanları mevcut Chrome sekmelerinize ve açık oturumlarınıza bağlayın."
+
 #: src/renderer/actions/prAutomationActions.ts
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/PrWatchControls.tsx
 msgid "Connect an agent before watching PRs."
@@ -3370,6 +3391,7 @@ msgstr "OpenCode'un kullanabileceği yapay zeka sağlayıcılarını buradan ba�
 
 #: src/renderer/components/mcp/McpServersManager.tsx
 #: src/renderer/components/plugins/PluginDetail.tsx
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
 msgid "Connected"
 msgstr "Bağlı"
 
@@ -4936,6 +4958,10 @@ msgstr "{tierLabel} efor düzeyini etkinleştir"
 #: src/renderer/components/mcp/McpServersManager.tsx
 msgid "Enable {tool}"
 msgstr "{tool} aracını etkinleştir"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Enable Developer mode."
+msgstr "Geliştirici modunu etkinleştirin."
 
 #: src/renderer/views/SettingsOverlay/parts/GeneralSettings.tsx
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
@@ -8779,6 +8805,10 @@ msgstr "Git deposu değil"
 #~ msgid "Not available for remote threads"
 #~ msgstr "Uzak konular için kullanılamaz"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Not connected"
+msgstr "Bağlı değil"
+
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeRows.tsx
 msgid "Not detected on this machine yet."
 msgstr "Bu makinede henüz algılanmadı."
@@ -8958,6 +8988,10 @@ msgstr "{0} aç"
 msgid "Open {label}"
 msgstr "{label} öğesini aç"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Open <0>chrome://extensions</0> in the signed-in Chrome profile you want agents to use."
+msgstr "Ajanların kullanmasını istediğiniz, oturum açılmış Chrome profilinde <0>chrome://extensions</0> adresini açın."
+
 #: src/renderer/commands/registry.ts
 msgid "Open a new browser tab"
 msgstr "Yeni bir tarayıcı sekmesi aç"
@@ -9035,6 +9069,10 @@ msgstr "Deneyi aç"
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Open experiment board"
 msgstr "Deney panosunu aç"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Open extension folder"
+msgstr "Uzantı klasörünü aç"
 
 #: src/renderer/commands/registry.ts
 msgid "Open File"
@@ -14083,6 +14121,10 @@ msgstr "Sayfaya yazın (önce bir alana dokunun)"
 msgid "Unable to authenticate {0}."
 msgstr "{0} kimlik doğrulaması yapılamıyor."
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Unable to check Chrome extension status."
+msgstr "Chrome uzantısının durumu kontrol edilemedi."
+
 #. placeholder {0}: friendlyError(error)
 #: src/renderer/actions/experimentDecisionActions.ts
 msgid "Unable to compare candidates: {0}"
@@ -14180,6 +14222,11 @@ msgstr "{0} oturum açma işlemi açılamıyor."
 #: src/renderer/commands/registry.ts
 msgid "Unable to open file"
 msgstr "Dosya açılamıyor"
+
+#: src/renderer/i18n/sharedMessages.ts
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Unable to open the Chrome extension folder."
+msgstr "Chrome uzantısının klasörü açılamadı."
 
 #: src/mobile/routeComponents.tsx
 #: src/mobile/useRemoteDesktop.ts

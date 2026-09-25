@@ -27,6 +27,8 @@ export interface ChromeToolContext {
   allowEval: boolean;
   allowDataAccess: boolean;
   disabledTools?: readonly string[];
+  /** Stable app-managed directory the user selects in Chrome's Load unpacked dialog. */
+  extensionPath?: string | null;
   /** Calling thread + task title (from the MCP URL) — the workspace tab joins a
    *  per-thread tab group named after the task. */
   threadId?: string;
@@ -100,7 +102,12 @@ export async function dispatchChromeTool(
     if (!conn) {
       return {
         connected: false,
-        hint: "The Poracode Chrome extension is not connected. Ask the user to install/enable it — it auto-connects when Poracode is running — and confirm its popup shows Connected.",
+        hint: "The Poracode Chrome extension is not connected. Open Poracode Settings > Browser > Chrome extension for the extension folder and setup instructions. In the Chrome profile you want agents to use, open chrome://extensions, enable Developer mode, click Load unpacked, and select that folder. Keep Poracode running and confirm the popup shows Connected. No Chrome Web Store search is needed.",
+        installation: {
+          extensionPath: ctx.extensionPath ?? null,
+          extensionsPage: "chrome://extensions",
+          settingsPage: "Settings > Browser > Chrome extension",
+        },
       };
     }
     return conn.status();
@@ -118,7 +125,7 @@ export async function dispatchChromeTool(
   if (!conn) {
     return {
       error:
-        "The Poracode Chrome extension is not connected. Ask the user to install/enable it (it auto-connects), then retry chrome_status.",
+        "The Poracode Chrome extension is not connected. Call chrome.status for the local extension folder and Load unpacked instructions, or open Poracode Settings > Browser > Chrome extension.",
     };
   }
 

@@ -23,6 +23,7 @@ export type ChromeMcpIngressInfo = StreamableHttpMcpIngressInfo;
 export class ChromeMcpIngress {
   private allowEval = false;
   private allowDataAccess = false;
+  private extensionPath: string | null = null;
   private readonly activeSessions = new Set<string>();
   private getConnection: (() => ExternalChromeConnection | null) | null = null;
   private readonly ingress = new StreamableHttpMcpIngress<ChromeToolContext>({
@@ -41,6 +42,10 @@ export class ChromeMcpIngress {
 
   setConnectionAccessor(getter: () => ExternalChromeConnection | null): void {
     this.getConnection = getter;
+  }
+
+  setExtensionPath(extensionPath: string | null): void {
+    this.extensionPath = extensionPath;
   }
 
   setAllowEval(allow: boolean): void {
@@ -68,6 +73,7 @@ export class ChromeMcpIngress {
     const sessionId = identity.threadId ?? "unscoped";
     return {
       connection: this.getConnection?.() ?? null,
+      extensionPath: this.extensionPath,
       disabledTools: (identity.disabledTools ?? []).map(normalizeChromeToolName),
       allowEval: this.allowEval,
       allowDataAccess: this.allowDataAccess,

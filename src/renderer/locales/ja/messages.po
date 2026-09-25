@@ -2446,6 +2446,10 @@ msgstr "確認中"
 msgid "Checking {serverName}"
 msgstr "{serverName} を確認中"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Checking connection..."
+msgstr "接続を確認中..."
+
 #: src/mobile/views/DesktopsView.tsx
 msgid "Checking host…"
 msgstr "ホストを確認中…"
@@ -2609,6 +2613,15 @@ msgstr "Chrome"
 msgid "Chrome Control"
 msgstr "Chrome 操作"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Chrome extension"
+msgstr "Chrome 拡張機能"
+
+#: src/renderer/i18n/sharedMessages.ts
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Chrome extension files are unavailable. Reinstall or update Poracode to restore them."
+msgstr "Chrome 拡張機能のファイルが見つかりません。Poracode を再インストールまたは更新して復元してください。"
+
 #: src/renderer/components/composer/composerMcpServers.ts
 msgid "Chrome MCP enabled for this thread"
 msgstr "このスレッドに対して Chrome MCP が有効になっています"
@@ -2707,6 +2720,10 @@ msgstr "CLIフック"
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "Click a shortcut to record a new key, or ＋ to add another."
 msgstr "ショートカットをクリックして新しいキーを記録するか、＋で別のキーを追加します。"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Click Load unpacked and select the extension folder shown below."
+msgstr "「パッケージ化されていない拡張機能を読み込む」をクリックし、以下に表示されている拡張機能フォルダーを選択してください。"
 
 #: src/mobile/views/ManageProjectsView.tsx
 #: src/renderer/views/MainView/parts/CreateProject/CloneProjectModal.tsx
@@ -3330,6 +3347,10 @@ msgstr "接続"
 #~ msgid "Connect a server"
 #~ msgstr "サーバーに接続"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Connect agents to your existing Chrome tabs and signed-in sessions."
+msgstr "エージェントを既存の Chrome タブやログイン済みのセッションに接続します。"
+
 #: src/renderer/actions/prAutomationActions.ts
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/PrWatchControls.tsx
 msgid "Connect an agent before watching PRs."
@@ -3369,6 +3390,7 @@ msgstr "OpenCode が使用できる AI プロバイダーをここで接続し�
 
 #: src/renderer/components/mcp/McpServersManager.tsx
 #: src/renderer/components/plugins/PluginDetail.tsx
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
 msgid "Connected"
 msgstr "接続済み"
 
@@ -4935,6 +4957,10 @@ msgstr "{tierLabel}の推論レベルを有効化"
 #: src/renderer/components/mcp/McpServersManager.tsx
 msgid "Enable {tool}"
 msgstr "{tool} を有効にする"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Enable Developer mode."
+msgstr "デベロッパー モードを有効にしてください。"
 
 #: src/renderer/views/SettingsOverlay/parts/GeneralSettings.tsx
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
@@ -8777,6 +8803,10 @@ msgstr "Git リポジトリではありません"
 #~ msgid "Not available for remote threads"
 #~ msgstr "リモートスレッドでは利用できません"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Not connected"
+msgstr "未接続"
+
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeRows.tsx
 msgid "Not detected on this machine yet."
 msgstr "このマシンではまだ検出されていません。"
@@ -8956,6 +8986,10 @@ msgstr "{0} を開く"
 msgid "Open {label}"
 msgstr "{label}を開く"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Open <0>chrome://extensions</0> in the signed-in Chrome profile you want agents to use."
+msgstr "エージェントに使用させたいログイン済みの Chrome プロフィールで <0>chrome://extensions</0> を開いてください。"
+
 #: src/renderer/commands/registry.ts
 msgid "Open a new browser tab"
 msgstr "新しいブラウザタブを開く"
@@ -9033,6 +9067,10 @@ msgstr "実験を開く"
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Open experiment board"
 msgstr "実験ボードを開く"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Open extension folder"
+msgstr "拡張機能フォルダーを開く"
 
 #: src/renderer/commands/registry.ts
 msgid "Open File"
@@ -14081,6 +14119,10 @@ msgstr "ページに入力（先にフィールドをタップ）"
 msgid "Unable to authenticate {0}."
 msgstr "{0}を認証できません。"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Unable to check Chrome extension status."
+msgstr "Chrome 拡張機能の状態を確認できませんでした。"
+
 #. placeholder {0}: friendlyError(error)
 #: src/renderer/actions/experimentDecisionActions.ts
 msgid "Unable to compare candidates: {0}"
@@ -14178,6 +14220,11 @@ msgstr "{0}ログインを開けません。"
 #: src/renderer/commands/registry.ts
 msgid "Unable to open file"
 msgstr "ファイルを開けません"
+
+#: src/renderer/i18n/sharedMessages.ts
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Unable to open the Chrome extension folder."
+msgstr "Chrome 拡張機能のフォルダーを開けませんでした。"
 
 #: src/mobile/routeComponents.tsx
 #: src/mobile/useRemoteDesktop.ts
