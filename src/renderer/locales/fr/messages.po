@@ -2447,6 +2447,10 @@ msgstr "Vérification"
 msgid "Checking {serverName}"
 msgstr "Vérification de {serverName}"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Checking connection..."
+msgstr "Vérification de la connexion..."
+
 #: src/mobile/views/DesktopsView.tsx
 msgid "Checking host…"
 msgstr "Vérification de l’hôte…"
@@ -2610,6 +2614,15 @@ msgstr "Chrome"
 msgid "Chrome Control"
 msgstr "Contrôle de Chrome"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Chrome extension"
+msgstr "Extension Chrome"
+
+#: src/renderer/i18n/sharedMessages.ts
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Chrome extension files are unavailable. Reinstall or update Poracode to restore them."
+msgstr "Les fichiers de l’extension Chrome sont indisponibles. Réinstallez ou mettez à jour Poracode pour les restaurer."
+
 #: src/renderer/components/composer/composerMcpServers.ts
 msgid "Chrome MCP enabled for this thread"
 msgstr "MCP Chrome activé pour ce fil de discussion"
@@ -2708,6 +2721,10 @@ msgstr "Hooks CLI"
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "Click a shortcut to record a new key, or ＋ to add another."
 msgstr "Cliquez sur un raccourci pour enregistrer une nouvelle touche, ou sur ＋ pour en ajouter un autre."
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Click Load unpacked and select the extension folder shown below."
+msgstr "Cliquez sur Charger l’extension non empaquetée et sélectionnez le dossier de l’extension indiqué ci-dessous."
 
 #: src/mobile/views/ManageProjectsView.tsx
 #: src/renderer/views/MainView/parts/CreateProject/CloneProjectModal.tsx
@@ -3331,6 +3348,10 @@ msgstr "Connecter"
 #~ msgid "Connect a server"
 #~ msgstr "Connecter un serveur"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Connect agents to your existing Chrome tabs and signed-in sessions."
+msgstr "Connectez les agents à vos onglets Chrome existants et à vos sessions déjà authentifiées."
+
 #: src/renderer/actions/prAutomationActions.ts
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/PrWatchControls.tsx
 msgid "Connect an agent before watching PRs."
@@ -3370,6 +3391,7 @@ msgstr "Connectez ici les fournisseurs d'IA qu'OpenCode peut utiliser et déconn
 
 #: src/renderer/components/mcp/McpServersManager.tsx
 #: src/renderer/components/plugins/PluginDetail.tsx
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
 msgid "Connected"
 msgstr "Connecté"
 
@@ -4936,6 +4958,10 @@ msgstr "Activer l'effort {tierLabel}"
 #: src/renderer/components/mcp/McpServersManager.tsx
 msgid "Enable {tool}"
 msgstr "Activer {tool}"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Enable Developer mode."
+msgstr "Activez le mode développeur."
 
 #: src/renderer/views/SettingsOverlay/parts/GeneralSettings.tsx
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
@@ -8778,6 +8804,10 @@ msgstr "Pas un dépôt Git"
 #~ msgid "Not available for remote threads"
 #~ msgstr "Indisponible pour les fils de discussion distants"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Not connected"
+msgstr "Non connecté"
+
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeRows.tsx
 msgid "Not detected on this machine yet."
 msgstr "Pas encore détecté sur cette machine."
@@ -8957,6 +8987,10 @@ msgstr "Ouvrir {0}"
 msgid "Open {label}"
 msgstr "Ouvrir {label}"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Open <0>chrome://extensions</0> in the signed-in Chrome profile you want agents to use."
+msgstr "Ouvrez <0>chrome://extensions</0> dans le profil Chrome connecté que vous souhaitez que les agents utilisent."
+
 #: src/renderer/commands/registry.ts
 msgid "Open a new browser tab"
 msgstr "Ouvrir un nouvel onglet du navigateur"
@@ -9034,6 +9068,10 @@ msgstr "Ouvrir l’expérience"
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Open experiment board"
 msgstr "Ouvrir le tableau de l’expérience"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Open extension folder"
+msgstr "Ouvrir le dossier de l’extension"
 
 #: src/renderer/commands/registry.ts
 msgid "Open File"
@@ -14082,6 +14120,10 @@ msgstr "Saisir dans la page (touchez d'abord un champ)"
 msgid "Unable to authenticate {0}."
 msgstr "Impossible d'authentifier {0}."
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Unable to check Chrome extension status."
+msgstr "Impossible de vérifier l’état de l’extension Chrome."
+
 #. placeholder {0}: friendlyError(error)
 #: src/renderer/actions/experimentDecisionActions.ts
 msgid "Unable to compare candidates: {0}"
@@ -14179,6 +14221,11 @@ msgstr "Impossible d'ouvrir la connexion {0}."
 #: src/renderer/commands/registry.ts
 msgid "Unable to open file"
 msgstr "Impossible d'ouvrir le fichier"
+
+#: src/renderer/i18n/sharedMessages.ts
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Unable to open the Chrome extension folder."
+msgstr "Impossible d’ouvrir le dossier de l’extension Chrome."
 
 #: src/mobile/routeComponents.tsx
 #: src/mobile/useRemoteDesktop.ts

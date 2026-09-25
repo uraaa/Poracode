@@ -2447,6 +2447,10 @@ msgstr "正在检查"
 msgid "Checking {serverName}"
 msgstr "正在检查 {serverName}"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Checking connection..."
+msgstr "正在检查连接..."
+
 #: src/mobile/views/DesktopsView.tsx
 msgid "Checking host…"
 msgstr "正在检查主机…"
@@ -2610,6 +2614,15 @@ msgstr "Chrome"
 msgid "Chrome Control"
 msgstr "Chrome 控制"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Chrome extension"
+msgstr "Chrome 扩展程序"
+
+#: src/renderer/i18n/sharedMessages.ts
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Chrome extension files are unavailable. Reinstall or update Poracode to restore them."
+msgstr "Chrome 扩展程序文件不可用。请重新安装或更新 Poracode 以恢复这些文件。"
+
 #: src/renderer/components/composer/composerMcpServers.ts
 msgid "Chrome MCP enabled for this thread"
 msgstr "为此线程启用 Chrome MCP"
@@ -2708,6 +2721,10 @@ msgstr "CLI 挂钩"
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "Click a shortcut to record a new key, or ＋ to add another."
 msgstr "点击快捷键以录制新的按键，或点击 ＋ 添加另一个。"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Click Load unpacked and select the extension folder shown below."
+msgstr "点击“加载已解压的扩展程序”，然后选择下方显示的扩展程序文件夹。"
 
 #: src/mobile/views/ManageProjectsView.tsx
 #: src/renderer/views/MainView/parts/CreateProject/CloneProjectModal.tsx
@@ -3331,6 +3348,10 @@ msgstr "连接"
 #~ msgid "Connect a server"
 #~ msgstr "连接服务器"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Connect agents to your existing Chrome tabs and signed-in sessions."
+msgstr "将智能体连接到现有的 Chrome 标签页和已登录的会话。"
+
 #: src/renderer/actions/prAutomationActions.ts
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/PrWatchControls.tsx
 msgid "Connect an agent before watching PRs."
@@ -3370,6 +3391,7 @@ msgstr "在此连接 OpenCode 可使用的 AI 提供商，并退出登录。"
 
 #: src/renderer/components/mcp/McpServersManager.tsx
 #: src/renderer/components/plugins/PluginDetail.tsx
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
 msgid "Connected"
 msgstr "已连接"
 
@@ -4936,6 +4958,10 @@ msgstr "启用{tierLabel}级别"
 #: src/renderer/components/mcp/McpServersManager.tsx
 msgid "Enable {tool}"
 msgstr "启用 {tool}"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Enable Developer mode."
+msgstr "启用开发者模式。"
 
 #: src/renderer/views/SettingsOverlay/parts/GeneralSettings.tsx
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
@@ -8778,6 +8804,10 @@ msgstr "不是 Git 存储库"
 #~ msgid "Not available for remote threads"
 #~ msgstr "远程线程不可用"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Not connected"
+msgstr "未连接"
+
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeRows.tsx
 msgid "Not detected on this machine yet."
 msgstr "尚未在此设备上检测到。"
@@ -8957,6 +8987,10 @@ msgstr "打开 {0}"
 msgid "Open {label}"
 msgstr "打开{label}"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Open <0>chrome://extensions</0> in the signed-in Chrome profile you want agents to use."
+msgstr "在您希望智能体使用的已登录 Chrome 个人资料中打开 <0>chrome://extensions</0>。"
+
 #: src/renderer/commands/registry.ts
 msgid "Open a new browser tab"
 msgstr "在浏览器中打开新选项卡"
@@ -9034,6 +9068,10 @@ msgstr "打开实验"
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Open experiment board"
 msgstr "打开实验面板"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Open extension folder"
+msgstr "打开扩展程序文件夹"
 
 #: src/renderer/commands/registry.ts
 msgid "Open File"
@@ -14082,6 +14120,10 @@ msgstr "在页面中输入（请先点按一个字段）"
 msgid "Unable to authenticate {0}."
 msgstr "无法验证{0}。"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Unable to check Chrome extension status."
+msgstr "无法检查 Chrome 扩展程序状态。"
+
 #. placeholder {0}: friendlyError(error)
 #: src/renderer/actions/experimentDecisionActions.ts
 msgid "Unable to compare candidates: {0}"
@@ -14179,6 +14221,11 @@ msgstr "无法打开{0}登录。"
 #: src/renderer/commands/registry.ts
 msgid "Unable to open file"
 msgstr "无法打开文件"
+
+#: src/renderer/i18n/sharedMessages.ts
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Unable to open the Chrome extension folder."
+msgstr "无法打开 Chrome 扩展程序文件夹。"
 
 #: src/mobile/routeComponents.tsx
 #: src/mobile/useRemoteDesktop.ts

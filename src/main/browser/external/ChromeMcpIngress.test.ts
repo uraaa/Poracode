@@ -25,6 +25,23 @@ afterEach(() => {
 });
 
 describe("ChromeMcpIngress", () => {
+  it("exposes the prepared directory through the real MCP status response", async () => {
+    ingress = new ChromeMcpIngress();
+    ingress.setExtensionPath("C:\\Users\\fixture\\.poracode\\chrome-extension");
+    const info = await ingress.start();
+    const response = await postMcp(info, {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name: "status", arguments: {} },
+    });
+    const body = (await response.json()) as { result: { content: Array<{ text: string }> } };
+    const status = JSON.parse(body.result.content[0]!.text);
+    expect(status).toMatchObject({
+      connected: false,
+      installation: { extensionPath: "C:\\Users\\fixture\\.poracode\\chrome-extension" },
+    });
+  });
   it.each(["chrome_click", "click"])(
     "enforces disabled %s across aliases and batches",
     async (disabled) => {

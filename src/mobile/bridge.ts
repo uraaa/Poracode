@@ -305,6 +305,9 @@ const remoteBridgeOverrides = {
   // the desktop's built-in browser through the remote command API. The state
   // they read arrives via runBrowserCommand/the mirror watch stream.
   browserGetState: () => requireClient().browserState(),
+  browserGetChromeExtensionStatus: () =>
+    Promise.resolve({ connected: false, extensionPath: null, extensionVersion: null }),
+  browserOpenChromeExtensionFolder: () => Promise.resolve(),
   browserCreateTab: async (payload: {
     url?: string;
     activate?: boolean;

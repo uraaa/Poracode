@@ -2447,6 +2447,10 @@ msgstr "Перевірка"
 msgid "Checking {serverName}"
 msgstr "Перевірка {serverName}"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Checking connection..."
+msgstr "Перевірка підключення..."
+
 #: src/mobile/views/DesktopsView.tsx
 msgid "Checking host…"
 msgstr "Перевірка хоста…"
@@ -2610,6 +2614,15 @@ msgstr "Chrome"
 msgid "Chrome Control"
 msgstr "Керування Chrome"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Chrome extension"
+msgstr "Розширення Chrome"
+
+#: src/renderer/i18n/sharedMessages.ts
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Chrome extension files are unavailable. Reinstall or update Poracode to restore them."
+msgstr "Файли розширення Chrome недоступні. Перевстановіть або оновіть Poracode, щоб відновити їх."
+
 #: src/renderer/components/composer/composerMcpServers.ts
 msgid "Chrome MCP enabled for this thread"
 msgstr "Chrome MCP увімкнено для цього треду"
@@ -2708,6 +2721,10 @@ msgstr "Хуки CLI"
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "Click a shortcut to record a new key, or ＋ to add another."
 msgstr "Натисніть комбінацію клавіш, щоб записати нову клавішу, або ＋, щоб додати ще одну."
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Click Load unpacked and select the extension folder shown below."
+msgstr "Натисніть «Завантажити розпаковане розширення» та виберіть папку розширення, указану нижче."
 
 #: src/mobile/views/ManageProjectsView.tsx
 #: src/renderer/views/MainView/parts/CreateProject/CloneProjectModal.tsx
@@ -3331,6 +3348,10 @@ msgstr "Підключити"
 #~ msgid "Connect a server"
 #~ msgstr "Підключити сервер"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Connect agents to your existing Chrome tabs and signed-in sessions."
+msgstr "Підключіть агентів до відкритих вкладок Chrome і сеансів із виконаним входом."
+
 #: src/renderer/actions/prAutomationActions.ts
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/PrWatchControls.tsx
 msgid "Connect an agent before watching PRs."
@@ -3370,6 +3391,7 @@ msgstr "Підключайте постачальників AI, які може 
 
 #: src/renderer/components/mcp/McpServersManager.tsx
 #: src/renderer/components/plugins/PluginDetail.tsx
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
 msgid "Connected"
 msgstr "Підключено"
 
@@ -4936,6 +4958,10 @@ msgstr "Увімкнути рівень зусиль {tierLabel}"
 #: src/renderer/components/mcp/McpServersManager.tsx
 msgid "Enable {tool}"
 msgstr "Увімкнути {tool}"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Enable Developer mode."
+msgstr "Увімкніть режим розробника."
 
 #: src/renderer/views/SettingsOverlay/parts/GeneralSettings.tsx
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
@@ -8779,6 +8805,10 @@ msgstr "Не репозиторій Git"
 #~ msgid "Not available for remote threads"
 #~ msgstr "Недоступно для віддалених тредів"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Not connected"
+msgstr "Не підключено"
+
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeRows.tsx
 msgid "Not detected on this machine yet."
 msgstr "На цьому комп’ютері ще не виявлено."
@@ -8958,6 +8988,10 @@ msgstr "Відкрити {0}"
 msgid "Open {label}"
 msgstr "Відкрити {label}"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Open <0>chrome://extensions</0> in the signed-in Chrome profile you want agents to use."
+msgstr "Відкрийте <0>chrome://extensions</0> у профілі Chrome із виконаним входом, який мають використовувати агенти."
+
 #: src/renderer/commands/registry.ts
 msgid "Open a new browser tab"
 msgstr "Відкрити нову вкладку браузера"
@@ -9035,6 +9069,10 @@ msgstr "Відкрити експеримент"
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Open experiment board"
 msgstr "Відкрити дошку експерименту"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Open extension folder"
+msgstr "Відкрити папку розширення"
 
 #: src/renderer/commands/registry.ts
 msgid "Open File"
@@ -14083,6 +14121,10 @@ msgstr "Вводите на странице (сначала коснитесь 
 msgid "Unable to authenticate {0}."
 msgstr "Не вдалося автентифікувати {0}."
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Unable to check Chrome extension status."
+msgstr "Не вдалося перевірити стан розширення Chrome."
+
 #. placeholder {0}: friendlyError(error)
 #: src/renderer/actions/experimentDecisionActions.ts
 msgid "Unable to compare candidates: {0}"
@@ -14180,6 +14222,11 @@ msgstr "Не вдалося відкрити вхід у {0}."
 #: src/renderer/commands/registry.ts
 msgid "Unable to open file"
 msgstr "Не вдалося відкрити файл"
+
+#: src/renderer/i18n/sharedMessages.ts
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Unable to open the Chrome extension folder."
+msgstr "Не вдалося відкрити папку розширення Chrome."
 
 #: src/mobile/routeComponents.tsx
 #: src/mobile/useRemoteDesktop.ts

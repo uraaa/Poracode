@@ -11,6 +11,13 @@ import { i18n } from "./i18n";
  * arguments resolved with the values passed to `msg()`.
  */
 const SHARED_MESSAGE_DESCRIPTORS: Record<MessageKey, MessageDescriptor> = {
+  "browser.chromeExtensionUnavailable": msg({
+    message:
+      "Chrome extension files are unavailable. Reinstall or update Poracode to restore them.",
+  }),
+  "browser.chromeExtensionOpenFailed": msg({
+    message: "Unable to open the Chrome extension folder.",
+  }),
   "voice.unavailable": msg({ message: "Live voice is unavailable for this thread." }),
   "voice.alreadyConnected": msg({ message: "A voice conversation is already active." }),
   "voice.subscriptionRequired": msg({

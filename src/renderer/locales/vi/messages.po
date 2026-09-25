@@ -2447,6 +2447,10 @@ msgstr "Đang kiểm tra"
 msgid "Checking {serverName}"
 msgstr "Đang kiểm tra {serverName}"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Checking connection..."
+msgstr "Đang kiểm tra kết nối..."
+
 #: src/mobile/views/DesktopsView.tsx
 msgid "Checking host…"
 msgstr "Đang kiểm tra máy chủ…"
@@ -2610,6 +2614,15 @@ msgstr "Chrome"
 msgid "Chrome Control"
 msgstr "Điều khiển Chrome"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Chrome extension"
+msgstr "Tiện ích Chrome"
+
+#: src/renderer/i18n/sharedMessages.ts
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Chrome extension files are unavailable. Reinstall or update Poracode to restore them."
+msgstr "Không có tệp tiện ích Chrome. Hãy cài đặt lại hoặc cập nhật Poracode để khôi phục các tệp này."
+
 #: src/renderer/components/composer/composerMcpServers.ts
 msgid "Chrome MCP enabled for this thread"
 msgstr "Đã bật Chrome MCP cho chủ đề này"
@@ -2708,6 +2721,10 @@ msgstr "Hook CLI"
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "Click a shortcut to record a new key, or ＋ to add another."
 msgstr "Nhấp vào một phím tắt để ghi lại phím mới, hoặc ＋ để thêm phím khác."
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Click Load unpacked and select the extension folder shown below."
+msgstr "Nhấp vào Tải tiện ích đã giải nén và chọn thư mục tiện ích hiển thị bên dưới."
 
 #: src/mobile/views/ManageProjectsView.tsx
 #: src/renderer/views/MainView/parts/CreateProject/CloneProjectModal.tsx
@@ -3331,6 +3348,10 @@ msgstr "Kết nối"
 #~ msgid "Connect a server"
 #~ msgstr "Kết nối máy chủ"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Connect agents to your existing Chrome tabs and signed-in sessions."
+msgstr "Kết nối các tác nhân với các thẻ Chrome hiện có và các phiên đã đăng nhập của bạn."
+
 #: src/renderer/actions/prAutomationActions.ts
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/PrWatchControls.tsx
 msgid "Connect an agent before watching PRs."
@@ -3370,6 +3391,7 @@ msgstr "Kết nối các nhà cung cấp AI mà OpenCode có thể dùng và đ�
 
 #: src/renderer/components/mcp/McpServersManager.tsx
 #: src/renderer/components/plugins/PluginDetail.tsx
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
 msgid "Connected"
 msgstr "Đã kết nối"
 
@@ -4936,6 +4958,10 @@ msgstr "Bật mức nỗ lực {tierLabel}"
 #: src/renderer/components/mcp/McpServersManager.tsx
 msgid "Enable {tool}"
 msgstr "Bật {tool}"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Enable Developer mode."
+msgstr "Bật chế độ dành cho nhà phát triển."
 
 #: src/renderer/views/SettingsOverlay/parts/GeneralSettings.tsx
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
@@ -8779,6 +8805,10 @@ msgstr "Không phải kho lưu trữ Git"
 #~ msgid "Not available for remote threads"
 #~ msgstr "Không khả dụng cho luồng từ xa"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Not connected"
+msgstr "Chưa kết nối"
+
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeRows.tsx
 msgid "Not detected on this machine yet."
 msgstr "Chưa được phát hiện trên máy này."
@@ -8958,6 +8988,10 @@ msgstr "Mở {0}"
 msgid "Open {label}"
 msgstr "Mở {label}"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Open <0>chrome://extensions</0> in the signed-in Chrome profile you want agents to use."
+msgstr "Mở <0>chrome://extensions</0> trong hồ sơ Chrome đã đăng nhập mà bạn muốn các tác nhân sử dụng."
+
 #: src/renderer/commands/registry.ts
 msgid "Open a new browser tab"
 msgstr "Mở tab trình duyệt mới"
@@ -9035,6 +9069,10 @@ msgstr "Mở thử nghiệm"
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Open experiment board"
 msgstr "Mở bảng thử nghiệm"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Open extension folder"
+msgstr "Mở thư mục tiện ích"
 
 #: src/renderer/commands/registry.ts
 msgid "Open File"
@@ -14083,6 +14121,10 @@ msgstr "Nhập vào trang (chạm vào trường trước)"
 msgid "Unable to authenticate {0}."
 msgstr "Không thể xác thực {0}."
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Unable to check Chrome extension status."
+msgstr "Không thể kiểm tra trạng thái tiện ích Chrome."
+
 #. placeholder {0}: friendlyError(error)
 #: src/renderer/actions/experimentDecisionActions.ts
 msgid "Unable to compare candidates: {0}"
@@ -14180,6 +14222,11 @@ msgstr "Không thể mở đăng nhập {0}."
 #: src/renderer/commands/registry.ts
 msgid "Unable to open file"
 msgstr "Không thể mở tập tin"
+
+#: src/renderer/i18n/sharedMessages.ts
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Unable to open the Chrome extension folder."
+msgstr "Không thể mở thư mục tiện ích Chrome."
 
 #: src/mobile/routeComponents.tsx
 #: src/mobile/useRemoteDesktop.ts

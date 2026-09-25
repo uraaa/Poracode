@@ -1,5 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
+import { msg } from "@/shared/messages";
 import {
   app,
   clipboard,
@@ -81,6 +82,7 @@ import {
   defineMainLocalIpcHandlers,
   IPC_EVENT_CHANNELS,
   type MainLocalIpcHandlerMap,
+  type ChromeExtensionStatus,
   type RemoteAccessTailscaleStatus,
   type StartTailscaleResult,
   type WindowChromePayload,
@@ -116,6 +118,7 @@ import {
 interface CreateLocalIpcHandlersOptions {
   getMainWindow(): BrowserWindow | null;
   getBrowserPanelManager(): BrowserPanelManager | null;
+  getChromeExtensionStatus?(): ChromeExtensionStatus;
   getRemoteAccessServer(): RemoteAccessServer | null;
   setRemoteAccessEnabled(enabled: boolean): Promise<RemoteAccessPairingInfo>;
   getRemoteAccessTailscaleStatus(): Promise<RemoteAccessTailscaleStatus>;
@@ -599,6 +602,18 @@ export function createLocalIpcHandlers(
     checkForUpdate: () => options.autoUpdater.checkForUpdate(),
     startUpdateDownload: () => options.autoUpdater.startUpdateDownload(),
     installUpdate: () => options.autoUpdater.installUpdate(),
+    browserGetChromeExtensionStatus: () =>
+      options.getChromeExtensionStatus?.() ?? {
+        connected: false,
+        extensionPath: null,
+        extensionVersion: null,
+      },
+    browserOpenChromeExtensionFolder: async () => {
+      const extensionPath = options.getChromeExtensionStatus?.().extensionPath;
+      if (!extensionPath) throw new Error(msg("browser.chromeExtensionUnavailable"));
+      const error = await shell.openPath(extensionPath);
+      if (error) throw new Error(msg("browser.chromeExtensionOpenFailed"));
+    },
     browserGetState: () => requireBrowserPanel(options.getBrowserPanelManager).snapshot(),
     browserCreateTab: (payload) =>
       requireBrowserPanel(options.getBrowserPanelManager).createTab({

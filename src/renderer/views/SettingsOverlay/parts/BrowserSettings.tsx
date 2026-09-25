@@ -6,6 +6,7 @@ import { useSharedSettings } from "@/renderer/state/sharedSettingsStore";
 import type { BrowserLinkOpenTarget, BrowserLinkPresentationMode } from "@/shared/settings";
 import { SettingRow, SettingsPage } from "./SettingsForm";
 import { useLocalizedOptions } from "./settingsOptions";
+import { ChromeExtensionSettings } from "./ChromeExtensionSettings";
 
 const linkOpenTargetOptions = [
   { id: "internal", label: msg`App Browser` },
@@ -30,6 +31,7 @@ export function BrowserSettings() {
 
   return (
     <SettingsPage title={t`Browser`}>
+      <ChromeExtensionSettings />
       <SettingRow
         anchorId="browser.linkOpenTarget"
         title={t`Open links in`}

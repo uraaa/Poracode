@@ -279,6 +279,10 @@ function copyArtifactsBack(stageReleaseDir, outputDir) {
   return copied;
 }
 
+export function stageChromeExtension(stageRoot) {
+  copyDir(resolve(repoRoot, "chrome-extension"), join(stageRoot, "resources", "chrome-extension"));
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const platform = args.platform ?? detectHostPlatform();
@@ -330,6 +334,7 @@ async function main() {
     copyPackagedDist(stageRoot);
     copyDir(resolve(repoRoot, "build"), join(stageRoot, "build"));
     copyDir(resolve(repoRoot, "resources"), join(stageRoot, "resources"));
+    stageChromeExtension(stageRoot);
 
     // 4. Generate stage package.json.
     const rootPkg = JSON.parse(readFileSync(resolve(repoRoot, "package.json"), "utf8"));
@@ -444,7 +449,7 @@ function macArtifactKindFor(platform, target) {
   return platform === "mac" && target === "zip" ? "updater" : "branded";
 }
 
-function buildElectronBuilderConfig(macArtifactKind = "branded") {
+export function buildElectronBuilderConfig(macArtifactKind = "branded") {
   // Generate the staged electron-builder config with a drastically simplified
   // `files:` block — the stage's node_modules contains only the runtime
   // externals we listed, so we can include all of node_modules without dragging
@@ -489,6 +494,10 @@ ${packagedDistFilesYaml}
   - "!node_modules/{better-sqlite3,node-pty}/build/**/*.{iobj,ipdb,lib,pdb,exp}"
 
 extraResources:
+  - from: resources/chrome-extension
+    to: chrome-extension
+    filter:
+      - "**/*"
   - from: resources/computer-use-helper
     to: computer-use-helper
     filter:
@@ -593,7 +602,8 @@ npmRebuild: false
 `;
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? (error.stack ?? error.message) : error);
-  process.exit(1);
-});
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
+  main().catch((error) => {
+    console.error(error instanceof Error ? (error.stack ?? error.message) : error);
+    process.exit(1);
+  });
