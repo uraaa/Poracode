@@ -85,6 +85,8 @@ export function prepareThreadUpsertStatement(
       @activeTurnStartedAt, @lastTurnStartedAt, @lastTurnEndedAt
     )
     ON CONFLICT(id) DO UPDATE SET
+      -- A project move updates the existing row so its transcript stays attached.
+      project_id = excluded.project_id,
       -- Kept in the update set so "Move to Workspace" survives full syncs.
       workspace_id = excluded.workspace_id,
       title = excluded.title,
