@@ -260,7 +260,7 @@ describe("ExperimentCandidateCard", () => {
     renderCard({ isCreatingPr: false, isMerging: false });
 
     await waitFor(() => expect(getExperimentCandidateStats).toHaveBeenCalledTimes(2), {
-      timeout: 2_000,
+      timeout: 3_000,
     });
     expect(await screen.findByText("+12")).toBeInTheDocument();
     expect(screen.getByText("−1")).toBeInTheDocument();

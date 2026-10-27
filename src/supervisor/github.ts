@@ -41,7 +41,8 @@ import { msg as sharedMsg } from "@/shared/messages";
 // Re-export the pure mappers previously defined inline here so the module's
 // public surface stays identical for github.test.ts and bridge consumers.
 export { aggregateChecksStatus, mapGitHubApiRepo, parseGhAuthAccounts } from "./githubMappers";
-import { getProjectShellEnv, primeProjectShellEnv } from "./agents/base";
+import { getPrimedPosixEnv, getProjectShellEnv, primeProjectShellEnv } from "./agents/base";
+import { getExecutablePathCacheGeneration } from "./agents/base/processRuntime";
 import { runRepositoryCommand } from "./repositoryCommands/client";
 import { resolveClonedProjectPath } from "./git/exec";
 import type { WslBridgeClient, WslProcessExecResult } from "./wsl/bridge/client";
@@ -364,7 +365,9 @@ async function runGh(
   if ((machineReadable || scopedPosix) && location.kind === "posix") {
     await primeProjectShellEnv(location.path);
   }
-  const shellEnv = getProjectShellEnv(location.path);
+  const shellEnv =
+    getProjectShellEnv(location.path) ??
+    (location.kind === "posix" ? getPrimedPosixEnv() : undefined);
   const { stdout } = await runRepositoryCommand({
     command: "gh",
     args,
@@ -487,8 +490,13 @@ export class GitHubService {
   /** Locations whose gh install rejects the `attempt` run field. */
   private unsupportedRunAttemptFieldLocations = new Set<string>();
   private wslClient: WslBridgeClient | undefined;
+  private readonly availabilityCache = new Map<
+    string,
+    { generation: number; expiresAt: number; result: Promise<GhCheckAvailableResult> }
+  >();
 
   setWslClient(client: WslBridgeClient | undefined): void {
+    if (this.wslClient !== client) this.availabilityCache.clear();
     this.wslClient = client;
   }
 
@@ -516,7 +524,9 @@ export class GitHubService {
       throw processResultToError(result);
     }
     if (location.kind === "posix") await primeProjectShellEnv(location.path);
-    const shellEnv = getProjectShellEnv(location.path);
+    const shellEnv =
+      getProjectShellEnv(location.path) ??
+      (location.kind === "posix" ? getPrimedPosixEnv() : undefined);
     const { stdout } = await runRepositoryCommand({
       command: "git",
       args: ["remote", "-v"],
@@ -569,13 +579,18 @@ export class GitHubService {
     }
   }
 
-  async checkGhAvailable(location: ProjectLocation): Promise<GhCheckAvailableResult> {
-    try {
-      await this.runGh(location, ["--version"]);
-      return { available: true };
-    } catch {
-      return { available: false };
-    }
+  checkGhAvailable(location: ProjectLocation): Promise<GhCheckAvailableResult> {
+    const key = locationKey(location);
+    const generation = getExecutablePathCacheGeneration();
+    const cached = this.availabilityCache.get(key);
+    if (cached && cached.generation === generation && cached.expiresAt > Date.now())
+      return cached.result;
+    const result = this.runGh(location, ["--version"]).then(
+      () => ({ available: true }),
+      () => ({ available: false }),
+    );
+    this.availabilityCache.set(key, { generation, expiresAt: Date.now() + 60_000, result });
+    return result;
   }
 
   /**

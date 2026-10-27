@@ -282,7 +282,7 @@ describe("PrWatchControls", () => {
       />,
     );
 
-    await waitFor(() => expect(onRefreshPr).toHaveBeenCalledOnce());
+    await waitFor(() => expect(onRefreshPr).toHaveBeenCalledExactlyOnceWith(true));
     // Reading the watch must not rewrite it. The helper agent is kept current by
     // the app-scoped sync, so a stale model here is not this popover's to repair —
     // when it was, a watch only caught up while its PR row was on screen.

@@ -37,7 +37,7 @@ export interface UsePrWriteActionsResult {
   handleMarkPrReady: () => Promise<void>;
   handleUpdatePrBranch: (rebase?: boolean) => Promise<void>;
   /** Refetch this PR's data + details on demand (e.g. the PR block refresh icon). */
-  handleRefreshPr: () => Promise<void>;
+  handleRefreshPr: (background?: boolean) => Promise<void>;
 }
 
 /**
@@ -61,7 +61,7 @@ export function usePrWriteActions(args: UsePrWriteActionsArgs): UsePrWriteAction
   // On-demand refetch of the live PR snapshot (state, mergeability, checks) plus
   // its details. Kept separate from `pendingAction` so the refresh spinner never
   // disables the merge/close/update buttons. No-ops without a key + head branch.
-  async function handleRefreshPr(): Promise<void> {
+  async function handleRefreshPr(background = false): Promise<void> {
     if (!prKey || !branch || isRefreshing) return;
     const prNumber = getCurrentPrData()?.number;
     const detailsCacheKey = projectId && prNumber ? `${projectId}#${prNumber}` : undefined;
@@ -71,6 +71,7 @@ export function usePrWriteActions(args: UsePrWriteActionsArgs): UsePrWriteAction
         projectLocation,
         prKey,
         branch,
+        ...(background ? { background: true } : {}),
         ...(detailsCacheKey ? { detailsCacheKey } : {}),
         ...(prNumber ? { prNumber } : {}),
       });

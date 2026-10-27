@@ -14,11 +14,13 @@ const port = parentPort;
 const children = new Set<ChildProcess>();
 let cacheGeneration = -1;
 let shuttingDown = false;
+let drainOnShutdown = false;
+let activeCommands = 0;
 
 function trackChild(child: ChildProcess): void {
   children.add(child);
   child.once("close", () => children.delete(child));
-  if (shuttingDown) child.kill();
+  if (shuttingDown && !drainOnShutdown) child.kill();
 }
 
 function serializeError(error: unknown): RepositoryCommandError {
@@ -39,27 +41,41 @@ port.on("message", (request: RepositoryWorkerRequest) => {
   }
   if ("shutdown" in request) {
     shuttingDown = true;
-    for (const child of children) child.kill();
-    port.close();
+    drainOnShutdown = request.drain;
+    if (!drainOnShutdown) for (const child of children) child.kill();
+    if (!drainOnShutdown || activeCommands === 0) port.close();
     return;
   }
   if (shuttingDown) return;
   // Workers get an isolated environment snapshot at creation. Refresh it so an
   // explicit PATH/install refresh also reaches registry fallback and lookups.
-  for (const key of Object.keys(process.env)) {
-    if (!(key in request.ambientEnv)) delete process.env[key];
+  if (request.ambientEnv) {
+    for (const key of Object.keys(process.env)) {
+      if (!(key in request.ambientEnv)) delete process.env[key];
+    }
+    Object.assign(process.env, request.ambientEnv);
   }
-  Object.assign(process.env, request.ambientEnv);
   if (cacheGeneration !== request.cacheGeneration) {
     invalidateExecutablePathCache();
     cacheGeneration = request.cacheGeneration;
   }
-  void executeRepositoryCommand(request.command, trackChild).then(
-    (result) => port.postMessage({ id: request.id, result } satisfies RepositoryWorkerReply),
-    (error: unknown) =>
-      port.postMessage({
-        id: request.id,
-        error: serializeError(error),
-      } satisfies RepositoryWorkerReply),
-  );
+  activeCommands += 1;
+  void executeRepositoryCommand(request.command, trackChild)
+    .then(
+      (result) => {
+        if (!shuttingDown || drainOnShutdown)
+          port.postMessage({ id: request.id, result } satisfies RepositoryWorkerReply);
+      },
+      (error: unknown) => {
+        if (!shuttingDown || drainOnShutdown)
+          port.postMessage({
+            id: request.id,
+            error: serializeError(error),
+          } satisfies RepositoryWorkerReply);
+      },
+    )
+    .finally(() => {
+      activeCommands -= 1;
+      if (shuttingDown && activeCommands === 0) port.close();
+    });
 });

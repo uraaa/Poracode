@@ -118,7 +118,7 @@ export async function execGit(
       throw gitBridgeResultToError(bridgeResult);
     }
 
-    const env = { ...process.env, GIT_OPTIONAL_LOCKS: "0", ...(options?.env ?? {}) };
+    const env = { GIT_OPTIONAL_LOCKS: "0", ...(options?.env ?? {}) };
     const execOptions = {
       cwd: location.path,
       env,

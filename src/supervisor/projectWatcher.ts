@@ -72,7 +72,10 @@ const WSL_IGNORE_DIRS = [
   ".venv",
 ];
 
-function isKnownGitNoisePath(value: string): boolean {
+export function isKnownGitNoisePath(value: string): boolean {
+  // Checkpoints update refs and loose objects without changing the working tree.
+  // Feeding these events into status polling creates a self-sustaining refresh loop.
+  const metadataPath = value.replace(/^worktrees\/[^/]+\//, "");
   return (
     value === "FETCH_HEAD" ||
     value === "index" ||
@@ -81,8 +84,8 @@ function isKnownGitNoisePath(value: string): boolean {
     /^worktrees\/[^/]+\/index$/.test(value) ||
     /^worktrees\/[^/]+\/index\.lock$/.test(value) ||
     /^\.watchman-cookie-/.test(value) ||
-    value.startsWith("logs/") ||
-    value.startsWith("objects/")
+    /^(logs|objects)(\/|$)/.test(metadataPath) ||
+    /^refs\/(poracode|lightcode)\/checkpoints(\/|$)/.test(value)
   );
 }
 

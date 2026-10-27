@@ -119,3 +119,14 @@ it("serves an unrelated RPC while git process creation is synchronously blocked"
     port2.close();
   }
 });
+
+it("does not serialize interactive patch input to compute a background deduplication key", async () => {
+  const stringify = vi.spyOn(JSON, "stringify");
+  const command = execGit({ kind: "posix", path: process.cwd() }, ["hash-object", "--stdin"], {
+    input: "patch fixture\n".repeat(500_000),
+  });
+  const synchronousCalls = stringify.mock.calls.length;
+  stringify.mockRestore();
+  await expect(command).resolves.toMatch(/^[a-f0-9]{40}\s*$/);
+  expect(synchronousCalls).toBe(0);
+});

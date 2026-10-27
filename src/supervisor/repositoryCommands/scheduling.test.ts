@@ -3,11 +3,37 @@ import {
   getRepositoryCommandPriority,
   pollingRepositoryRequest,
   scheduleRepositoryCommand,
+  repositoryMutation,
+  getRepositoryReadEpoch,
 } from "./scheduling";
 
 const flush = () => new Promise<void>((resolve) => setImmediate(resolve));
 
 describe("repository command scheduling", () => {
+  it("reserves local background slots while a network fetch is stalled", async () => {
+    const fetch = Promise.withResolvers<string>();
+    const network = scheduleRepositoryCommand("network", "network-stall", () => fetch.promise);
+    const secondGate = Promise.withResolvers<string>();
+    const secondFetch = scheduleRepositoryCommand(
+      "network",
+      "network-wait",
+      () => secondGate.promise,
+    );
+    const started: string[] = [];
+    const locals = [1, 2].map((id) =>
+      scheduleRepositoryCommand("background", `local:${id}`, async () => {
+        started.push(String(id));
+      }),
+    );
+    await flush();
+    try {
+      expect(started).toEqual(["1", "2"]);
+    } finally {
+      fetch.resolve("first");
+      secondGate.resolve("second");
+      await Promise.all([network, secondFetch, ...locals]);
+    }
+  });
   it("runs at most two background commands and starts waiting commands in order", async () => {
     const started: number[] = [];
     const gates = Array.from({ length: 4 }, () => Promise.withResolvers<number>());
@@ -86,6 +112,39 @@ describe("repository command scheduling", () => {
 });
 
 describe("polling repository requests", () => {
+  it("evicts hung requests after30seconds and ignores their late cleanup", async () => {
+    vi.useFakeTimers();
+    try {
+      const old = Promise.withResolvers<string>();
+      const stuck = pollingRepositoryRequest("watchdog", () => old.promise).catch(
+        (error: unknown) => error,
+      );
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(await stuck).toMatchObject({ message: "Repository polling request timed out" });
+      const replacement = Promise.withResolvers<string>();
+      const task = vi.fn<() => Promise<string>>(() => replacement.promise);
+      const next = pollingRepositoryRequest("watchdog", task);
+      old.resolve("stale");
+      await vi.advanceTimersByTimeAsync(0);
+      expect(pollingRepositoryRequest("watchdog", task)).toBe(next);
+      expect(task).toHaveBeenCalledTimes(1);
+      replacement.resolve("fresh");
+      expect(await next).toBe("fresh");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("invalidates shared-worktree metadata before and after a failed mutation", async () => {
+    const initial = getRepositoryReadEpoch();
+    await expect(
+      repositoryMutation(async () => {
+        expect(getRepositoryReadEpoch()).toBeGreaterThan(initial);
+        throw new Error("partial mutation");
+      }),
+    ).rejects.toThrow("partial mutation");
+    expect(getRepositoryReadEpoch()).toBeGreaterThan(initial + 1);
+  });
   it("propagates background priority across awaits without changing concurrent interactive calls", async () => {
     expect(getRepositoryCommandPriority()).toBe("interactive");
     const gate = Promise.withResolvers<void>();

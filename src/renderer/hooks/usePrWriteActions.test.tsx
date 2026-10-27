@@ -4,13 +4,18 @@ import type { PrData } from "@/shared/contracts";
 import { useGitStore } from "@/renderer/state/gitStore";
 import { usePrWriteActions } from "./usePrWriteActions";
 
-const { bridgeMock, setPrMergeMethodMock, syncMergedPrBaseMock } = vi.hoisted(() => ({
-  bridgeMock: {
-    ghMergePr: vi.fn<() => Promise<void>>(),
-  },
-  setPrMergeMethodMock: vi.fn<(method: string) => void>(),
-  syncMergedPrBaseMock: vi.fn<(projectId: string, pr: PrData) => Promise<void>>(),
-}));
+const { bridgeMock, setPrMergeMethodMock, syncMergedPrBaseMock, refreshSinglePrMock } = vi.hoisted(
+  () => ({
+    refreshSinglePrMock: vi.fn<(params: { background?: boolean }) => Promise<null>>(
+      async () => null,
+    ),
+    bridgeMock: {
+      ghMergePr: vi.fn<() => Promise<void>>(),
+    },
+    setPrMergeMethodMock: vi.fn<(method: string) => void>(),
+    syncMergedPrBaseMock: vi.fn<(projectId: string, pr: PrData) => Promise<void>>(),
+  }),
+);
 
 vi.mock("@heroui/react", () => ({
   toast: { danger: vi.fn<(message: string) => void>() },
@@ -19,6 +24,8 @@ vi.mock("@heroui/react", () => ({
 vi.mock("@/renderer/bridge", () => ({
   readBridge: () => bridgeMock,
 }));
+
+vi.mock("@/renderer/state/gitRefresh", () => ({ refreshSinglePr: refreshSinglePrMock }));
 
 vi.mock("@/renderer/state/sharedSettingsStore", () => ({
   useSharedSettings: {
@@ -47,6 +54,24 @@ describe("usePrWriteActions", () => {
     bridgeMock.ghMergePr.mockResolvedValue(undefined);
     syncMergedPrBaseMock.mockResolvedValue(undefined);
     useGitStore.setState({ prData: { "__branchname:p1:feature": openPr } });
+  });
+
+  it("marks automatic refreshes as background while keeping manual refresh interactive", async () => {
+    const { result } = renderHook(() =>
+      usePrWriteActions({
+        projectLocation: { kind: "posix", path: "/repo" },
+        projectId: "p1",
+        prKey: "__branchname:p1:feature",
+        branch: "feature",
+        onRefresh: () => undefined,
+      }),
+    );
+    await act(() => result.current.handleRefreshPr(true));
+    expect(refreshSinglePrMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ background: true }),
+    );
+    await act(() => result.current.handleRefreshPr());
+    expect(refreshSinglePrMock.mock.calls.at(-1)?.[0].background).not.toBe(true);
   });
 
   it("syncs the base checkout after a direct merge without a matching worktree thread", async () => {

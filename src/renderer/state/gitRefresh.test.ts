@@ -167,6 +167,7 @@ describe("pending PR refresh", () => {
       configurable: true,
       value: {
         platform: "darwin",
+        dbSyncAll: vi.fn<PoracodeBridge["dbSyncAll"]>().mockResolvedValue(undefined),
         dbSetState: vi
           .fn<(key: string, value: string) => Promise<void>>()
           .mockResolvedValue(undefined),
@@ -200,7 +201,11 @@ describe("pending PR refresh", () => {
       collapsedWorktrees: {},
       threadListLimits: {},
     });
-    useAppStore.setState({ projects: [project], threads: [], view: { kind: "home" } });
+    useAppStore.setState({
+      projects: [project],
+      threads: [],
+      view: { kind: "thread", panes: ["t1"] },
+    });
     useExperimentStore.setState({ experiments: {} });
   });
 
@@ -391,8 +396,13 @@ describe("pending PR refresh", () => {
     expect(ghGetPrForBranchMock).toHaveBeenCalledWith({
       projectLocation: location,
       branch: "feature/pr-checks",
+      background: true,
     });
-    expect(ghGetPrDetailsMock).toHaveBeenCalledWith({ projectLocation: location, prNumber: 42 });
+    expect(ghGetPrDetailsMock).toHaveBeenCalledWith({
+      projectLocation: location,
+      prNumber: 42,
+      background: true,
+    });
 
     ghGetPrForBranchMock.mockClear();
     ghGetPrDetailsMock.mockClear();
@@ -402,8 +412,13 @@ describe("pending PR refresh", () => {
     expect(ghGetPrForBranchMock).toHaveBeenCalledWith({
       projectLocation: location,
       branch: "feature/pr-checks",
+      background: true,
     });
-    expect(ghGetPrDetailsMock).toHaveBeenCalledWith({ projectLocation: location, prNumber: 42 });
+    expect(ghGetPrDetailsMock).toHaveBeenCalledWith({
+      projectLocation: location,
+      prNumber: 42,
+      background: true,
+    });
     expect(useGitStore.getState().prData[prKey]?.checksStatus).toBe("SUCCESS");
     expect(useGitStore.getState().prDetails["p1#42"]?.checks[0]?.conclusion).toBe("SUCCESS");
     expect(checkPrWatchMock).toHaveBeenCalledOnce();
@@ -431,8 +446,13 @@ describe("pending PR refresh", () => {
     expect(ghGetPrForBranchMock).toHaveBeenCalledWith({
       projectLocation: location,
       branch: "feature/pr-checks",
+      background: true,
     });
-    expect(ghGetPrDetailsMock).toHaveBeenCalledWith({ projectLocation: location, prNumber: 42 });
+    expect(ghGetPrDetailsMock).toHaveBeenCalledWith({
+      projectLocation: location,
+      prNumber: 42,
+      background: true,
+    });
   });
 
   it("pauses pending PR polling on WSL unload and resumes when a thread loads", async () => {
@@ -466,6 +486,7 @@ describe("pending PR refresh", () => {
     expect(ghGetPrForBranchMock).toHaveBeenCalledWith({
       projectLocation: location,
       branch: "feature/wt",
+      background: true,
     });
 
     ghGetPrForBranchMock.mockClear();
@@ -490,6 +511,7 @@ describe("pending PR refresh", () => {
     expect(ghGetPrForBranchMock).toHaveBeenCalledWith({
       projectLocation: location,
       branch: "feature/wt",
+      background: true,
     });
   });
 
@@ -582,6 +604,80 @@ describe("pending PR refresh", () => {
 });
 
 describe("watcher git status refresh", () => {
+  it("keeps explicit manual status reads interactive with exact diff counts", async () => {
+    const getGitStatus = vi.fn<PoracodeBridge["getGitStatus"]>().mockResolvedValue(status);
+    Object.defineProperty(window, "poracode", {
+      configurable: true,
+      value: { platform: "darwin", getGitStatus },
+    });
+    await refreshGitProject(project, "manual", "status");
+    expect(getGitStatus).toHaveBeenCalledExactlyOnceWith({
+      projectLocation: location,
+      detail: "full",
+    });
+  });
+
+  it("does not refresh dormant sidebar rows or archived panes", () => {
+    useAppStore.setState({ threads: [worktreeThread], view: { kind: "home" } });
+    expect(getProjectActiveWorktreePaths(project.id)).toEqual([]);
+    useAppStore.setState({
+      threads: [{ ...worktreeThread, archived: true }],
+      view: { kind: "thread", panes: ["t1"] },
+    });
+    expect(getProjectActiveWorktreePaths(project.id)).toEqual([]);
+  });
+
+  it.each(["poll", "watcher"] as const)(
+    "limits %s volume to two open worktrees out of forty sidebar rows",
+    async (reason) => {
+      vi.useFakeTimers();
+      useSidebarUiStore.setState({ threadListLimits: { p1: 40 } });
+      const threads = Array.from({ length: 40 }, (_, index) => ({
+        ...worktreeThread,
+        id: `volume-${index}`,
+        worktreePath: `/repo-wt-${index}`,
+      }));
+      useAppStore.setState({ threads, view: { kind: "thread", panes: ["volume-0", "volume-1"] } });
+      const getGitStatus = vi.fn<PoracodeBridge["getGitStatus"]>().mockResolvedValue(status);
+      const gitWorktreeStatusBatch = vi
+        .fn<PoracodeBridge["gitWorktreeStatusBatch"]>()
+        .mockResolvedValue({
+          statuses: {
+            "/repo-wt-0": {
+              ...status,
+              detail: "summary",
+              staged: [{ path: "new.ts", staged: true, status: "A", insertions: 0, deletions: 0 }],
+            },
+          },
+        });
+      Object.defineProperty(window, "poracode", {
+        configurable: true,
+        value: {
+          platform: "darwin",
+          dbSyncAll: vi.fn<PoracodeBridge["dbSyncAll"]>().mockResolvedValue(undefined),
+          getGitStatus,
+          gitWorktreeStatusBatch,
+        },
+      });
+      const requests = Array.from({ length: reason === "watcher" ? 100 : 1 }, () =>
+        refreshGitProject(project, reason, "status"),
+      );
+      await vi.advanceTimersByTimeAsync(250);
+      await Promise.all(requests);
+      expect(getGitStatus).toHaveBeenCalledExactlyOnceWith({
+        projectLocation: location,
+        detail: "summary",
+        background: true,
+      });
+      expect(gitWorktreeStatusBatch).toHaveBeenCalledExactlyOnceWith({
+        projectLocation: location,
+        worktreePaths: ["/repo-wt-0", "/repo-wt-1"],
+        detail: "summary",
+        background: true,
+      });
+    },
+  );
+
   beforeEach(() => {
     cleanupGitRefreshProjects(new Set());
     useGitStore.setState({
@@ -608,7 +704,11 @@ describe("watcher git status refresh", () => {
       collapsedWorktrees: {},
       threadListLimits: {},
     });
-    useAppStore.setState({ projects: [project], threads: [], view: { kind: "home" } });
+    useAppStore.setState({
+      projects: [project],
+      threads: [],
+      view: { kind: "thread", panes: ["t1"] },
+    });
   });
 
   afterEach(() => {
@@ -616,7 +716,7 @@ describe("watcher git status refresh", () => {
     vi.useRealTimers();
   });
 
-  it("keeps a timed-out cycle locked until the underlying status request settles", async () => {
+  it("abandons a timed-out cycle and rejects its stale store writes", async () => {
     vi.useFakeTimers();
     const stalled = Promise.withResolvers<GitStatusResult>();
     const getGitStatus = vi
@@ -625,20 +725,25 @@ describe("watcher git status refresh", () => {
       .mockResolvedValue(status);
     Object.defineProperty(window, "poracode", {
       configurable: true,
-      value: { platform: "darwin", getGitStatus },
+      value: {
+        platform: "darwin",
+        dbSyncAll: vi.fn<PoracodeBridge["dbSyncAll"]>().mockResolvedValue(undefined),
+        getGitStatus,
+      },
     });
-    const first = refreshGitProject(project, "watcher", "status");
+    const first = refreshGitProject(project, "poll", "status");
     await vi.advanceTimersByTimeAsync(30_000);
     await first;
     const second = refreshGitProject(project, "poll", "status");
     try {
       await vi.advanceTimersByTimeAsync(0);
-      expect(getGitStatus).toHaveBeenCalledTimes(1);
+      expect(getGitStatus).toHaveBeenCalledTimes(2);
     } finally {
-      stalled.resolve(status);
+      stalled.resolve({ ...status, branch: "stale-branch" });
       await second;
     }
     expect(getGitStatus).toHaveBeenCalledTimes(2);
+    expect(useGitStore.getState().statuses.p1?.branch).toBe(status.branch);
   });
 
   it.each(["manual", "fetch"] as const)(
@@ -660,6 +765,7 @@ describe("watcher git status refresh", () => {
         configurable: true,
         value: {
           platform: "darwin",
+          dbSyncAll: vi.fn<PoracodeBridge["dbSyncAll"]>().mockResolvedValue(undefined),
           getGitStatus,
           gitProjectSnapshot,
           gitFetch,
@@ -668,7 +774,7 @@ describe("watcher git status refresh", () => {
             .mockResolvedValue(undefined),
         },
       });
-      const first = refreshGitProject(project, "watcher", "status");
+      const first = refreshGitProject(project, "poll", "status");
       const manual = refreshGitProject(project, reason, "full", { fetchRemote: true });
       const requests = Array.from({ length: 20 }, () => [
         refreshGitProject(project, "watcher", "status"),
@@ -697,10 +803,14 @@ describe("watcher git status refresh", () => {
       .mockResolvedValue(status);
     Object.defineProperty(window, "poracode", {
       configurable: true,
-      value: { platform: "darwin", getGitStatus },
+      value: {
+        platform: "darwin",
+        dbSyncAll: vi.fn<PoracodeBridge["dbSyncAll"]>().mockResolvedValue(undefined),
+        getGitStatus,
+      },
     });
     let active = true;
-    const first = refreshGitProject(project, "watcher", "status", { isActive: () => active });
+    const first = refreshGitProject(project, "poll", "status", { isActive: () => active });
     await Promise.resolve();
     active = false;
     cleanupGitRefreshProjects(new Set());
@@ -728,6 +838,7 @@ describe("watcher git status refresh", () => {
       configurable: true,
       value: {
         platform: "darwin",
+        dbSyncAll: vi.fn<PoracodeBridge["dbSyncAll"]>().mockResolvedValue(undefined),
         gitProjectSnapshot: vi.fn<PoracodeBridge["gitProjectSnapshot"]>().mockResolvedValue({
           status,
           branches: { current: status.branch, branches: [] },
@@ -760,6 +871,7 @@ describe("watcher git status refresh", () => {
     expect(ghGetPrForBranch).toHaveBeenCalledWith({
       projectLocation: location,
       branch: "feature/wt",
+      background: true,
     });
     expect(useGitStore.getState().prData[buildBranchPrKey("p1")]).toEqual({
       ...bulkPr,
@@ -798,6 +910,7 @@ describe("watcher git status refresh", () => {
       configurable: true,
       value: {
         platform: "darwin",
+        dbSyncAll: vi.fn<PoracodeBridge["dbSyncAll"]>().mockResolvedValue(undefined),
         getGitStatus,
         gitWorktreeStatusBatch,
       },
@@ -824,141 +937,54 @@ describe("watcher git status refresh", () => {
     expect(gitWorktreeStatusBatch).toHaveBeenCalledWith({
       projectLocation: location,
       worktreePaths: ["/repo-wt"],
-      detail: "full",
+      detail: "summary",
+      background: true,
     });
     expect(useGitStore.getState().worktreeStatuses["/repo-wt"]).toEqual(worktreeStatus);
   });
 
-  it("escalates a summary poll to a full refresh when a file was staged externally", async () => {
-    // Previously the file was unstaged/modified with real counts...
-    const previousWorktreeStatus: GitStatusResult = {
-      ...status,
-      branch: "feature/wt",
-      unstaged: [
-        { path: "src/changed.ts", status: "M", staged: false, insertions: 5, deletions: 1 },
-      ],
-      totalInsertions: 5,
-      totalDeletions: 1,
-    };
-    // A summary poll now reports it staged (an external `git add`) with 0/0 —
-    // no backfill key matches, so the counts can't be recovered from cache.
-    const summaryWorktreeStatus: GitStatusResult = {
-      ...status,
-      detail: "summary",
-      branch: "feature/wt",
-      staged: [{ path: "src/changed.ts", status: "M", staged: true, insertions: 0, deletions: 0 }],
-      unstaged: [],
-      totalInsertions: 0,
-      totalDeletions: 0,
-    };
-    // The follow-up full refresh recovers the real cumulative counts.
-    const fullWorktreeStatus: GitStatusResult = {
-      ...status,
-      branch: "feature/wt",
-      staged: [{ path: "src/changed.ts", status: "M", staged: true, insertions: 5, deletions: 1 }],
-      unstaged: [],
-      totalInsertions: 5,
-      totalDeletions: 1,
-    };
-    const getGitStatus = vi.fn<() => Promise<GitStatusResult>>().mockResolvedValue(status);
+  it("requests exact worktree counts only for the worktree whose Git review is visible", async () => {
     const gitWorktreeStatusBatch = vi
-      .fn<
-        (payload: {
-          projectLocation: ProjectLocation;
-          worktreePaths: string[];
-          detail?: "summary" | "full";
-        }) => Promise<{ statuses: Record<string, GitStatusResult> }>
-      >()
-      .mockImplementation(async ({ detail }) => ({
-        statuses: {
-          "/repo-wt": detail === "full" ? fullWorktreeStatus : summaryWorktreeStatus,
-        },
-      }));
+      .fn<PoracodeBridge["gitWorktreeStatusBatch"]>()
+      .mockResolvedValue({ statuses: { "/repo-wt": status } });
+    const getGitStatus = vi.fn<PoracodeBridge["getGitStatus"]>().mockResolvedValue(status);
     Object.defineProperty(window, "poracode", {
       configurable: true,
-      value: { platform: "darwin", getGitStatus, gitWorktreeStatusBatch },
+      value: {
+        platform: "darwin",
+        dbSyncAll: vi.fn<PoracodeBridge["dbSyncAll"]>().mockResolvedValue(undefined),
+        getGitStatus,
+        gitWorktreeStatusBatch,
+      },
     });
-    useGitStore.getState().setWorktreeStatus("/repo-wt", previousWorktreeStatus);
-    useAppStore.setState({ threads: [worktreeThread] });
-
+    useAppStore.setState({
+      threads: [worktreeThread, hiddenWorktreeThread],
+      view: { kind: "thread", panes: ["t1", "t-hidden"] },
+    });
+    usePanelStore.setState({
+      rightPanelTab: "git",
+      gitReviewAsPanel: true,
+      gitReviewContext: { projectId: "p1", worktreePath: "/repo-wt" },
+    });
     await refreshGitProject(project, "poll", "status");
-    // The escalation fires fire-and-forget after the poll resolves — flush it.
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(gitWorktreeStatusBatch).toHaveBeenCalledWith({
-      projectLocation: location,
-      worktreePaths: ["/repo-wt"],
-      detail: "summary",
-    });
+    expect(gitWorktreeStatusBatch).toHaveBeenCalledTimes(2);
     expect(gitWorktreeStatusBatch).toHaveBeenCalledWith({
       projectLocation: location,
       worktreePaths: ["/repo-wt"],
       detail: "full",
+      background: true,
     });
-    expect(useGitStore.getState().worktreeStatuses["/repo-wt"]).toEqual(fullWorktreeStatus);
-  });
-
-  it("retries summary-to-full escalation after a transient full refresh failure", async () => {
-    const previousWorktreeStatus: GitStatusResult = {
-      ...status,
-      branch: "feature/wt",
-      unstaged: [
-        { path: "src/changed.ts", status: "M", staged: false, insertions: 5, deletions: 1 },
-      ],
-      totalInsertions: 5,
-      totalDeletions: 1,
-    };
-    const summaryWorktreeStatus: GitStatusResult = {
-      ...status,
+    expect(gitWorktreeStatusBatch).toHaveBeenCalledWith({
+      projectLocation: location,
+      worktreePaths: ["/repo-hidden"],
       detail: "summary",
-      branch: "feature/wt",
-      staged: [{ path: "src/changed.ts", status: "M", staged: true, insertions: 0, deletions: 0 }],
-      unstaged: [],
-      totalInsertions: 0,
-      totalDeletions: 0,
-    };
-    const fullWorktreeStatus: GitStatusResult = {
-      ...status,
-      branch: "feature/wt",
-      staged: [{ path: "src/changed.ts", status: "M", staged: true, insertions: 5, deletions: 1 }],
-      unstaged: [],
-      totalInsertions: 5,
-      totalDeletions: 1,
-    };
-    const getGitStatus = vi.fn<() => Promise<GitStatusResult>>().mockResolvedValue(status);
-    let fullAttempts = 0;
-    const gitWorktreeStatusBatch = vi
-      .fn<
-        (payload: {
-          projectLocation: ProjectLocation;
-          worktreePaths: string[];
-          detail?: "summary" | "full";
-        }) => Promise<{ statuses: Record<string, GitStatusResult> }>
-      >()
-      .mockImplementation(async ({ detail }) => {
-        if (detail === "full") {
-          fullAttempts += 1;
-          if (fullAttempts === 1) throw new Error("bridge unavailable");
-          return { statuses: { "/repo-wt": fullWorktreeStatus } };
-        }
-        return { statuses: { "/repo-wt": summaryWorktreeStatus } };
-      });
-    Object.defineProperty(window, "poracode", {
-      configurable: true,
-      value: { platform: "darwin", getGitStatus, gitWorktreeStatusBatch },
+      background: true,
     });
-    useGitStore.getState().setWorktreeStatus("/repo-wt", previousWorktreeStatus);
-    useAppStore.setState({ threads: [worktreeThread] });
-
-    await refreshGitProject(project, "poll", "status");
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(useGitStore.getState().worktreeStatuses["/repo-wt"]).toEqual(summaryWorktreeStatus);
-
-    await refreshGitProject(project, "poll", "status");
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(fullAttempts).toBe(2);
-    expect(useGitStore.getState().worktreeStatuses["/repo-wt"]).toEqual(fullWorktreeStatus);
+    expect(getGitStatus).toHaveBeenCalledExactlyOnceWith({
+      projectLocation: location,
+      detail: "summary",
+      background: true,
+    });
   });
 
   it("preserves cached worktree diff stats during fetch refreshes", async () => {
@@ -1006,6 +1032,7 @@ describe("watcher git status refresh", () => {
       configurable: true,
       value: {
         platform: "darwin",
+        dbSyncAll: vi.fn<PoracodeBridge["dbSyncAll"]>().mockResolvedValue(undefined),
         gitProjectSnapshot,
         gitWatchWorktrees,
         gitWorktreeStatusBatch,
@@ -1019,6 +1046,7 @@ describe("watcher git status refresh", () => {
     expect(gitProjectSnapshot).toHaveBeenCalledWith({
       projectLocation: location,
       includeGhCheck: true,
+      background: true,
     });
     expect(gitWorktreeStatusBatch).not.toHaveBeenCalled();
     expect(useGitStore.getState().worktreeStatuses["/repo-wt"]).toEqual(cachedWorktreeStatus);
@@ -1069,6 +1097,7 @@ describe("watcher git status refresh", () => {
       configurable: true,
       value: {
         platform: "darwin",
+        dbSyncAll: vi.fn<PoracodeBridge["dbSyncAll"]>().mockResolvedValue(undefined),
         gitProjectSnapshot,
         gitWatchWorktrees,
         gitWorktreeStatusBatch,
@@ -1082,12 +1111,13 @@ describe("watcher git status refresh", () => {
     expect(gitWorktreeStatusBatch).toHaveBeenCalledWith({
       projectLocation: wslLocation,
       worktreePaths: ["/repo-wt"],
-      detail: "full",
+      detail: "summary",
+      background: true,
     });
     expect(useGitStore.getState().worktreeStatuses["/repo-wt"]).toEqual(worktreeStatus);
   });
 
-  it("uses full worktree status for WSL poll refreshes", async () => {
+  it("uses summary worktree status for WSL poll refreshes", async () => {
     const getGitStatus = vi.fn<() => Promise<GitStatusResult>>().mockResolvedValue(status);
     const worktreeStatus: GitStatusResult = {
       ...status,
@@ -1117,6 +1147,7 @@ describe("watcher git status refresh", () => {
       configurable: true,
       value: {
         platform: "darwin",
+        dbSyncAll: vi.fn<PoracodeBridge["dbSyncAll"]>().mockResolvedValue(undefined),
         getGitStatus,
         gitWorktreeStatusBatch,
       },
@@ -1128,7 +1159,8 @@ describe("watcher git status refresh", () => {
     expect(gitWorktreeStatusBatch).toHaveBeenCalledWith({
       projectLocation: wslLocation,
       worktreePaths: ["/repo-wt"],
-      detail: "full",
+      detail: "summary",
+      background: true,
     });
     expect(useGitStore.getState().worktreeStatuses["/repo-wt"]).toEqual(worktreeStatus);
   });
@@ -1168,6 +1200,7 @@ describe("watcher git status refresh", () => {
       configurable: true,
       value: {
         platform: "darwin",
+        dbSyncAll: vi.fn<PoracodeBridge["dbSyncAll"]>().mockResolvedValue(undefined),
         getGitStatus,
         gitProjectSnapshot,
         gitWatchWorktrees,
@@ -1181,6 +1214,7 @@ describe("watcher git status refresh", () => {
     expect(gitProjectSnapshot).toHaveBeenCalledWith({
       projectLocation: location,
       includeGhCheck: true,
+      background: true,
     });
     expect(useGitStore.getState().statuses.p1).toEqual(status);
     expect(useGitStore.getState().branches.p1).toEqual({
@@ -1239,6 +1273,7 @@ describe("watcher git status refresh", () => {
       configurable: true,
       value: {
         platform: "darwin",
+        dbSyncAll: vi.fn<PoracodeBridge["dbSyncAll"]>().mockResolvedValue(undefined),
         gitProjectSnapshot,
         gitWatchWorktrees,
         gitWorktreeStatusBatch,
@@ -1256,7 +1291,8 @@ describe("watcher git status refresh", () => {
     expect(gitWorktreeStatusBatch).toHaveBeenCalledWith({
       projectLocation: location,
       worktreePaths: ["/repo-wt"],
-      detail: "full",
+      detail: "summary",
+      background: true,
     });
     expect(useGitStore.getState().worktreeStatuses["/repo-wt"]).toEqual(worktreeStatus);
   });
@@ -1278,6 +1314,7 @@ describe("watcher git status refresh", () => {
       configurable: true,
       value: {
         platform: "darwin",
+        dbSyncAll: vi.fn<PoracodeBridge["dbSyncAll"]>().mockResolvedValue(undefined),
         gitProjectSnapshot,
         gitWatchWorktrees,
         gitWorktreeStatusBatch,
@@ -1293,7 +1330,7 @@ describe("watcher git status refresh", () => {
 
     expect(gitWatchWorktrees).toHaveBeenCalledWith({
       projectId: "p1",
-      worktreePaths: ["/repo-hidden", "/repo-wt"],
+      worktreePaths: ["/repo-hidden"],
     });
   });
 
@@ -1314,6 +1351,7 @@ describe("watcher git status refresh", () => {
       configurable: true,
       value: {
         platform: "darwin",
+        dbSyncAll: vi.fn<PoracodeBridge["dbSyncAll"]>().mockResolvedValue(undefined),
         gitProjectSnapshot,
         gitWatchWorktrees,
         gitWorktreeStatusBatch,
@@ -1340,6 +1378,7 @@ describe("watcher git status refresh", () => {
       configurable: true,
       value: {
         platform: "darwin",
+        dbSyncAll: vi.fn<PoracodeBridge["dbSyncAll"]>().mockResolvedValue(undefined),
         dbSetState: vi
           .fn<(key: string, value: string) => Promise<void>>()
           .mockResolvedValue(undefined),

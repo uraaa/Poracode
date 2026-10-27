@@ -200,6 +200,7 @@ export function useGitHubActionsViewModel(props: { projectId?: string; runId?: n
   const [runsRefreshVersion, setRunsRefreshVersion] = useState(0);
   const [runRefreshVersion, setRunRefreshVersion] = useState(0);
   const [dispatchRequestedAt, setDispatchRequestedAt] = useState<number | null>(null);
+  const dispatchRequestedAtRef = useRef(dispatchRequestedAt);
   const [dispatching, setDispatching] = useState(false);
   const [pendingRunId, setPendingRunId] = useState<number | null>(null);
   const [deleteRun, setDeleteRun] = useState<GitHubActionsRun | null>(null);
@@ -218,6 +219,10 @@ export function useGitHubActionsViewModel(props: { projectId?: string; runId?: n
     userPickedWorkflowRef.current = userPickedWorkflow;
   }, [userPickedWorkflow]);
 
+  useEffect(() => {
+    dispatchRequestedAtRef.current = dispatchRequestedAt;
+  }, [dispatchRequestedAt]);
+
   // Request identities: every input that must restart a request is folded
   // into a key the fetch effects consume (staleness guard), instead of
   // listing trigger-only versions (workflowRefreshVersion, runsRefreshVersion,
@@ -225,13 +230,21 @@ export function useGitHubActionsViewModel(props: { projectId?: string; runId?: n
   const ghAccountKey = `${ghAccount?.host ?? ""}\0${ghAccount?.login ?? ""}`;
   const projectResetKey = `${selectedProjectId ?? ""}\0${props.runId ?? ""}`;
   const workflowsRequestKey = `${selectedProjectId ?? ""}\0${ghAccountKey}\0${workflowRefreshVersion}`;
-  const runsRequestKey = `${selectedProjectId ?? ""}\0${selectedWorkflowId ?? ""}\0${ghAccountKey}\0${runsRefreshVersion}`;
+  const runsScopeKey = `${selectedProjectId ?? ""}\0${selectedWorkflowId ?? ""}\0${ghAccountKey}`;
+  const runsRequestKey = `${runsScopeKey}\0${runsRefreshVersion}`;
   const definitionRequestKey = `${selectedProjectId ?? ""}\0${selectedWorkflowId ?? ""}\0${ghAccountKey}\0${definitionRef ?? ""}\0${workflowRefreshVersion}`;
-  const runDetailsKey = `${selectedProjectId ?? ""}\0${selectedRunId ?? ""}\0${ghAccountKey}\0${runRefreshVersion}`;
+  const runDetailsScopeKey = `${selectedProjectId ?? ""}\0${selectedRunId ?? ""}\0${ghAccountKey}`;
+  const runDetailsKey = `${runDetailsScopeKey}\0${runRefreshVersion}`;
   const activeWorkflowsKeyRef = useRef(workflowsRequestKey);
   const activeRunsKeyRef = useRef(runsRequestKey);
   const activeDefinitionKeyRef = useRef(definitionRequestKey);
   const activeRunDetailsKeyRef = useRef(runDetailsKey);
+  // Only timer-created versions use the background lane. A changed selection
+  // or an explicit refresh creates its own interactive request as before.
+  const automaticRunsRequestRef = useRef<string | null>(null);
+  const automaticRunDetailsRequestRef = useRef<string | null>(null);
+  const pendingRunsRef = useRef(new Map<symbol, string>());
+  const pendingRunDetailsRef = useRef(new Map<symbol, string>());
 
   // Switching project resets the view. Seed from cache rather than clearing, so
   // this also leaves the mount-time seed above intact (same references in, no
@@ -377,16 +390,21 @@ export function useGitHubActionsViewModel(props: { projectId?: string; runId?: n
 
   useEffect(() => {
     activeRunsKeyRef.current = runsRequestKey;
+    const background = automaticRunsRequestRef.current === runsRequestKey;
+    automaticRunsRequestRef.current = null;
     if (!selectedProject || !selectedWorkflowId) {
       return;
     }
     let cancelled = false;
     const capturedKey = runsRequestKey;
+    const request = Symbol();
+    pendingRunsRef.current.set(request, runsScopeKey);
     const cachedRuns = cachedRunsFor(selectedProject.id, selectedWorkflowId, ghAccount);
     void readBridge()
       .ghListWorkflowRuns({
         projectLocation: selectedProject.location,
         workflowId: selectedWorkflowId,
+        ...(background ? { background: true } : {}),
         ...(ghAccount ? { ghAccount } : {}),
       })
       .then(
@@ -400,12 +418,13 @@ export function useGitHubActionsViewModel(props: { projectId?: string; runId?: n
             );
           }
           setRuns(result.runs);
+          const requestedAt = dispatchRequestedAtRef.current;
           if (
-            dispatchRequestedAt !== null &&
+            requestedAt !== null &&
             result.runs.some(
               (run) =>
                 run.event === "workflow_dispatch" &&
-                new Date(run.createdAt).getTime() >= dispatchRequestedAt - POLL_INTERVAL_MS,
+                new Date(run.createdAt).getTime() >= requestedAt - POLL_INTERVAL_MS,
             )
           ) {
             setDispatchRequestedAt(null);
@@ -418,11 +437,14 @@ export function useGitHubActionsViewModel(props: { projectId?: string; runId?: n
           setLoadError(friendlyError(error));
           setLoadingRuns(false);
         },
-      );
+      )
+      .finally(() => {
+        pendingRunsRef.current.delete(request);
+      });
     return () => {
       cancelled = true;
     };
-  }, [dispatchRequestedAt, ghAccount, runsRequestKey, selectedProject, selectedWorkflowId]);
+  }, [ghAccount, runsRequestKey, runsScopeKey, selectedProject, selectedWorkflowId]);
 
   const [prevDefinitionKey, setPrevDefinitionKey] = useState<string | null>(null);
   if (prevDefinitionKey !== definitionRequestKey) {
@@ -497,15 +519,20 @@ export function useGitHubActionsViewModel(props: { projectId?: string; runId?: n
 
   useEffect(() => {
     activeRunDetailsKeyRef.current = runDetailsKey;
+    const background = automaticRunDetailsRequestRef.current === runDetailsKey;
+    automaticRunDetailsRequestRef.current = null;
     if (!selectedProject || !selectedRunId) {
       return;
     }
     let cancelled = false;
     const capturedKey = runDetailsKey;
+    const request = Symbol();
+    pendingRunDetailsRef.current.set(request, runDetailsScopeKey);
     void readBridge()
       .ghGetWorkflowRun({
         projectLocation: selectedProject.location,
         runId: selectedRunId,
+        ...(background ? { background: true } : {}),
         ...(ghAccount ? { ghAccount } : {}),
       })
       .then(
@@ -521,11 +548,14 @@ export function useGitHubActionsViewModel(props: { projectId?: string; runId?: n
           setLoadError(friendlyError(error));
           setLoadingRun(false);
         },
-      );
+      )
+      .finally(() => {
+        pendingRunDetailsRef.current.delete(request);
+      });
     return () => {
       cancelled = true;
     };
-  }, [ghAccount, runDetailsKey, selectedProject, selectedRunId]);
+  }, [ghAccount, runDetailsKey, runDetailsScopeKey, selectedProject, selectedRunId]);
 
   const hasActiveRuns = runs.some(workflowRunIsActive);
   useEffect(() => {
@@ -537,11 +567,33 @@ export function useGitHubActionsViewModel(props: { projectId?: string; runId?: n
       ) {
         setDispatchRequestedAt(null);
       }
-      setRunsRefreshVersion((current) => current + 1);
-      if (selectedRunId) setRunRefreshVersion((current) => current + 1);
+      if (
+        automaticRunsRequestRef.current === null &&
+        !Array.from(pendingRunsRef.current.values()).includes(runsScopeKey)
+      ) {
+        automaticRunsRequestRef.current = `${runsScopeKey}\0${runsRefreshVersion + 1}`;
+        setRunsRefreshVersion((current) => current + 1);
+      }
+      if (
+        selectedRunId &&
+        automaticRunDetailsRequestRef.current === null &&
+        !Array.from(pendingRunDetailsRef.current.values()).includes(runDetailsScopeKey)
+      ) {
+        automaticRunDetailsRequestRef.current = `${runDetailsScopeKey}\0${runRefreshVersion + 1}`;
+        setRunRefreshVersion((current) => current + 1);
+      }
     }, POLL_INTERVAL_MS);
     return () => window.clearInterval(interval);
-  }, [dispatchRequestedAt, hasActiveRuns, selectedProject, selectedRunId]);
+  }, [
+    dispatchRequestedAt,
+    hasActiveRuns,
+    runDetailsScopeKey,
+    runRefreshVersion,
+    runsRefreshVersion,
+    runsScopeKey,
+    selectedProject,
+    selectedRunId,
+  ]);
 
   const selectedWorkflow = workflows.find((workflow) => workflow.id === selectedWorkflowId);
   const selectedRun =

@@ -33,6 +33,9 @@ import {
   sumChangeTotals,
   type ParsedPorcelainStatus,
 } from "./statusParsing";
+import { RepositoryMetadataCache } from "./repositoryMetadata";
+
+const STATUS_ARGS = ["status", "--porcelain=v2", "-b", "--untracked-files=all"];
 
 interface UntrackedStatsCacheEntry {
   signature: string;
@@ -77,6 +80,7 @@ function countTextLines(buffer: Buffer): number {
 
 export class GitStatusService {
   private readonly untrackedStatsCache = new Map<string, UntrackedStatsCacheEntry>();
+  private readonly metadataCache = new RepositoryMetadataCache();
   private wslClient: WslBridgeClient | undefined;
 
   setWslClient(client: WslBridgeClient | undefined): void {
@@ -88,11 +92,20 @@ export class GitStatusService {
       return this.getStatusBatchedWsl(location);
     }
 
+    let statusOutput: string;
     try {
-      await execGit(location, ["rev-parse", "--is-inside-work-tree"], {
+      statusOutput = await execGit(location, STATUS_ARGS, {
         timeout: GIT_STATUS_TIMEOUT,
       });
-    } catch {
+    } catch (error) {
+      // The status command doubles as repository detection. Other failures
+      // (index corruption, timeouts, permissions) must remain visible to callers.
+      if (
+        !(error instanceof Error) ||
+        !/not a git repository|must be run in a work tree/i.test(error.message)
+      ) {
+        throw error;
+      }
       return {
         isRepo: false,
         branch: "",
@@ -108,12 +121,15 @@ export class GitStatusService {
       };
     }
 
-    const [statusOutput, remoteOutput, stagedNumstat, unstagedNumstat] = await Promise.all([
-      execGit(location, ["status", "--porcelain=v2", "-b"], { timeout: GIT_STATUS_TIMEOUT }),
-      execGit(location, ["remote", "-v"], { timeout: GIT_STATUS_TIMEOUT }).catch((error) => {
-        console.warn("[git] 'remote -v' failed:", error);
-        return "";
-      }),
+    const [remoteOutput, stagedNumstat, unstagedNumstat] = await Promise.all([
+      this.metadataCache
+        .read(location, "remotes", () =>
+          execGit(location, ["remote", "-v"], { timeout: GIT_STATUS_TIMEOUT }),
+        )
+        .catch((error) => {
+          console.warn("[git] 'remote -v' failed:", error);
+          return "";
+        }),
       // `null` on failure, NOT "" — an empty numstat is a real answer ("no file
       // has a diff") that `applyNumstatCounts` prunes against.
       execGit(location, ["diff", "--cached", "--numstat"], { timeout: GIT_STATUS_TIMEOUT }).catch(
@@ -133,7 +149,7 @@ export class GitStatusService {
     const { hasRemote, remoteInfo } = parseRemoteInfo(remoteOutput);
     applyNumstatCounts(parsed, stagedNumstat, unstagedNumstat);
 
-    await this.replaceUntrackedEntries(location, parsed);
+    await this.replaceUntrackedEntries(location, parsed, false);
 
     const { totalInsertions, totalDeletions } = sumChangeTotals(parsed);
 
@@ -157,39 +173,40 @@ export class GitStatusService {
     if (location.kind === "wsl") {
       const results = await execGitBatchWslBridge(
         location,
-        [
-          { cwd: location.linuxPath, args: ["status", "--porcelain=v2", "-b"] },
-          { cwd: location.linuxPath, args: LS_FILES_UNTRACKED_ARGS },
-        ],
+        [{ cwd: location.linuxPath, args: STATUS_ARGS }],
         GIT_STATUS_TIMEOUT,
       );
       const result = results[0];
-      const untracked = results[1];
       if (!result?.ok) return nonRepoSummaryStatus();
-      const summary = buildGitStatusSummaryFromOutput(
-        result.stdout,
-        untracked?.ok ? untracked.stdout : "",
-      );
+      const summary = buildGitStatusSummaryFromOutput(result.stdout, "");
       await this.clearInheritedStartPointUpstream(location, summary);
-      return summary;
+      return this.includeRemoteMetadata(location, summary);
     }
 
     try {
-      const [statusOutput, untrackedOutput] = await Promise.all([
-        execGit(location, ["status", "--porcelain=v2", "-b"], { timeout: GIT_STATUS_TIMEOUT }),
-        execGit(location, LS_FILES_UNTRACKED_ARGS, { timeout: GIT_STATUS_TIMEOUT }).catch(
-          (error) => {
-            console.warn("[git] ls-files untracked failed:", error);
-            return "";
-          },
-        ),
-      ]);
-      const summary = buildGitStatusSummaryFromOutput(statusOutput, untrackedOutput);
+      const statusOutput = await execGit(location, STATUS_ARGS, { timeout: GIT_STATUS_TIMEOUT });
+      const summary = buildGitStatusSummaryFromOutput(statusOutput, "");
       await this.clearInheritedStartPointUpstream(location, summary);
-      return summary;
+      return this.includeRemoteMetadata(location, summary);
     } catch (error) {
       console.warn("[git] status summary failed, treating as non-repo:", error);
       return nonRepoSummaryStatus();
+    }
+  }
+
+  private async includeRemoteMetadata(
+    location: ProjectLocation,
+    summary: GitStatusResult,
+  ): Promise<GitStatusResult> {
+    try {
+      const output = await this.metadataCache.read(location, "remotes", () =>
+        execGit(location, ["remote", "-v"], { timeout: GIT_STATUS_TIMEOUT }),
+      );
+      return { ...summary, ...parseRemoteInfo(output), remoteMetadataIncluded: true };
+    } catch (error) {
+      console.warn("[git] summary remote metadata failed:", error);
+      // Keep the summary useful while allowing consumers to retain known metadata.
+      return summary;
     }
   }
 
@@ -227,11 +244,11 @@ export class GitStatusService {
     if (slash <= 0 || status.tracking.slice(slash + 1) === status.branch) return;
     let poracodeSource: string | null = null;
     try {
-      const result = await execGit(location, [
-        "config",
-        "--get",
-        `branch.${status.branch}.poracodeSource`,
-      ]);
+      const result = await this.metadataCache.read(location, `source:${status.branch}`, () =>
+        execGit(location, ["config", "--get", `branch.${status.branch}.poracodeSource`]).catch(
+          () => "",
+        ),
+      );
       poracodeSource = result.trim() || null;
     } catch {
       return;
@@ -400,29 +417,34 @@ export class GitStatusService {
   ): Promise<Record<string, GitStatusResult>> {
     if (worktreePaths.length === 0) return {};
 
-    const PER_WORKTREE_CMDS = 2;
+    const PER_WORKTREE_CMDS = 1;
     const bridgeCommands: { cwd: string; args: string[] }[] = [];
     for (const cwd of worktreePaths) {
-      bridgeCommands.push(
-        { cwd, args: ["status", "--porcelain=v2", "-b"] },
-        { cwd, args: LS_FILES_UNTRACKED_ARGS },
-      );
+      bridgeCommands.push({ cwd, args: STATUS_ARGS });
     }
     const results = await execGitBatchWslBridge(location, bridgeCommands, GIT_STATUS_TIMEOUT);
 
     const out: Record<string, GitStatusResult> = {};
-    for (let i = 0; i < worktreePaths.length; i += 1) {
-      const off = i * PER_WORKTREE_CMDS;
-      const statusResult = results[off];
-      if (!statusResult) continue;
-      const untrackedResult = results[off + 1];
-      out[worktreePaths[i]!] = statusResult.ok
-        ? buildGitStatusSummaryFromOutput(
-            statusResult.stdout,
-            untrackedResult?.ok ? untrackedResult.stdout : "",
-          )
-        : nonRepoSummaryStatus();
-    }
+    await Promise.all(
+      worktreePaths.map(async (path, i) => {
+        const off = i * PER_WORKTREE_CMDS;
+        const statusResult = results[off];
+        if (!statusResult) return;
+        if (!statusResult.ok) {
+          out[path] = nonRepoSummaryStatus();
+          return;
+        }
+        const summary = buildGitStatusSummaryFromOutput(statusResult.stdout, "");
+        const wtLocation: ProjectLocation = {
+          kind: "wsl",
+          distro: location.distro,
+          linuxPath: path,
+          uncPath: toWslUncPath(location.distro, path),
+        };
+        await this.clearInheritedStartPointUpstream(wtLocation, summary);
+        out[path] = await this.includeRemoteMetadata(wtLocation, summary);
+      }),
+    );
     return out;
   }
 
@@ -606,18 +628,20 @@ export class GitStatusService {
   private async replaceUntrackedEntries(
     location: ProjectLocation,
     parsed: ParsedPorcelainStatus,
+    expandDirectories = true,
   ): Promise<void> {
     if (!parsed.unstaged.some((file) => file.status === "?")) return;
 
-    const lsFilesOutput = await execGit(location, LS_FILES_UNTRACKED_ARGS, {
-      timeout: GIT_STATUS_TIMEOUT,
-    }).catch((error) => {
-      console.warn("[git] ls-files untracked failed:", error);
-      return "";
-    });
-    // Share the row-shaping with the summary path so the two never disagree on
-    // untracked-entry shape (the key the renderer's count backfill matches on).
-    expandUntrackedEntries(parsed, lsFilesOutput);
+    if (expandDirectories) {
+      // Snapshot/legacy bridge batches may still use collapsed status output.
+      const lsFilesOutput = await execGit(location, LS_FILES_UNTRACKED_ARGS, {
+        timeout: GIT_STATUS_TIMEOUT,
+      }).catch((error) => {
+        console.warn("[git] ls-files untracked failed:", error);
+        return "";
+      });
+      expandUntrackedEntries(parsed, lsFilesOutput);
+    }
 
     // The full path additionally counts insertions per untracked file; the
     // expanded rows arrive with counts at 0, so fill them in here.

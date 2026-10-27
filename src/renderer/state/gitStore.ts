@@ -22,6 +22,8 @@ export interface WorktreeSourceInfo {
 interface GitState {
   statuses: Record<string, GitStatusResult>;
   worktreeStatuses: Record<string, GitStatusResult>;
+  /** Transient content invalidations emitted once after a completed watcher refresh. */
+  worktreeStatusRevisions: Record<string, number>;
   worktrees: Record<string, GitWorktreeInfo[]>;
   branches: Record<string, GitBranchListResult>;
   ghAvailable: Record<string, boolean>;
@@ -47,6 +49,7 @@ interface GitActions {
   clearStatus: (projectId: string) => void;
   setWorktreeStatus: (worktreePath: string, status: GitStatusResult) => void;
   setWorktreeStatuses: (statuses: Record<string, GitStatusResult>) => void;
+  bumpWorktreeStatusRevisions: (worktreePaths: readonly string[]) => void;
   clearWorktreeStatus: (worktreePath: string) => void;
   setWorktrees: (projectId: string, worktrees: GitWorktreeInfo[]) => void;
   setBranches: (projectId: string, branches: GitBranchListResult) => void;
@@ -182,6 +185,7 @@ function areGitStatusesEqual(a: GitStatusResult | undefined, b: GitStatusResult)
   const rightRemote = b.remoteInfo;
   return (
     a.detail === b.detail &&
+    a.remoteMetadataIncluded === b.remoteMetadataIncluded &&
     a.isRepo === b.isRepo &&
     a.branch === b.branch &&
     a.headSha === b.headSha &&
@@ -223,13 +227,17 @@ function mergeSummaryStatus(
   previous: GitStatusResult | undefined,
   incoming: GitStatusResult,
 ): GitStatusResult {
-  if (incoming.detail !== "summary" || !previous) return incoming;
+  if (incoming.detail !== "summary" || !incoming.isRepo || !previous) return incoming;
   const staged = mergeSummaryFiles(previous.staged, incoming.staged);
   const unstaged = mergeSummaryFiles(previous.unstaged, incoming.unstaged);
   return {
     ...incoming,
-    hasRemote: incoming.hasRemote || previous.hasRemote,
-    remoteInfo: incoming.remoteInfo ?? previous.remoteInfo,
+    hasRemote: incoming.remoteMetadataIncluded
+      ? incoming.hasRemote
+      : incoming.hasRemote || previous.hasRemote,
+    remoteInfo: incoming.remoteMetadataIncluded
+      ? incoming.remoteInfo
+      : (incoming.remoteInfo ?? previous.remoteInfo),
     staged,
     unstaged,
     totalInsertions:
@@ -454,6 +462,7 @@ const initialPersisted = loadPersistedSnapshot();
 export const useGitStore = create<GitState & GitActions>()((set, get) => ({
   statuses: initialPersisted.statuses ?? {},
   worktreeStatuses: initialPersisted.worktreeStatuses ?? {},
+  worktreeStatusRevisions: {},
   worktrees: initialPersisted.worktrees ?? {},
   branches: initialPersisted.branches ?? {},
   ghAvailable: initialPersisted.ghAvailable ?? {},
@@ -464,9 +473,10 @@ export const useGitStore = create<GitState & GitActions>()((set, get) => ({
   prDetails: {},
 
   setStatus: (projectId, status) => {
-    if (areGitStatusesEqual(get().statuses[projectId], status)) return;
+    const nextStatus = mergeSummaryStatus(get().statuses[projectId], status);
+    if (areGitStatusesEqual(get().statuses[projectId], nextStatus)) return;
     set((state) => ({
-      statuses: { ...state.statuses, [projectId]: status },
+      statuses: { ...state.statuses, [projectId]: nextStatus },
     }));
   },
 
@@ -502,6 +512,15 @@ export const useGitStore = create<GitState & GitActions>()((set, get) => ({
       return changed ? { worktreeStatuses: nextWorktreeStatuses } : state;
     }),
 
+  bumpWorktreeStatusRevisions: (worktreePaths) => {
+    if (worktreePaths.length === 0) return;
+    set((state) => {
+      const revisions = { ...state.worktreeStatusRevisions };
+      for (const path of new Set(worktreePaths)) revisions[path] = (revisions[path] ?? 0) + 1;
+      return { worktreeStatusRevisions: revisions };
+    });
+  },
+
   clearWorktreeStatus: (worktreePath) =>
     set((state) => {
       const { [worktreePath]: _, ...rest } = state.worktreeStatuses;
@@ -530,9 +549,12 @@ export const useGitStore = create<GitState & GitActions>()((set, get) => ({
       let nextGhAvailable = state.ghAvailable;
       let changed = false;
 
-      if (snapshot.status && !areGitStatusesEqual(state.statuses[projectId], snapshot.status)) {
-        nextStatuses = { ...nextStatuses, [projectId]: snapshot.status };
-        changed = true;
+      if (snapshot.status) {
+        const nextStatus = mergeSummaryStatus(state.statuses[projectId], snapshot.status);
+        if (!areGitStatusesEqual(state.statuses[projectId], nextStatus)) {
+          nextStatuses = { ...nextStatuses, [projectId]: nextStatus };
+          changed = true;
+        }
       }
 
       if (snapshot.branches && !areBranchListsEqual(state.branches[projectId], snapshot.branches)) {
@@ -772,6 +794,7 @@ export function resetGitStoreCache(): void {
   useGitStore.setState({
     statuses: {},
     worktreeStatuses: {},
+    worktreeStatusRevisions: {},
     worktrees: {},
     branches: {},
     ghAvailable: {},

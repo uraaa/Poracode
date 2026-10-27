@@ -1634,7 +1634,30 @@ describe("GitService.getStatus Windows path normalization", () => {
     expect(result.detail).toBe("summary");
     expect(result.branch).toBe("main");
     expect(result.behind).toBe(1);
-    expect(commands.some((args) => args[0] === "remote" || args[0] === "diff")).toBe(false);
+    expect(commands.some((args) => ["diff", "rev-parse", "ls-files"].includes(args[0]!))).toBe(
+      false,
+    );
+    expect(result.remoteMetadataIncluded).toBe(true);
+  });
+
+  it("retains a successful status summary when its remote metadata read fails", async () => {
+    mockGitCommands((args) => {
+      if (args[0] === "status") return { stdout: "# branch.head main\n" };
+      if (args[0] === "remote") return { error: new Error("Config temporarily unreadable") };
+      return { stdout: "" };
+    });
+    const result = await new GitService().getStatus(location, "summary");
+    expect(result.isRepo).toBe(true);
+    expect(result.branch).toBe("main");
+    expect(result.remoteMetadataIncluded).toBeUndefined();
+  });
+
+  it("preserves full-status errors for repositories whose status command fails", async () => {
+    mockGitCommands((args) => {
+      if (args[0] === "status") return { error: new Error("Unable to read index") };
+      return { stdout: "true\n" };
+    });
+    await expect(new GitService().getStatus(location)).rejects.toThrow("Unable to read index");
   });
 
   it("normalizes Windows-style git paths before returning status", async () => {
@@ -1761,6 +1784,71 @@ describe("GitService.getStatus Windows path normalization", () => {
       owner: "owner",
       repo: "repo",
     });
+  });
+
+  it("includes cached remote metadata in WSL summary batches", async () => {
+    const gitBatch = vi.fn<WslBridgeClient["gitBatch"]>(async (_location, input) => ({
+      results: input.commands.map(() => ({
+        ok: true,
+        stdout: "# branch.head main\n? nested/new.txt\n",
+        stderr: "",
+        exitCode: 0,
+      })),
+    }));
+    const gitExec = vi.fn<WslBridgeClient["gitExec"]>(async () => ({
+      ok: true,
+      stdout: "origin\thttps://github.com/example/repo.git (fetch)\n",
+      stderr: "",
+      exitCode: 0,
+    }));
+    const service = new GitService();
+    service.setWslClient({ gitBatch, gitExec } as unknown as WslBridgeClient);
+    const wslLocation = {
+      kind: "wsl" as const,
+      distro: "Ubuntu",
+      linuxPath: "/home/demo/repo",
+      uncPath: "\\\\wsl.localhost\\Ubuntu\\home\\demo\\repo",
+    };
+    try {
+      for (let refresh = 0; refresh < 2; refresh += 1) {
+        const statuses = await service.getWorktreeStatusBatch(
+          wslLocation,
+          ["/repo/a", "/repo/b"],
+          "summary",
+        );
+        expect(statuses["/repo/a"]).toMatchObject({
+          remoteMetadataIncluded: true,
+          hasRemote: true,
+          remoteInfo: { repo: "repo" },
+        });
+        expect(statuses["/repo/b"]?.unstaged[0]?.path).toBe("nested/new.txt");
+        expect(gitExec).toHaveBeenCalledTimes(2);
+        expect(gitBatch.mock.calls.at(-1)?.[1].commands).toEqual([
+          expect.objectContaining({
+            cwd: "/repo/a",
+            args: [
+              ...GIT_QUOTEPATH_PREFIX,
+              "status",
+              "--porcelain=v2",
+              "-b",
+              "--untracked-files=all",
+            ],
+          }),
+          expect.objectContaining({
+            cwd: "/repo/b",
+            args: [
+              ...GIT_QUOTEPATH_PREFIX,
+              "status",
+              "--porcelain=v2",
+              "-b",
+              "--untracked-files=all",
+            ],
+          }),
+        ]);
+      }
+    } finally {
+      service.setWslClient(undefined);
+    }
   });
 
   it("routes WSL status snapshots through the bridge when available", async () => {
@@ -3390,7 +3478,7 @@ describe("GitService.commit pull-stash re-apply", () => {
   });
 });
 
-describe("GitService.getStatus Windows untracked expansion", () => {
+describe("GitService.getStatus Windows untracked files", () => {
   const location = {
     kind: "windows" as const,
     path: "C:\\Users\\demo\\work\\poracode",
@@ -3398,24 +3486,26 @@ describe("GitService.getStatus Windows untracked expansion", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    statMock.mockResolvedValue({
-      isFile: () => true,
-      size: 12,
-      mtimeMs: 100,
+    statMock.mockImplementation(async (...args: unknown[]) => {
+      if (String(args[0]).replace(/\\/g, "/").endsWith("/.git")) {
+        throw new Error("No Git metadata in the file-content fixture");
+      }
+      return { isFile: () => true, size: 12, mtimeMs: 100 };
     });
     readFileMock.mockResolvedValue("line-1\nline-2");
   });
 
-  it("expands untracked entries via git ls-files instead of directory recursion", async () => {
+  it("uses expanded porcelain untracked paths without a second Git command", async () => {
     mockGitCommands((args) => {
       if (args[0] === "rev-parse") return { stdout: "true\n" };
       if (args[0] === "status")
         return {
-          stdout: ["# branch.head main", "# branch.ab +0 -0", "? src"].join("\n"),
+          stdout: ["# branch.head main", "# branch.ab +0 -0", "? src/a.ts", "? src/b.ts"].join(
+            "\n",
+          ),
         };
       if (args[0] === "remote") return { stdout: "" };
       if (args[0] === "diff") return { stdout: "" };
-      if (args[0] === "ls-files") return { stdout: "src/a.ts\0src/b.ts\0" };
       return { stdout: "" };
     });
 
@@ -3426,6 +3516,12 @@ describe("GitService.getStatus Windows untracked expansion", () => {
       expect.objectContaining({ path: "src/b.ts", status: "?", insertions: 2, deletions: 0 }),
     ]);
     expect(readFileMock).toHaveBeenCalledTimes(2);
+    expect(execFileMock.mock.calls.map((call) => gitSubcommandArgs(call[1]))).toEqual(
+      expect.arrayContaining([["status", "--porcelain=v2", "-b", "--untracked-files=all"]]),
+    );
+    expect(
+      execFileMock.mock.calls.some((call) => gitSubcommandArgs(call[1])[0] === "ls-files"),
+    ).toBe(false);
   });
 
   it("reuses cached untracked file stats when size and mtime are unchanged", async () => {
@@ -3433,7 +3529,7 @@ describe("GitService.getStatus Windows untracked expansion", () => {
       if (args[0] === "rev-parse") return { stdout: "true\n" };
       if (args[0] === "status")
         return {
-          stdout: ["# branch.head main", "# branch.ab +0 -0", "? src"].join("\n"),
+          stdout: ["# branch.head main", "# branch.ab +0 -0", "? src/a.ts"].join("\n"),
         };
       if (args[0] === "remote") return { stdout: "" };
       if (args[0] === "diff") return { stdout: "" };
@@ -3483,23 +3579,24 @@ describe("GitService.getStatus Windows untracked expansion", () => {
   });
 
   it("refreshes cached untracked file stats when file metadata changes", async () => {
-    statMock
-      .mockResolvedValueOnce({
+    let fileReads = 0;
+    statMock.mockImplementation(async (...args: unknown[]) => {
+      if (String(args[0]).replace(/\\/g, "/").endsWith("/.git")) {
+        throw new Error("No Git metadata in the file-content fixture");
+      }
+      fileReads += 1;
+      return {
         isFile: () => true,
-        size: 12,
-        mtimeMs: 100,
-      })
-      .mockResolvedValueOnce({
-        isFile: () => true,
-        size: 14,
-        mtimeMs: 200,
-      });
+        size: fileReads === 1 ? 12 : 14,
+        mtimeMs: fileReads === 1 ? 100 : 200,
+      };
+    });
 
     mockGitCommands((args) => {
       if (args[0] === "rev-parse") return { stdout: "true\n" };
       if (args[0] === "status")
         return {
-          stdout: ["# branch.head main", "# branch.ab +0 -0", "? src"].join("\n"),
+          stdout: ["# branch.head main", "# branch.ab +0 -0", "? src/a.ts"].join("\n"),
         };
       if (args[0] === "remote") return { stdout: "" };
       if (args[0] === "diff") return { stdout: "" };

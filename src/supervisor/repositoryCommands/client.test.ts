@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { Worker } from "node:worker_threads";
 import { afterAll, afterEach, beforeAll, expect, it } from "vitest";
@@ -69,6 +69,216 @@ it("preserves nonzero exit diagnostics across the worker boundary", async () => 
       ),
     ),
   ).rejects.toMatchObject({ code: 7, stdout: "partial", stderr: "failure", killed: false });
+});
+
+it("inherits ambient variables when command env contains only overrides", async () => {
+  const prior = process.env.PORACODE_TEST_AMBIENT;
+  process.env.PORACODE_TEST_AMBIENT = "inherited";
+  try {
+    const client = makeClient();
+    await expect(
+      client.run({
+        ...nodeCommand(
+          "process.stdout.write(process.env.PORACODE_TEST_AMBIENT + ':' + process.env.FIXTURE)",
+        ),
+        options: { env: { FIXTURE: "override" }, windowsHide: true },
+      }),
+    ).resolves.toMatchObject({ stdout: "inherited:override" });
+    await expect(
+      client.run({
+        ...nodeCommand("process.stdout.write(process.env.PORACODE_TEST_AMBIENT ?? 'unset')"),
+        options: { env: { PORACODE_TEST_AMBIENT: undefined }, windowsHide: true },
+      }),
+    ).resolves.toMatchObject({ stdout: "unset" });
+    await expect(
+      client.run(nodeCommand("process.stdout.write(process.env.PORACODE_TEST_AMBIENT)")),
+    ).resolves.toMatchObject({ stdout: "inherited" });
+  } finally {
+    if (prior === undefined) delete process.env.PORACODE_TEST_AMBIENT;
+    else process.env.PORACODE_TEST_AMBIENT = prior;
+  }
+});
+
+it("preserves transferred POSIX shell environment and removes ambient repository scope", async () => {
+  const prior = process.env.GH_REPO;
+  process.env.GH_REPO = "ambient/repository";
+  try {
+    await expect(
+      makeClient().run({
+        ...nodeCommand(
+          "process.stdout.write(process.env.FIXTURE + ':' + (process.env.GH_REPO ?? 'unset'))",
+        ),
+        preparation: {
+          location: { kind: "posix", path: directory },
+          direct: true,
+          shellEnv: { FIXTURE: "main shell" },
+          omitEnv: ["GH_REPO"],
+        },
+      }),
+    ).resolves.toMatchObject({ stdout: "main shell:unset" });
+  } finally {
+    if (prior === undefined) delete process.env.GH_REPO;
+    else process.env.GH_REPO = prior;
+  }
+});
+
+it.each([undefined, "selected/repository"])(
+  "keeps prepared PATH and omitted ambient scope when scoped overrides select %s",
+  async (repositoryScope) => {
+    const prior = process.env.GH_REPO;
+    process.env.GH_REPO = "ambient/repository";
+    try {
+      await expect(
+        makeClient().run({
+          ...nodeCommand(
+            "process.stdout.write([process.env.PATH, process.env.GH_REPO ?? 'unset', process.env.GH_TOKEN].join(':'))",
+          ),
+          options: {
+            windowsHide: true,
+            env: {
+              GH_TOKEN: "fixture-token",
+              ...(repositoryScope ? { GH_REPO: repositoryScope } : {}),
+            },
+          },
+          preparation: {
+            location: { kind: "posix", path: directory },
+            direct: true,
+            shellEnv: { PATH: "primed-path-fixture" },
+            omitEnv: ["GH_REPO"],
+          },
+        }),
+      ).resolves.toMatchObject({
+        stdout: `primed-path-fixture:${repositoryScope ?? "unset"}:fixture-token`,
+      });
+    } finally {
+      if (prior === undefined) delete process.env.GH_REPO;
+      else process.env.GH_REPO = prior;
+    }
+  },
+);
+
+it("sends ambient environment only at worker boot and explicit environment refresh", async () => {
+  const requests: Array<{ ambientEnv?: NodeJS.ProcessEnv }> = [];
+  const client = new RepositoryCommandClient(() => {
+    const worker = new Worker(join(directory, "repositoryCommandWorker.cjs"));
+    const postMessage = worker.postMessage.bind(worker);
+    worker.postMessage = (request) => {
+      requests.push(request);
+      postMessage(request);
+    };
+    return worker;
+  });
+  clients.push(client);
+  await client.run(nodeCommand(""));
+  await client.run(nodeCommand(""));
+  invalidateExecutablePathCache();
+  await client.run(nodeCommand(""));
+  expect(requests.map((request) => request.ambientEnv !== undefined)).toEqual([true, false, true]);
+});
+
+it("drains interactive work during shutdown without interrupting repository writes", async () => {
+  const client = new RepositoryCommandClient(
+    () => new Worker(join(directory, "repositoryCommandWorker.cjs")),
+    { drainOnShutdown: true },
+  );
+  clients.push(client);
+  const startedFile = join(directory, "write-started");
+  const finishedFile = join(directory, "write-finished");
+  const pending = client.run({
+    ...nodeCommand(
+      "const fs=require('node:fs'); fs.writeFileSync(process.env.STARTED,'1'); setTimeout(()=>{fs.writeFileSync(process.env.FINISHED,'done');process.stdout.write('committed')},200)",
+    ),
+    options: {
+      env: { ...process.env, STARTED: startedFile, FINISHED: finishedFile },
+      timeout: 5000,
+    },
+  });
+  const result = pending.catch((error: unknown) => error);
+  await expect.poll(() => readFile(startedFile, "utf8").catch(() => "")).toBe("1");
+  await client.dispose();
+  expect(await result).toMatchObject({ stdout: "committed" });
+  expect(await readFile(finishedFile, "utf8")).toBe("done");
+});
+
+it("finishes an in-flight Git commit on shutdown and releases the index lock", async () => {
+  const repository = await mkdtemp(join(directory, "commit-drain-"));
+  const client = new RepositoryCommandClient(
+    () => new Worker(join(directory, "repositoryCommandWorker.cjs")),
+    { drainOnShutdown: true },
+  );
+  clients.push(client);
+  const hooks = join(repository, "test-hooks");
+  const started = join(repository, "hook-started");
+  const release = join(repository, "hook-release");
+  const hookScript = join(repository, "hook.cjs");
+  const indexLock = join(repository, ".git", "index.lock");
+  const git = (owner: RepositoryCommandClient, args: string[]) =>
+    owner.run({
+      command: "git",
+      args: [
+        "-c",
+        `core.hooksPath=${hooks}`,
+        "-c",
+        "commit.gpgsign=false",
+        "-c",
+        "user.name=Shutdown Fixture",
+        "-c",
+        "user.email=shutdown-fixture@example.invalid",
+        ...args,
+      ],
+      options: { cwd: repository, timeout: 5000, windowsHide: true },
+    });
+  await git(client, ["init", "--initial-branch=main"]);
+  await writeFile(join(repository, "tracked.txt"), "committed fixture\n");
+  await git(client, ["add", "--", "tracked.txt"]);
+  await mkdir(hooks);
+  await writeFile(
+    hookScript,
+    `
+    const fs = require('node:fs');
+    fs.writeFileSync(${JSON.stringify(started)}, 'started');
+    const timer = setInterval(() => {
+      if (fs.existsSync(${JSON.stringify(release)})) clearInterval(timer);
+    }, 10);
+    setTimeout(() => process.exit(1), 3000).unref();
+  `,
+  );
+  const shellPath = (path: string) => `'${path.replaceAll("\\", "/").replaceAll("'", "'\"'\"'")}'`;
+  await writeFile(
+    join(hooks, "pre-commit"),
+    `#!/bin/sh\nexec ${shellPath(process.execPath)} ${shellPath(hookScript)}\n`,
+    { mode: 0o755 },
+  );
+
+  // A partial commit holds index.lock across the hook; a plain commit may
+  // release its lock before invoking hooks when the index is already current.
+  const committed = git(client, [
+    "commit",
+    "--only",
+    "-m",
+    "finish during shutdown",
+    "--",
+    "tracked.txt",
+  ]).catch((error: unknown) => error);
+  try {
+    await expect.poll(() => readFile(started, "utf8").catch(() => "")).toBe("started");
+    expect((await stat(indexLock)).isFile()).toBe(true);
+    const disposed = client.dispose();
+    await writeFile(release, "release");
+    await disposed;
+    expect(await committed).toMatchObject({
+      stdout: expect.stringContaining("finish during shutdown"),
+    });
+    await expect(stat(indexLock)).rejects.toMatchObject({ code: "ENOENT" });
+    const verifier = makeClient();
+    await expect(git(verifier, ["show", "HEAD:tracked.txt"])).resolves.toMatchObject({
+      stdout: "committed fixture\n",
+    });
+  } finally {
+    // Also let the hook exit if a pre-shutdown assertion fails.
+    await writeFile(release, "release");
+    await committed;
+  }
 });
 
 it("preserves ENOENT, timeout and maxBuffer failures", async () => {

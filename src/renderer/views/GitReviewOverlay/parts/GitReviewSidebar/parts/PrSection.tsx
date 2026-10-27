@@ -72,7 +72,7 @@ export function PrSection(props: {
   handleMarkPrReady: () => Promise<void>;
   handleUpdatePrBranch?: ((rebase?: boolean) => Promise<void>) | undefined;
   /** Refetch live PR data, hydrate missing details once, and power the refresh icon. */
-  onRefreshPr?: (() => void | Promise<void>) | undefined;
+  onRefreshPr?: ((background?: boolean) => void | Promise<void>) | undefined;
   isRefreshingPr?: boolean | undefined;
   initialWatch?: PrWatch | null | undefined;
   onInitialWatchUsed?: (() => void) | undefined;
@@ -122,7 +122,7 @@ export function PrSection(props: {
       return;
     }
     requestedDetailsKey.current = cacheKey;
-    void onRefreshPr();
+    void onRefreshPr(true);
   }, [cacheKey, details, isRefreshingPr, onRefreshPr, state]);
 
   const reasonKey = mergeable === "CONFLICTING" ? "DIRTY" : mergeStateStatus;

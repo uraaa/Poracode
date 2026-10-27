@@ -147,12 +147,16 @@ export const ghCreatePrPayloadSchema = z.object({
 export type GhCreatePrPayload = z.infer<typeof ghCreatePrPayloadSchema>;
 
 export const ghGetPrForBranchPayloadSchema = z.object({
+  /** Opt-in polling; omitted for user, agent and remote interactive reads. */
+  background: z.boolean().optional(),
   projectLocation: projectLocationSchema,
   branch: z.string().min(1),
 });
 export type GhGetPrForBranchPayload = z.infer<typeof ghGetPrForBranchPayloadSchema>;
 
 export const ghListPrsPayloadSchema = z.object({
+  /** Opt-in polling; omitted for user, agent and remote interactive reads. */
+  background: z.boolean().optional(),
   projectLocation: projectLocationSchema,
 });
 export type GhListPrsPayload = z.infer<typeof ghListPrsPayloadSchema>;
@@ -176,6 +180,8 @@ export interface PullRequestSummary {
 }
 
 export const ghListPullRequestsPayloadSchema = z.object({
+  /** Opt-in polling; omitted for user, agent and remote interactive reads. */
+  background: z.boolean().optional(),
   projectLocation: projectLocationSchema,
 });
 export type GhListPullRequestsPayload = z.infer<typeof ghListPullRequestsPayloadSchema>;
@@ -259,6 +265,8 @@ export interface GitHubActionsRun {
 }
 
 export const ghListWorkflowsPayloadSchema = z.object({
+  /** Opt-in polling; omitted for user, agent and remote interactive reads. */
+  background: z.boolean().optional(),
   projectLocation: projectLocationSchema,
   ghAccount: gitHubAccountRefSchema.optional(),
 });
@@ -271,6 +279,8 @@ export interface GhListWorkflowsResult {
 }
 
 export const ghListWorkflowRunsPayloadSchema = z.object({
+  /** Opt-in polling; omitted for user, agent and remote interactive reads. */
+  background: z.boolean().optional(),
   projectLocation: projectLocationSchema,
   workflowId: z.number().int().min(1).optional(),
   ghAccount: gitHubAccountRefSchema.optional(),
@@ -294,6 +304,8 @@ export interface GhGetWorkflowDefinitionResult {
 }
 
 export const ghGetWorkflowRunPayloadSchema = z.object({
+  /** Opt-in polling; omitted for user, agent and remote interactive reads. */
+  background: z.boolean().optional(),
   projectLocation: projectLocationSchema,
   runId: z.number().int().min(1),
   ghAccount: gitHubAccountRefSchema.optional(),
@@ -369,6 +381,8 @@ export const ghUpdatePrBranchPayloadSchema = z.object({
 export type GhUpdatePrBranchPayload = z.infer<typeof ghUpdatePrBranchPayloadSchema>;
 
 export const ghGetPrChecksPayloadSchema = z.object({
+  /** Opt-in polling; omitted for user, agent and remote interactive reads. */
+  background: z.boolean().optional(),
   projectLocation: projectLocationSchema,
   branch: z.string().min(1),
 });
@@ -407,6 +421,8 @@ export const ghSubmitPrReviewPayloadSchema = z.object({
 export type GhSubmitPrReviewPayload = z.infer<typeof ghSubmitPrReviewPayloadSchema>;
 
 export const ghGetPrDetailsPayloadSchema = z.object({
+  /** Opt-in polling; omitted for user, agent and remote interactive reads. */
+  background: z.boolean().optional(),
   projectLocation: projectLocationSchema,
   prNumber: z.number().int().min(1),
 });

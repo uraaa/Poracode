@@ -19,11 +19,30 @@ vi.mock("./exec", async () => {
 
 import { GIT_NETWORK_TIMEOUT } from "./exec";
 import { GitWorktreeService, isValidGitBranchName } from "./worktreeService";
+import { pollingRepositoryRequest } from "../repositoryCommands/scheduling";
 
 const location: ProjectLocation = {
   kind: "posix",
   path: "/repo",
 };
+
+it("does not make an interactive fetch join a pending polling fetch", async () => {
+  const gate = Promise.withResolvers<string>();
+  mocks.execGit.mockImplementation(async (_location, args) =>
+    args[0] === "remote" ? gate.promise : "",
+  );
+  const service = new GitWorktreeService();
+  const background = pollingRepositoryRequest("fetch-priority-fixture", () =>
+    service.fetch(location, "origin", true),
+  );
+  await Promise.resolve();
+  const interactive = service.fetch(location, "origin", true);
+  await Promise.resolve();
+  const probes = mocks.execGit.mock.calls.filter(([, args]) => args[0] === "remote");
+  gate.resolve("origin\n");
+  await Promise.all([background, interactive]);
+  expect(probes).toHaveLength(2);
+});
 
 describe("GitWorktreeService pull", () => {
   beforeEach(() => {

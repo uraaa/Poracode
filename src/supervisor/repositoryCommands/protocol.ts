@@ -2,10 +2,11 @@ import type { ProjectLocation } from "@/shared/contracts";
 
 // Private, co-bundled worker protocol. No independently deployed or persisted
 // copy exists; both endpoints must come from the same supervisor build.
-export const REPOSITORY_COMMAND_PROTOCOL_VERSION = 1;
+export const REPOSITORY_COMMAND_PROTOCOL_VERSION = 2;
 
 export interface RepositoryCommandOptions {
   cwd?: string;
+  /** Overrides merged into the worker's ambient environment. */
   env?: NodeJS.ProcessEnv;
   timeout?: number;
   maxBuffer?: number;
@@ -49,10 +50,11 @@ export type RepositoryWorkerRequest =
       version: typeof REPOSITORY_COMMAND_PROTOCOL_VERSION;
       id: number;
       command: RepositoryCommand;
-      ambientEnv: NodeJS.ProcessEnv;
+      /** Included at boot and after an explicit executable/environment refresh. */
+      ambientEnv?: NodeJS.ProcessEnv;
       cacheGeneration: number;
     }
-  | { version: typeof REPOSITORY_COMMAND_PROTOCOL_VERSION; shutdown: true };
+  | { version: typeof REPOSITORY_COMMAND_PROTOCOL_VERSION; shutdown: true; drain: boolean };
 
 export type RepositoryWorkerReply =
   | {

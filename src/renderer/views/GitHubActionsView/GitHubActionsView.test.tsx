@@ -202,6 +202,85 @@ describe("GitHubActionsView", () => {
     expect(jobDetails).toHaveAttribute("open");
   });
 
+  it("marks automatic Actions refreshes as background and keeps manual refreshes interactive", async () => {
+    const intervals = vi.spyOn(window, "setInterval");
+    try {
+      render(<GitHubActionsView projectId={project.id} runId={run.id} onClose={() => {}} />);
+      await screen.findByText("Typecheck");
+      await screen.findByRole("link", { name: new RegExp(run.title) });
+      expect(bridge.ghListWorkflowRuns.mock.calls.at(-1)?.[0].background).toBeUndefined();
+      expect(bridge.ghGetWorkflowRun.mock.calls.at(-1)?.[0].background).toBeUndefined();
+      await waitFor(() =>
+        expect(intervals.mock.calls.some(([, delay]) => delay === 5000)).toBe(true),
+      );
+      const poll = intervals.mock.calls
+        .filter(([, delay]) => delay === 5000)
+        .at(-1)?.[0] as () => void;
+      expect(poll).toBeTypeOf("function");
+      await act(async () => {
+        poll();
+      });
+      expect(bridge.ghListWorkflowRuns.mock.calls.at(-1)?.[0].background).toBe(true);
+      expect(bridge.ghGetWorkflowRun.mock.calls.at(-1)?.[0].background).toBe(true);
+      fireEvent.click(screen.getByRole("button", { name: "Refresh workflow runs" }));
+      fireEvent.click(screen.getByRole("button", { name: "Refresh run" }));
+      await waitFor(() => {
+        expect(bridge.ghListWorkflowRuns.mock.calls.at(-1)?.[0].background).toBeUndefined();
+        expect(bridge.ghGetWorkflowRun.mock.calls.at(-1)?.[0].background).toBeUndefined();
+      });
+    } finally {
+      intervals.mockRestore();
+    }
+  });
+
+  it("does not stack automatic Actions requests while a poll is pending and lets manual refresh bypass it", async () => {
+    const intervals = vi.spyOn(window, "setInterval");
+    const pendingRuns = Promise.withResolvers<GhListWorkflowRunsResult>();
+    const pendingRun = Promise.withResolvers<GhGetWorkflowRunResult>();
+    try {
+      render(<GitHubActionsView projectId={project.id} runId={run.id} onClose={() => {}} />);
+      await screen.findByText("Typecheck");
+      await screen.findByRole("link", { name: new RegExp(run.title) });
+      bridge.ghListWorkflowRuns.mockImplementation(() => pendingRuns.promise);
+      bridge.ghGetWorkflowRun.mockImplementation(() => pendingRun.promise);
+      await waitFor(() =>
+        expect(intervals.mock.calls.some(([, delay]) => delay === 5000)).toBe(true),
+      );
+      const poll = () => {
+        const tick = intervals.mock.calls
+          .filter(([, delay]) => delay === 5000)
+          .at(-1)?.[0] as () => void;
+        tick();
+      };
+      const initialRuns = bridge.ghListWorkflowRuns.mock.calls.length;
+      const initialRun = bridge.ghGetWorkflowRun.mock.calls.length;
+      await act(async () => {
+        poll();
+      });
+      await act(async () => {
+        poll();
+      });
+      await act(async () => {
+        poll();
+      });
+      expect(bridge.ghListWorkflowRuns).toHaveBeenCalledTimes(initialRuns + 1);
+      expect(bridge.ghGetWorkflowRun).toHaveBeenCalledTimes(initialRun + 1);
+      fireEvent.click(screen.getByRole("button", { name: "Refresh workflows" }));
+      await waitFor(() => {
+        expect(bridge.ghListWorkflowRuns).toHaveBeenCalledTimes(initialRuns + 2);
+        expect(bridge.ghGetWorkflowRun).toHaveBeenCalledTimes(initialRun + 2);
+      });
+      expect(bridge.ghListWorkflowRuns.mock.calls.at(-1)?.[0].background).toBeUndefined();
+      expect(bridge.ghGetWorkflowRun.mock.calls.at(-1)?.[0].background).toBeUndefined();
+    } finally {
+      await act(async () => {
+        pendingRuns.resolve({ runs: [run] });
+        pendingRun.resolve({ run });
+      });
+      intervals.mockRestore();
+    }
+  });
+
   it("selects the first active project by default", async () => {
     render(<GitHubActionsView onClose={() => {}} />);
 

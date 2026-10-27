@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isIgnoredWorkTreeFile, ProjectWatcher } from "./projectWatcher";
+import { isIgnoredWorkTreeFile, isKnownGitNoisePath, ProjectWatcher } from "./projectWatcher";
 import type { WslBridgeClient, WslLocation } from "./wsl/bridge/client";
 
 function makeLocation(linuxPath: string, distro = "Ubuntu"): WslLocation {
@@ -54,6 +54,33 @@ function createWatchHarness(subscriptionIdForCall: (callNumber: number) => strin
     watch,
   };
 }
+
+describe("Git metadata watcher filtering", () => {
+  it("ignores checkpoint and object churn without hiding branch or configuration changes", () => {
+    for (const name of [
+      "objects",
+      "objects/ab/cd",
+      "logs",
+      "logs/HEAD",
+      "refs/poracode/checkpoints",
+      "refs/poracode/checkpoints/thread/1",
+      "refs/lightcode/checkpoints/thread/1",
+      "worktrees/feature/logs/HEAD",
+    ]) {
+      expect(isKnownGitNoisePath(name)).toBe(true);
+    }
+    for (const name of [
+      "HEAD",
+      "config",
+      "packed-refs",
+      "refs/heads/feature",
+      "refs/remotes/origin/main",
+      "worktrees/feature/HEAD",
+    ]) {
+      expect(isKnownGitNoisePath(name)).toBe(false);
+    }
+  });
+});
 
 describe("isIgnoredWorkTreeFile", () => {
   it("ignores project-relative managed worktrees and their dependency churn", () => {

@@ -21,10 +21,13 @@ export class RepositoryCommandClient {
   private readonly pending = new Map<number, PendingCommand>();
   private nextId = 0;
   private disposed = false;
+  private environmentGeneration = -1;
+  private disposal: Promise<void> | undefined;
 
   constructor(
     private readonly createWorker = () =>
       new Worker(join(__dirname, "repositoryCommandWorker.cjs")),
+    private readonly options: { drainOnShutdown?: boolean } = {},
   ) {}
 
   run(command: RepositoryCommand): Promise<RepositoryCommandResult> {
@@ -35,13 +38,17 @@ export class RepositoryCommandClient {
       this.pending.set(id, { resolve, reject });
       worker.ref();
       try {
+        const cacheGeneration = getExecutablePathCacheGeneration();
+        const ambientEnv =
+          this.environmentGeneration !== cacheGeneration ? { ...process.env } : undefined;
         worker.postMessage({
           version: REPOSITORY_COMMAND_PROTOCOL_VERSION,
           id,
           command,
-          ambientEnv: { ...process.env },
-          cacheGeneration: getExecutablePathCacheGeneration(),
+          ...(ambientEnv ? { ambientEnv } : {}),
+          cacheGeneration,
         } satisfies RepositoryWorkerRequest);
+        this.environmentGeneration = cacheGeneration;
       } catch (error) {
         this.pending.delete(id);
         if (this.pending.size === 0) worker.unref();
@@ -50,24 +57,29 @@ export class RepositoryCommandClient {
     });
   }
 
-  async dispose(): Promise<void> {
+  dispose(): Promise<void> {
+    if (this.disposal) return this.disposal;
     this.disposed = true;
     const worker = this.worker;
-    if (!worker) return;
-    this.failWorker(worker, new Error("Repository command client is disposed"));
-    await new Promise<void>((resolve) => {
+    if (!worker) return Promise.resolve();
+    if (!this.options.drainOnShutdown)
+      this.failWorker(worker, new Error("Repository command client is disposed"));
+    this.disposal = new Promise<void>((resolve) => {
       worker.once("exit", () => resolve());
       worker.postMessage({
         version: REPOSITORY_COMMAND_PROTOCOL_VERSION,
         shutdown: true,
+        drain: this.options.drainOnShutdown ?? false,
       } satisfies RepositoryWorkerRequest);
       worker.ref();
     });
+    return this.disposal;
   }
 
   private startWorker(): Worker {
     const worker = this.createWorker();
     this.worker = worker;
+    this.environmentGeneration = -1;
     worker.on("message", (reply: RepositoryWorkerReply) => {
       if (this.worker !== worker) return;
       const pending = this.pending.get(reply.id);
@@ -99,15 +111,29 @@ export class RepositoryCommandClient {
 // A separate interactive lane reserves a spawn owner for mutations and
 // agent-critical repository work even while the polling worker is in CreateProcess.
 const backgroundCommands = new RepositoryCommandClient();
-const interactiveCommands = new RepositoryCommandClient();
+// Fetch updates remote refs, so it receives the same graceful exit as mutations.
+const networkCommands = new RepositoryCommandClient(undefined, { drainOnShutdown: true });
+const interactiveCommands = new RepositoryCommandClient(undefined, { drainOnShutdown: true });
 
 export function runRepositoryCommand(command: RepositoryCommand): Promise<RepositoryCommandResult> {
   const priority = getRepositoryCommandPriority();
-  return scheduleRepositoryCommand(priority, JSON.stringify(command), () =>
-    (priority === "background" ? backgroundCommands : interactiveCommands).run(command),
+  // Interactive commands may carry multi-megabyte patch input. They are never
+  // deduplicated, so serializing them on the supervisor has no purpose.
+  const key = priority === "interactive" ? "" : JSON.stringify(command);
+  return scheduleRepositoryCommand(priority, key, () =>
+    (priority === "background"
+      ? backgroundCommands
+      : priority === "network"
+        ? networkCommands
+        : interactiveCommands
+    ).run(command),
   );
 }
 
 export async function disposeRepositoryCommands(): Promise<void> {
-  await Promise.all([backgroundCommands.dispose(), interactiveCommands.dispose()]);
+  await Promise.all([
+    backgroundCommands.dispose(),
+    networkCommands.dispose(),
+    interactiveCommands.dispose(),
+  ]);
 }

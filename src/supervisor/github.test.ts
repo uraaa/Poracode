@@ -9,12 +9,15 @@ const buildAgentCommandMock = vi.hoisted(() =>
       location: { kind: "windows"; path: string },
       command: string,
       args: string[],
+      resolvedExecPath?: string,
+      env?: Record<string, string>,
     ) => { command: string; args: string[] }
   >(),
 );
 const primeProjectShellEnvMock = vi.hoisted(() =>
   vi.fn<(cwd: string) => Promise<Record<string, string> | undefined>>(),
 );
+const getPrimedPosixEnvMock = vi.hoisted(() => vi.fn<() => Record<string, string> | undefined>());
 const mkdtempMock = vi.hoisted(() => vi.fn<(prefix: string) => Promise<string>>());
 const rmMock = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<void>>());
 const writeFileMock = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<void>>());
@@ -47,6 +50,7 @@ vi.mock("./agents/base", () => ({
   buildAgentCommand: buildAgentCommandMock,
   primeProjectShellEnv: primeProjectShellEnvMock,
   getProjectShellEnv: () => undefined,
+  getPrimedPosixEnv: getPrimedPosixEnvMock,
   resolveExecutablePathAsync: async () => undefined,
 }));
 
@@ -86,6 +90,7 @@ describe("GitHubService", () => {
     rmMock.mockResolvedValue(undefined);
     writeFileMock.mockResolvedValue(undefined);
     primeProjectShellEnvMock.mockResolvedValue(undefined);
+    getPrimedPosixEnvMock.mockReturnValue(undefined);
   });
 
   afterEach(() => {
@@ -93,6 +98,35 @@ describe("GitHubService", () => {
   });
 
   describe("checkGhAvailable", () => {
+    it("reuses availability until TTL expiry or executable refresh", async () => {
+      const { invalidateExecutablePathCache } = await import("./agents/base/processRuntime");
+      const clock = vi.spyOn(Date, "now").mockReturnValue(1000);
+      execFileAsyncMock.mockResolvedValue({ stdout: "gh version 2.50.0\n" });
+      const service = new GitHubService();
+      try {
+        await Promise.all([service.checkGhAvailable(location), service.checkGhAvailable(location)]);
+        await service.checkGhAvailable(location);
+        expect(execFileAsyncMock).toHaveBeenCalledTimes(1);
+        clock.mockReturnValue(61_001);
+        await service.checkGhAvailable(location);
+        expect(execFileAsyncMock).toHaveBeenCalledTimes(2);
+        invalidateExecutablePathCache();
+        await service.checkGhAvailable(location);
+        expect(execFileAsyncMock).toHaveBeenCalledTimes(3);
+      } finally {
+        clock.mockRestore();
+      }
+    });
+
+    it("forwards the main process POSIX fallback env when project priming is unavailable", async () => {
+      getPrimedPosixEnvMock.mockReturnValue({ PATH: "/primed/bin:/usr/bin", FALLBACK: "main" });
+      execFileAsyncMock.mockResolvedValue({ stdout: "[]" });
+      await new GitHubService().listPrs(posixLocation);
+      expect(buildAgentCommandMock.mock.calls[0]?.[4]).toEqual({
+        PATH: "/primed/bin:/usr/bin",
+        FALLBACK: "main",
+      });
+    });
     it("returns available true when gh --version succeeds", async () => {
       execFileAsyncMock.mockResolvedValue({ stdout: "gh version 2.50.0\n" });
 

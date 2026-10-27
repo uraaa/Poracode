@@ -1869,7 +1869,7 @@ describe("App", () => {
           updatedAt: "2026-03-22T00:00:00.000Z",
         },
       ],
-      view: { kind: "draft", projectId: "project-1" },
+      view: { kind: "thread", panes: ["thread-existing", "draft:project-1"] },
     }));
 
     render(<App />);
@@ -1944,7 +1944,7 @@ describe("App", () => {
           updatedAt: "2026-03-21T00:00:00.000Z",
         },
       ],
-      view: { kind: "home" },
+      view: { kind: "thread", panes: ["thread-visible"] },
     }));
 
     render(<App />);

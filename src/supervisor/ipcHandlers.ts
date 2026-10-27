@@ -1,43 +1,8 @@
 import type { ListPluginsPayload } from "@/shared/contracts";
 import { defineSupervisorIpcHandlers, type SupervisorIpcHandlerMap } from "@/shared/ipc";
 import { getProjectFsPath } from "@/shared/wsl";
-import { pollingRepositoryRequest } from "./repositoryCommands/scheduling";
+import { configureRepositoryIpcScheduling } from "./repositoryCommands/ipcScheduling";
 import type { SupervisorRuntime } from "./supervisorRuntime";
-
-const repositoryPollingProcedures = [
-  "listFileCheckpoints",
-  "getGitStatus",
-  "getExperimentCandidateStats",
-  "gitListBranches",
-  "gitListWorktrees",
-  "gitGetWorktreeSourceBranch",
-  "gitGetWorktreeOwner",
-  "gitProjectSnapshot",
-  "gitWorktreeStatusBatch",
-  "ghCheckAvailable",
-  "ghGetPrForBranch",
-  "ghListPrs",
-  "ghListPullRequests",
-  "ghListWorkflows",
-  "ghListWorkflowRuns",
-  "ghGetWorkflowRun",
-  "ghGetPrChecks",
-  "ghGetPrDetails",
-] as const satisfies readonly (keyof SupervisorIpcHandlerMap)[];
-
-function wrapRepositoryPollingHandler<Name extends (typeof repositoryPollingProcedures)[number]>(
-  handlers: SupervisorIpcHandlerMap,
-  name: Name,
-): void {
-  type Handler = SupervisorIpcHandlerMap[Name];
-  type Payload = Parameters<Handler>[0];
-  // Keep each procedure's payload/result pair intact through the generic map lookup.
-  const handler = handlers[name] as (payload: Payload) => ReturnType<Handler>;
-  handlers[name] = ((payload: Payload) =>
-    pollingRepositoryRequest(JSON.stringify([name, payload]), async () =>
-      handler(payload),
-    )) as Handler;
-}
 
 /**
  * Maps IPC procedures straight onto the runtime's services. Payload → argument
@@ -194,12 +159,7 @@ export function createSupervisorIpcHandlers(runtime: SupervisorRuntime): Supervi
       generation.cancelJudgeExperiment(payload.experimentId);
     },
     gitListBranches: (payload) => git.listBranches(payload.projectLocation, payload.includeRemote),
-    gitFetch: (payload) => {
-      const fetch = () => git.fetch(payload.projectLocation, payload.remote, payload.prune);
-      return payload.background
-        ? pollingRepositoryRequest(JSON.stringify(["gitFetch", payload]), fetch)
-        : fetch();
-    },
+    gitFetch: (payload) => git.fetch(payload.projectLocation, payload.remote, payload.prune),
     gitListWorktrees: (payload) => git.listWorktrees(payload.projectLocation),
     gitAddWorktree: (payload) =>
       git.addWorktree(
@@ -402,8 +362,6 @@ export function createSupervisorIpcHandlers(runtime: SupervisorRuntime): Supervi
       return listPlugins(payload);
     },
   });
-  for (const name of repositoryPollingProcedures) {
-    wrapRepositoryPollingHandler(handlers, name);
-  }
+  configureRepositoryIpcScheduling(handlers);
   return handlers;
 }

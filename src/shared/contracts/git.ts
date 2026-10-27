@@ -24,6 +24,8 @@ export type GitStatusDetail = z.infer<typeof gitStatusDetailSchema>;
 
 export interface GitStatusResult {
   detail?: GitStatusDetail;
+  /** A summary may include authoritative cached/config-refreshed remote metadata. */
+  remoteMetadataIncluded?: boolean;
   isRepo: boolean;
   branch: string;
   /** Commit currently checked out at HEAD. */
@@ -80,6 +82,8 @@ export const fileCheckpointTurnSchema = fileCheckpointRecordSchema.extend({
 export type FileCheckpointTurn = z.infer<typeof fileCheckpointTurnSchema>;
 
 export const getGitStatusPayloadSchema = z.object({
+  /** Opt-in polling; omitted for user, agent and remote interactive reads. */
+  background: z.boolean().optional(),
   projectLocation: projectLocationSchema,
   detail: gitStatusDetailSchema.optional(),
 });
@@ -109,6 +113,8 @@ export interface FinalizeFileCheckpointResult {
 }
 
 export const listFileCheckpointsPayloadSchema = z.object({
+  /** Opt-in polling; omitted for user, agent and remote interactive reads. */
+  background: z.boolean().optional(),
   threadId: z.string().min(1),
   projectLocation: projectLocationSchema,
 });
@@ -127,6 +133,8 @@ export const restoreFileCheckpointPayloadSchema = z.object({
 export type RestoreFileCheckpointPayload = z.infer<typeof restoreFileCheckpointPayloadSchema>;
 
 export const gitWorktreeStatusBatchPayloadSchema = z.object({
+  /** Opt-in polling; omitted for user, agent and remote interactive reads. */
+  background: z.boolean().optional(),
   projectLocation: projectLocationSchema,
   worktreePaths: z.array(z.string().min(1)),
   detail: gitStatusDetailSchema.optional(),
@@ -344,6 +352,8 @@ export interface GitAddWorktreeResult {
 }
 
 export const getGitBranchesPayloadSchema = z.object({
+  /** Opt-in polling; omitted for user, agent and remote interactive reads. */
+  background: z.boolean().optional(),
   projectLocation: projectLocationSchema,
   includeRemote: z.boolean().default(true),
 });
@@ -359,6 +369,8 @@ export const gitFetchPayloadSchema = z.object({
 export type GitFetchPayload = z.infer<typeof gitFetchPayloadSchema>;
 
 export const gitListWorktreesPayloadSchema = z.object({
+  /** Opt-in polling; omitted for user, agent and remote interactive reads. */
+  background: z.boolean().optional(),
   projectLocation: projectLocationSchema,
 });
 export type GitListWorktreesPayload = z.infer<typeof gitListWorktreesPayloadSchema>;
@@ -518,6 +530,8 @@ export interface GitSyncResult {
 }
 
 export const gitProjectSnapshotPayloadSchema = z.object({
+  /** Opt-in polling; omitted for user, agent and remote interactive reads. */
+  background: z.boolean().optional(),
   projectLocation: projectLocationSchema,
   /** Pass true to also include the gh availability check (`gh --version`). */
   includeGhCheck: z.boolean().default(false),
@@ -532,6 +546,8 @@ export interface GitProjectSnapshotResult {
 }
 
 export const gitGetWorktreeSourceBranchPayloadSchema = z.object({
+  /** Opt-in polling; omitted for user, agent and remote interactive reads. */
+  background: z.boolean().optional(),
   projectLocation: projectLocationSchema,
   branch: z.string().min(1),
   /** When set, skip inference and use this branch as the source (e.g. PR baseRefName). */
@@ -548,6 +564,7 @@ export interface GitGetWorktreeSourceBranchResult {
 }
 
 export const gitGetWorktreeOwnerPayloadSchema = gitGetWorktreeSourceBranchPayloadSchema.pick({
+  background: true,
   projectLocation: true,
   branch: true,
 });

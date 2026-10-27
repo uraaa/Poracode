@@ -7,10 +7,11 @@ import type {
 } from "@/shared/contracts";
 import { buildWorktreeLocation } from "@/shared/worktree";
 import { readBridge } from "@/renderer/bridge";
+import { useGitStore } from "@/renderer/state/gitStore";
 
 export type CandidateStatsState = GetExperimentCandidateStatsResult | "loading" | "unavailable";
 
-const ACTIVE_RETRY_DELAY_MS = 500;
+const ACTIVE_RETRY_DELAY_MS = 2_000;
 const candidateStatsCache = new Map<string, GetExperimentCandidateStatsResult | "unavailable">();
 
 /**
@@ -43,13 +44,16 @@ export function useExperimentCandidateStats(args: {
   worktreeStatus: GitStatusResult | undefined;
   isActive: boolean;
 }): { stats: CandidateStatsState; isRefreshing: boolean } {
+  const statusRevision = useGitStore((state) =>
+    args.worktreePath ? (state.worktreeStatusRevisions[args.worktreePath] ?? 0) : 0,
+  );
   const statsCacheKey = args.worktreePath ? `${args.worktreePath}\0${args.baseCommit}` : "";
   const [stats, setStats] = useState<CandidateStatsState>("loading");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [retryNonce, setRetryNonce] = useState(0);
   // Every input that must restart the request, folded into one key so the
   // fetch effect consumes them instead of listing trigger-only dependencies.
-  const requestKey = `${statsCacheKey}\0${args.worktreeState}\0${retryNonce}\0${buildWorktreeStatusFingerprint(args.worktreeStatus)}`;
+  const requestKey = `${statsCacheKey}\0${args.worktreeState}\0${retryNonce}\0${statusRevision}\0${buildWorktreeStatusFingerprint(args.worktreeStatus)}`;
   // Reset-on-request-change during render (official "adjust state during
   // render" pattern): mirrors what the fetch effect used to do synchronously
   // on entry. Starts as null so the mount pass applies it too — the old
@@ -107,6 +111,7 @@ export function useExperimentCandidateStats(args: {
       .getExperimentCandidateStats({
         projectLocation: buildWorktreeLocation(args.projectLocation, args.worktreePath),
         baseRef: args.baseCommit,
+        background: true,
       })
       .then((nextStats) => {
         if (

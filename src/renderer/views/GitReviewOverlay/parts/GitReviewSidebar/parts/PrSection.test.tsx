@@ -176,7 +176,7 @@ describe("PrSection", () => {
     const onRefreshPr = vi.fn<() => Promise<void>>(async () => undefined);
     const view = render(<PrSection {...baseProps} onRefreshPr={onRefreshPr} />);
 
-    await waitFor(() => expect(onRefreshPr).toHaveBeenCalledOnce());
+    await waitFor(() => expect(onRefreshPr).toHaveBeenCalledExactlyOnceWith(true));
     expect(screen.queryByText("+51")).not.toBeInTheDocument();
 
     view.rerender(<PrSection {...baseProps} onRefreshPr={onRefreshPr} />);

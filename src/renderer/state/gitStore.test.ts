@@ -116,6 +116,77 @@ describe("gitStore batch updates", () => {
     });
   });
 
+  it.each(["status", "snapshot"] as const)(
+    "preserves root remote metadata and matching cached counts during a summary %s update",
+    (update) => {
+      useGitStore.getState().setStatus("p1", {
+        ...baseStatus,
+        unstaged: [{ path: "changed.ts", status: "M", staged: false, insertions: 8, deletions: 2 }],
+        totalInsertions: 8,
+        totalDeletions: 2,
+      });
+      const summary: GitStatusResult = {
+        ...baseStatus,
+        detail: "summary",
+        tracking: "",
+        hasRemote: false,
+        remoteInfo: null,
+        ahead: 1,
+        unstaged: [{ path: "changed.ts", status: "M", staged: false, insertions: 0, deletions: 0 }],
+      };
+      if (update === "status") useGitStore.getState().setStatus("p1", summary);
+      else useGitStore.getState().setProjectSnapshot("p1", { status: summary });
+      expect(useGitStore.getState().statuses.p1).toMatchObject({
+        detail: "summary",
+        tracking: "",
+        ahead: 1,
+        hasRemote: true,
+        remoteInfo: baseStatus.remoteInfo,
+        totalInsertions: 8,
+        totalDeletions: 2,
+        unstaged: [{ path: "changed.ts", insertions: 8, deletions: 2 }],
+      });
+      const previous = useGitStore.getState().statuses;
+      if (update === "status") useGitStore.getState().setStatus("p1", summary);
+      else useGitStore.getState().setProjectSnapshot("p1", { status: summary });
+      expect(useGitStore.getState().statuses).toBe(previous);
+    },
+  );
+
+  it("clears root cached counts when summary rows disappear and accepts authoritative full remote removal", () => {
+    useGitStore.getState().setStatus("p1", {
+      ...baseStatus,
+      totalInsertions: 8,
+      unstaged: [{ path: "changed.ts", status: "M", staged: false, insertions: 8, deletions: 0 }],
+    });
+    useGitStore.getState().setStatus("p1", { ...baseStatus, detail: "summary", remoteInfo: null });
+    expect(useGitStore.getState().statuses.p1?.totalInsertions).toBe(0);
+    expect(useGitStore.getState().statuses.p1?.remoteInfo).toEqual(baseStatus.remoteInfo);
+    useGitStore.getState().setStatus("p1", { ...baseStatus, hasRemote: false, remoteInfo: null });
+    expect(useGitStore.getState().statuses.p1?.hasRemote).toBe(false);
+    expect(useGitStore.getState().statuses.p1?.remoteInfo).toBeNull();
+  });
+
+  it("accepts authoritative summary metadata when the remote is removed or replaced", () => {
+    useGitStore.getState().setStatus("p1", baseStatus);
+    useGitStore.getState().setStatus("p1", {
+      ...baseStatus,
+      detail: "summary",
+      remoteMetadataIncluded: true,
+      hasRemote: false,
+      remoteInfo: null,
+    });
+    expect(useGitStore.getState().statuses.p1?.hasRemote).toBe(false);
+    expect(useGitStore.getState().statuses.p1?.remoteInfo).toBeNull();
+    useGitStore.getState().setStatus("p1", {
+      ...baseStatus,
+      detail: "summary",
+      remoteMetadataIncluded: true,
+      remoteInfo: { ...baseStatus.remoteInfo!, owner: "new-owner" },
+    });
+    expect(useGitStore.getState().statuses.p1?.remoteInfo?.owner).toBe("new-owner");
+  });
+
   it("clears in-memory and persisted cache state immediately", () => {
     useGitStore.getState().setStatus("p1", baseStatus);
     localStorage.setItem("poracode-git-cache-v1", "stale-desktop-cache");

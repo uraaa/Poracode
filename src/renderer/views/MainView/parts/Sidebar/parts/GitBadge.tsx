@@ -96,6 +96,7 @@ export function GitBadge(props: {
     ghAvailable,
     totalInsertions,
     totalDeletions,
+    hasChangedFiles,
     prState,
     checksStatus,
     reviewDecision,
@@ -125,6 +126,7 @@ export function GitBadge(props: {
         ghAvailable: s.ghAvailable[props.projectId] ?? false,
         totalInsertions: gitStatus?.totalInsertions ?? 0,
         totalDeletions: gitStatus?.totalDeletions ?? 0,
+        hasChangedFiles: (gitStatus?.staged.length ?? 0) + (gitStatus?.unstaged.length ?? 0) > 0,
         prState: pr?.state,
         checksStatus: combineChecksStatus(detailsStatus, pr?.checksStatus),
         reviewDecision: pr?.reviewDecision,
@@ -185,7 +187,8 @@ export function GitBadge(props: {
     remotePlatform,
   ]);
 
-  const hasChanges = totalInsertions > 0 || totalDeletions > 0;
+  const hasDiffStats = totalInsertions > 0 || totalDeletions > 0;
+  const hasChanges = hasChangedFiles || hasDiffStats;
   const isWorktree = props.worktreePath !== undefined;
   if (hasStatus && !isRepo) {
     return (
@@ -268,7 +271,7 @@ export function GitBadge(props: {
       tabIndex={0}
       aria-label={t`Git status for ${props.projectName}`}
       className={`${gitBadgeButtonClass} ${
-        hasChanges ? gitBadgeTextPaddingClass : gitBadgeIconPaddingClass
+        hasDiffStats ? gitBadgeTextPaddingClass : gitBadgeIconPaddingClass
       } ${props.isActive ? activeGitBadgeClass : ""}`}
       onClick={(e) => {
         e.stopPropagation();
@@ -277,13 +280,16 @@ export function GitBadge(props: {
       onKeyDown={(e) => handleKeyActivate(e, () => props.onPress?.(), { stopPropagation: true })}
     >
       <span className="flex items-center gap-1 text-[10px] font-medium">
-        {hasChanges && (
+        {hasDiffStats && (
           <DiffStat
             animated
             className="flex items-center gap-0.5"
             insertions={totalInsertions}
             deletions={totalDeletions}
           />
+        )}
+        {hasChanges && !hasDiffStats && !showPrIcon && !showWorktreeFork && (
+          <GitBranch className="size-3 shrink-0" />
         )}
         {showPrIcon && <GitPullRequest className={`size-3 shrink-0 ${prIconColor}`} />}
         {showWorktreeFork && (

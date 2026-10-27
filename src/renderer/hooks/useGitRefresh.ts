@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import type { ProjectLocation } from "@/shared/contracts";
 import { parseDraftProjectId } from "@/shared/paneId";
 import { readBridge } from "@/renderer/bridge";
 import { useAppStore } from "@/renderer/state/appStore";
@@ -9,16 +8,14 @@ import { useDevTerminalStore } from "@/renderer/state/devTerminalStore";
 import { useFileEditorStore } from "@/renderer/state/fileEditorStore";
 import { useGitStore } from "@/renderer/state/gitStore";
 import { usePanelStore } from "@/renderer/state/panelStore";
-import { useSidebarUiStore } from "@/renderer/state/sidebarUiStore";
 import { shouldPollProject } from "@/renderer/state/wslBackgroundActivity";
 import {
   cleanupGitRefreshProjects,
   getWatcherRefreshMode,
-  prefetchBranchPrData,
   refreshGitProject,
   stopPendingPrRefresh,
   syncPendingPrRefreshProjects,
-  syncWatchedWorktreeProjects,
+  syncWatchedWorktreeProject,
 } from "@/renderer/state/gitRefresh";
 import {
   GIT_FETCH_PRIORITY_INTERVAL_MS,
@@ -64,27 +61,11 @@ export function useGitRefresh(storeHydrated: boolean) {
 
     let isActive = true;
     const lastFetchTimes = new Map<string, number>();
+    const watchedPathKeys = new Map<string, string>();
+    const fetchInFlight = new Map<string, symbol>();
+    const fetchTimeouts = new Set<ReturnType<typeof setTimeout>>();
     let previousPriorityProjectIds = new Set<string>();
     const isActiveCheck = () => isActive;
-
-    const watcherDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
-    const WATCHER_DEBOUNCE_MS = 250;
-
-    function scheduleWatcherRefresh(project: { id: string; location: ProjectLocation }) {
-      if (!isActive) return;
-      const existing = watcherDebounceTimers.get(project.id);
-      if (existing) clearTimeout(existing);
-      watcherDebounceTimers.set(
-        project.id,
-        setTimeout(() => {
-          watcherDebounceTimers.delete(project.id);
-          if (!isActive) return;
-          void refreshGitProject(project, "watcher", getWatcherRefreshMode(project.id), {
-            isActive: isActiveCheck,
-          });
-        }, WATCHER_DEBOUNCE_MS),
-      );
-    }
 
     function getPriorityProjectIds(): Set<string> {
       const state = useAppStore.getState();
@@ -127,20 +108,22 @@ export function useGitRefresh(storeHydrated: boolean) {
 
     function syncActiveWorktrees() {
       if (!isActive) return;
-      syncWatchedWorktreeProjects(activeProjects);
-      syncPendingPrRefreshProjects(activeProjects);
-    }
-
-    function prefetchVisibleBranchPrData() {
-      if (!isActive) return;
-      // One bulk PR query keeps sidebar rows current when a thread becomes
-      // visible (for example after "See more") without spawning one `gh pr
-      // view` process per worktree. Do not put this on the view-change path:
-      // plain thread switches must not spawn Git work while the panel is hidden.
       for (const project of activeProjects) {
-        if (!shouldPollProject(project)) continue;
-        void prefetchBranchPrData(project);
+        const paths = syncWatchedWorktreeProject(project.id);
+        const panel = usePanelStore.getState();
+        const visibleGit =
+          panel.gitReviewContext?.projectId === project.id &&
+          ((panel.gitReviewAsPanel && panel.rightPanelTab === "git") || panel.gitOverlayOpen);
+        const key = JSON.stringify([paths, visibleGit ? panel.gitReviewContext : null]);
+        const previous = watchedPathKeys.get(project.id);
+        watchedPathKeys.set(project.id, key);
+        // Dormant rows have no background status work. Opening a pane or Git
+        // review must load its status even when the new watcher sees no edits.
+        if (previous !== undefined && previous !== key) {
+          void refreshGitProject(project, "watcher", "status", { isActive: isActiveCheck });
+        }
       }
+      syncPendingPrRefreshProjects(activeProjects);
     }
 
     const unsubWatcher = readBridge().onSupervisorEvent((event) => {
@@ -150,7 +133,11 @@ export function useGitRefresh(storeHydrated: boolean) {
       if (event.type === "git-changed" || event.type === "project-tree-changed") {
         console.log(`[git-refresh] watcher-event ${event.type} project=${event.projectId}`);
         const project = activeProjects.find((p) => p.id === event.projectId);
-        if (project) scheduleWatcherRefresh(project);
+        if (project) {
+          void refreshGitProject(project, "watcher", getWatcherRefreshMode(project.id), {
+            isActive: isActiveCheck,
+          });
+        }
       }
       if (event.type === "project-tree-changed") {
         const editorRoot = useFileEditorStore.getState().rootContext;
@@ -162,7 +149,6 @@ export function useGitRefresh(storeHydrated: boolean) {
     });
 
     syncActiveWorktrees();
-    prefetchVisibleBranchPrData();
     for (const project of activeProjects) {
       void refreshGitProject(project, "initial", "full", { isActive: isActiveCheck });
     }
@@ -180,18 +166,10 @@ export function useGitRefresh(storeHydrated: boolean) {
       (state) => [state.threads, state.view, state.projects],
       syncActiveWorktrees,
     );
-    const unsubBranchPrPrefetchApp = subscribeToFieldChanges(
-      useAppStore.subscribe,
-      (state) => [state.threads, state.projects],
-      prefetchVisibleBranchPrData,
-    );
     const unsubActiveWorktreeExperiments = subscribeToFieldChanges(
       useExperimentStore.subscribe,
       (state) => [state.experiments],
-      () => {
-        syncActiveWorktrees();
-        prefetchVisibleBranchPrData();
-      },
+      syncActiveWorktrees,
     );
     const unsubActiveWorktreePanel = subscribeToFieldChanges(
       usePanelStore.subscribe,
@@ -200,17 +178,9 @@ export function useGitRefresh(storeHydrated: boolean) {
         state.gitReviewAsPanel,
         state.filesPanelContext,
         state.rightPanelTab,
-        state.threadSortMode,
+        state.gitOverlayOpen,
       ],
       syncActiveWorktrees,
-    );
-    const unsubActiveWorktreeSidebar = subscribeToFieldChanges(
-      useSidebarUiStore.subscribe,
-      (state) => [state.collapsedProjects, state.collapsedWorktrees, state.threadListLimits],
-      () => {
-        syncActiveWorktrees();
-        prefetchVisibleBranchPrData();
-      },
     );
     const unsubActiveWorktreeTerminal = subscribeToFieldChanges(
       useDevTerminalStore.subscribe,
@@ -218,7 +188,7 @@ export function useGitRefresh(storeHydrated: boolean) {
       syncActiveWorktrees,
     );
 
-    async function fetchRemotes() {
+    function fetchRemotes() {
       if (!isActive) return;
       if (typeof document !== "undefined" && !document.hasFocus()) {
         console.log("[git-refresh] fetch-skip windowFocused=false");
@@ -230,6 +200,7 @@ export function useGitRefresh(storeHydrated: boolean) {
         [...priorityProjectIds].filter((projectId) => !previousPriorityProjectIds.has(projectId)),
       );
       const projectsToFetch = activeProjects.filter((project) => {
+        if (fetchInFlight.has(project.id)) return false;
         if (lastFetchTimes.has(project.id) && !shouldPollProject(project)) return false;
         const isPriority = priorityProjectIds.has(project.id);
         const interval = isPriority
@@ -242,21 +213,35 @@ export function useGitRefresh(storeHydrated: boolean) {
       previousPriorityProjectIds = priorityProjectIds;
       if (projectsToFetch.length === 0) return;
 
-      await Promise.all(
-        projectsToFetch.map(async (project) => {
-          if (!isActive) return;
-          const isPriority = priorityProjectIds.has(project.id);
-          const promoted = promotedProjectIds.has(project.id);
-          console.log(
-            `[git-refresh] fetch-start project=${project.id} priority=${isPriority} promoted=${promoted}`,
-          );
-          lastFetchTimes.set(project.id, now);
-          await refreshGitProject(project, "fetch", "full", {
-            isActive: isActiveCheck,
-            fetchRemote: true,
+      for (const project of projectsToFetch) {
+        const token = Symbol(project.id);
+        fetchInFlight.set(project.id, token);
+        lastFetchTimes.set(project.id, now);
+        // Network has its own lane. A slow remote cannot hold the local status queue.
+        const timeout = setTimeout(() => {
+          fetchTimeouts.delete(timeout);
+          if (fetchInFlight.get(project.id) === token) fetchInFlight.delete(project.id);
+        }, 30_000);
+        fetchTimeouts.add(timeout);
+        void readBridge()
+          .gitFetch({
+            projectLocation: project.location,
+            remote: "origin",
+            prune: true,
+            background: true,
+          })
+          .catch(() => undefined)
+          .then(() => {
+            if (!isActive || fetchInFlight.get(project.id) !== token) return;
+            // Ref updates need fresh status, not another branches/worktrees/PR snapshot.
+            void refreshGitProject(project, "watcher", "status", { isActive: isActiveCheck });
+          })
+          .finally(() => {
+            clearTimeout(timeout);
+            fetchTimeouts.delete(timeout);
+            if (fetchInFlight.get(project.id) === token) fetchInFlight.delete(project.id);
           });
-        }),
-      );
+      }
     }
 
     function pollPriorityWslStatus() {
@@ -271,11 +256,8 @@ export function useGitRefresh(storeHydrated: boolean) {
       }
     }
 
-    // Defer the first remote fetch until after the initial refresh batch has
-    // had a chance to paint UI. Running them concurrently means git fetch's
-    // ref updates (legitimate `.git/refs/...` writes) trigger watcher events
-    // mid-init, which queue a redundant refresh-after-init. Letting init
-    // finish first cleanly separates "local snapshot" from "remote sync".
+    // Give the initial local snapshot time to paint before syncing remotes.
+    // Fetch completions share the watcher quiet period for their ref updates.
     const initialFetchTimer = setTimeout(() => void fetchRemotes(), 5000);
     const fetchIntervalId = setInterval(
       () => void fetchRemotes(),
@@ -288,14 +270,13 @@ export function useGitRefresh(storeHydrated: boolean) {
       clearTimeout(initialFetchTimer);
       clearInterval(fetchIntervalId);
       clearInterval(wslStatusPollIntervalId);
-      for (const timer of watcherDebounceTimers.values()) clearTimeout(timer);
-      watcherDebounceTimers.clear();
+      for (const timer of fetchTimeouts) clearTimeout(timer);
+      fetchTimeouts.clear();
+      fetchInFlight.clear();
       unsubPendingPrRefresh();
       unsubActiveWorktreeApp();
-      unsubBranchPrPrefetchApp();
       unsubActiveWorktreeExperiments();
       unsubActiveWorktreePanel();
-      unsubActiveWorktreeSidebar();
       unsubActiveWorktreeTerminal();
       stopPendingPrRefresh();
       unsubWatcher();

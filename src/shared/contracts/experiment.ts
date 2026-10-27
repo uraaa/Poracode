@@ -323,6 +323,8 @@ export const cancelJudgeExperimentPayloadSchema = z.object({
 export type CancelJudgeExperimentPayload = z.infer<typeof cancelJudgeExperimentPayloadSchema>;
 
 export const getExperimentCandidateDiffPayloadSchema = z.object({
+  /** Opt-in polling; omitted for user, agent and remote interactive reads. */
+  background: z.boolean().optional(),
   projectLocation: projectLocationSchema,
   baseRef: fullCommitOidSchema,
 });

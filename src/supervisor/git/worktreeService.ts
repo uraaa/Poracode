@@ -32,6 +32,7 @@ import {
 } from "./exec";
 import { copyIgnoredFilesIntoWorktree } from "./copyIgnoredFiles";
 import { parseStatusPorcelainV2 } from "./statusParsing";
+import { getRepositoryCommandPriority } from "../repositoryCommands/scheduling";
 
 const WORKTREE_OWNER_REFLOG_PREFIX = "poracode experiment owner ";
 const EXPERIMENT_WORKTREE_CREATE_CONCURRENCY = 2;
@@ -160,7 +161,7 @@ export class GitWorktreeService {
   }
 
   async fetch(location: ProjectLocation, remote: string, prune: boolean): Promise<void> {
-    const key = JSON.stringify([location, remote, prune]);
+    const key = JSON.stringify([getRepositoryCommandPriority(), location, remote, prune]);
     const existing = this.inFlightFetches.get(key);
     if (existing) return existing;
     const pending = this.performFetch(location, remote, prune).finally(() => {

@@ -11,6 +11,7 @@ import { createSupervisorIpcHandlers } from "./ipcHandlers";
 import { SupervisorRuntime } from "./supervisorRuntime";
 import { configureSecretStorageKey } from "./secretStorage";
 import { disposeRepositoryCommands } from "./repositoryCommands/client";
+import { drainSupervisorShutdown } from "./repositoryCommands/shutdown";
 
 const isDev = process.env.PORACODE_IS_DEV === "1" || Boolean(process.env.VITE_DEV_SERVER_URL);
 
@@ -28,7 +29,6 @@ const runtime = new SupervisorRuntime((event) => {
 const handlers = createSupervisorIpcHandlers(runtime);
 
 let isShuttingDown = false;
-const SUPERVISOR_SHUTDOWN_TIMEOUT_MS = 5_000;
 const DEV_SHUTDOWN_REPEAT_FORCE_EXIT_MS = 250;
 
 async function shutdownSupervisor(exitCode = 0): Promise<void> {
@@ -43,16 +43,14 @@ async function shutdownSupervisor(exitCode = 0): Promise<void> {
   }
   isShuttingDown = true;
   try {
-    await Promise.race([
-      Promise.all([runtime.disposeAsync(), disposeRepositoryCommands()]),
-      new Promise<void>((resolve) => setTimeout(resolve, SUPERVISOR_SHUTDOWN_TIMEOUT_MS)),
-    ]);
+    await drainSupervisorShutdown(() => runtime.disposeAsync(), disposeRepositoryCommands);
   } finally {
     process.exit(exitCode);
   }
 }
 
 async function handleRequest(request: SupervisorRequest): Promise<unknown> {
+  if (isShuttingDown) throw new Error("Supervisor is shutting down");
   const handler = handlers[request.type];
   return handler(request.payload as never);
 }

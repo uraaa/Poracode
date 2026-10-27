@@ -174,4 +174,20 @@ describe("ThreadChangesBubble", () => {
 
     expect(screen.queryByRole("button", { name: "Review changes" })).not.toBeInTheDocument();
   });
+
+  it("keeps root changes accessible when summary files have no exact counts yet", () => {
+    useGitStore.getState().setStatus(
+      "project-1",
+      makeStatus({
+        detail: "summary",
+        unstaged: [{ path: "new.ts", status: "?", staged: false, insertions: 0, deletions: 0 }],
+      }),
+    );
+    render(<ThreadChangesBubble projectId="project-1" />);
+    const bubble = screen.getByRole("button", { name: "Review changes" });
+    expect(bubble.querySelector(".lucide-git-branch")).not.toBeNull();
+    fireEvent.click(bubble);
+    expect(usePanelStore.getState().gitReviewContext).toEqual({ projectId: "project-1" });
+    expect(usePanelStore.getState().gitReviewAsPanel).toBe(true);
+  });
 });

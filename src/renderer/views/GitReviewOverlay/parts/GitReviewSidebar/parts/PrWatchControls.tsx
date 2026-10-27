@@ -44,7 +44,7 @@ export function PrWatchControls(props: {
   prNumber: number;
   headBranch: string;
   worktreePath?: string | undefined;
-  onRefreshPr?: (() => void | Promise<void>) | undefined;
+  onRefreshPr?: ((background?: boolean) => void | Promise<void>) | undefined;
   initialWatch?: PrWatch | null | undefined;
   onInitialWatchUsed?: (() => void) | undefined;
 }) {
@@ -99,7 +99,7 @@ export function PrWatchControls(props: {
         const shouldRefreshPr = result !== null || watchPresentRef.current;
         watchPresentRef.current = result !== null;
         setWatch(result);
-        if (shouldRefreshPr) void refreshPrRef.current?.();
+        if (shouldRefreshPr) void refreshPrRef.current?.(true);
       } catch {
         // Keep the last visible watch state when the bridge is temporarily unavailable.
       }

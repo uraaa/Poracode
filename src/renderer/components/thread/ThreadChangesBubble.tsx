@@ -1,6 +1,6 @@
 import { useShallow } from "zustand/shallow";
 import { Tooltip } from "@heroui/react";
-import { GitFork, GitPullRequest } from "lucide-react";
+import { GitBranch, GitFork, GitPullRequest } from "lucide-react";
 import { useLingui } from "@lingui/react/macro";
 import { getBasename } from "@/shared/pathUtils";
 import { closeAllPanels, showGitReviewPanel } from "@/renderer/actions/panelActions";
@@ -36,6 +36,7 @@ export function ThreadChangesBubble(props: {
   const {
     insertions,
     deletions,
+    hasChangedFiles,
     prNumber,
     prState,
     checksStatus,
@@ -52,6 +53,7 @@ export function ThreadChangesBubble(props: {
       return {
         insertions: status?.totalInsertions ?? 0,
         deletions: status?.totalDeletions ?? 0,
+        hasChangedFiles: (status?.staged.length ?? 0) + (status?.unstaged.length ?? 0) > 0,
         prNumber: pr?.number,
         prState: pr?.state,
         reviewDecision: pr?.reviewDecision,
@@ -73,7 +75,8 @@ export function ThreadChangesBubble(props: {
       s.gitReviewContext?.worktreePath === props.worktreePath,
   );
 
-  const hasChanges = insertions > 0 || deletions > 0;
+  const hasDiffStats = insertions > 0 || deletions > 0;
+  const hasChanges = hasChangedFiles || hasDiffStats;
   const hasVisiblePr =
     prNumber !== undefined &&
     prState !== "closed" &&
@@ -92,7 +95,7 @@ export function ThreadChangesBubble(props: {
       /* Sized to a 28px pill — same height as the scroll-to-bottom circle and the
          rail's icon buttons, so the floating chrome shares one scale. */
       className={`${floatingGlassSurfaceClass} ${floatingGlassBubbleClass} flex h-7 items-center gap-1.5 rounded-full text-xs font-medium transition-colors ${
-        hasChanges || hasVisiblePr ? "px-3" : "w-7 justify-center px-0"
+        hasDiffStats || hasVisiblePr ? "px-3" : "w-7 justify-center px-0"
       } ${isOpen ? `${floatingGlassActiveClass} ${floatingGlassBubbleActiveClass}` : ""}`}
       onClick={() => {
         if (isOpen) {
@@ -111,6 +114,8 @@ export function ThreadChangesBubble(props: {
         </>
       ) : props.worktreePath ? (
         <GitFork className="size-3.5 shrink-0 text-muted" />
+      ) : hasChanges && !hasDiffStats ? (
+        <GitBranch className="size-3.5 shrink-0 text-muted" />
       ) : null}
       <DiffStat animated insertions={insertions} deletions={deletions} />
     </button>

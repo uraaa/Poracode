@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createSupervisorIpcHandlers } from "./ipcHandlers";
 import { getRepositoryCommandPriority } from "./repositoryCommands/scheduling";
 import type { SupervisorRuntime } from "./supervisorRuntime";
@@ -17,7 +17,7 @@ describe("repository polling IPC scheduling", () => {
       },
     } as unknown as SupervisorRuntime;
     const handlers = createSupervisorIpcHandlers(runtime);
-    const payload = { projectLocation, includeGhCheck: false };
+    const payload = { projectLocation, includeGhCheck: false, background: true };
     const first = handlers.gitProjectSnapshot(payload);
     const second = handlers.gitProjectSnapshot({ ...payload });
     gate.resolve();
@@ -26,7 +26,7 @@ describe("repository polling IPC scheduling", () => {
     expect(await handlers.gitProjectSnapshot(payload)).toEqual({ read: 2, priority: "background" });
   });
 
-  it("classifies repository reads as background while mutations and thread work stay interactive", async () => {
+  it("honors polling hints while mutations and thread work stay interactive", async () => {
     const priority = async () => {
       await Promise.resolve();
       return getRepositoryCommandPriority();
@@ -53,22 +53,36 @@ describe("repository polling IPC scheduling", () => {
       gitCheckpointService: { list: priority },
     } as unknown as SupervisorRuntime;
     const handlers = createSupervisorIpcHandlers(runtime);
-    const branch = { projectLocation, branch: "feature" };
-    expect(await handlers.getGitStatus({ projectLocation })).toBe("background");
-    expect(await handlers.listFileCheckpoints({ projectLocation, threadId: "thread" })).toBe(
-      "background",
-    );
-    expect(await handlers.gitWorktreeStatusBatch({ projectLocation, worktreePaths: [] })).toEqual({
+    const branch = { projectLocation, branch: "feature", background: true };
+    expect(await handlers.getGitStatus({ projectLocation, background: true })).toBe("background");
+    expect(
+      await handlers.listFileCheckpoints({ projectLocation, threadId: "thread", background: true }),
+    ).toBe("background");
+    expect(
+      await handlers.gitWorktreeStatusBatch({
+        projectLocation,
+        worktreePaths: [],
+        background: true,
+      }),
+    ).toEqual({
       statuses: "background",
     });
     expect(await handlers.gitGetWorktreeSourceBranch(branch)).toBe("background");
-    expect(await handlers.getExperimentCandidateStats({ projectLocation, baseRef: "master" })).toBe(
-      "background",
+    expect(
+      await handlers.getExperimentCandidateStats({
+        projectLocation,
+        baseRef: "master",
+        background: true,
+      }),
+    ).toBe("background");
+    expect(await handlers.ghListPrs({ projectLocation, background: true })).toEqual({
+      prs: "network",
+    });
+    expect(await handlers.ghGetPrForBranch(branch)).toBe("network");
+    expect(await handlers.ghGetPrChecks(branch)).toBe("network");
+    expect(await handlers.ghGetPrDetails({ projectLocation, prNumber: 1, background: true })).toBe(
+      "network",
     );
-    expect(await handlers.ghListPrs({ projectLocation })).toEqual({ prs: "background" });
-    expect(await handlers.ghGetPrForBranch(branch)).toBe("background");
-    expect(await handlers.ghGetPrChecks(branch)).toBe("background");
-    expect(await handlers.ghGetPrDetails({ projectLocation, prNumber: 1 })).toBe("background");
     expect(await handlers.gitStageAll({ projectLocation })).toBe("interactive");
     expect(await handlers.ghClosePr({ projectLocation, prNumber: 1 })).toBe("interactive");
     expect(await handlers.getThreadSnapshots({})).toBe("interactive");
@@ -96,7 +110,50 @@ describe("repository polling IPC scheduling", () => {
     } as unknown as SupervisorRuntime;
     const handlers = createSupervisorIpcHandlers(runtime);
     const fetch = { projectLocation, remote: "origin", prune: true };
-    expect(await handlers.gitFetch({ ...fetch, background: true })).toBe("background");
+    expect(await handlers.gitFetch({ ...fetch, background: true })).toBe("network");
     expect(await handlers.gitFetch(fetch)).toBe("interactive");
+  });
+
+  it("uses caller intent for status, branch and snapshot reads", async () => {
+    const priority = async () => getRepositoryCommandPriority();
+    const handlers = createSupervisorIpcHandlers({
+      gitService: { getStatus: priority, listBranches: priority },
+      gitProjectSnapshot: priority,
+    } as unknown as SupervisorRuntime);
+    expect(await handlers.getGitStatus({ projectLocation })).toBe("interactive");
+    expect(await handlers.gitListBranches({ projectLocation, includeRemote: true })).toBe(
+      "interactive",
+    );
+    expect(await handlers.gitProjectSnapshot({ projectLocation, includeGhCheck: false })).toBe(
+      "interactive",
+    );
+    expect(await handlers.getGitStatus({ projectLocation, background: true })).toBe("background");
+  });
+
+  it("does not join a pre-mutation read after revert or its late completion", async () => {
+    const old = Promise.withResolvers<void>();
+    let version = 0;
+    const read = vi.fn<() => Promise<number>>(async () => {
+      const captured = version;
+      if (captured === 0) await old.promise;
+      return captured;
+    });
+    const handlers = createSupervisorIpcHandlers({
+      gitProjectSnapshot: read,
+      gitService: {
+        revertAll: async () => {
+          version++;
+        },
+      },
+    } as unknown as SupervisorRuntime);
+    const payload = { projectLocation, includeGhCheck: false, background: true };
+    const before = handlers.gitProjectSnapshot(payload);
+    await Promise.resolve();
+    await handlers.gitRevertAll({ projectLocation });
+    const after = handlers.gitProjectSnapshot(payload);
+    old.resolve();
+    expect(await before).toBe(0);
+    expect(await after).toBe(1);
+    expect(read).toHaveBeenCalledTimes(2);
   });
 });

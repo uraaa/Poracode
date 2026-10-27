@@ -80,6 +80,28 @@ describe("GitBadge", () => {
     });
   });
 
+  it.each(["root", "worktree"] as const)(
+    "keeps a changed %s summary badge visible before exact counts load",
+    (scope) => {
+      const summary = makeStatus({
+        detail: "summary",
+        unstaged: [{ path: "new.ts", status: "?", staged: false, insertions: 0, deletions: 0 }],
+      });
+      if (scope === "root") useGitStore.getState().setStatus("project-1", summary);
+      else useGitStore.getState().setWorktreeStatus("/wt/feature", summary);
+      render(
+        <GitBadge
+          projectId="project-1"
+          projectName="Project"
+          {...(scope === "worktree" ? { worktreePath: "/wt/feature" } : {})}
+        />,
+      );
+      const badge = screen.getByRole("button", { name: "Git status for Project" });
+      expect(badge).not.toHaveClass("opacity-0");
+      expect(badge.querySelector(".lucide-git-branch")).not.toBeNull();
+    },
+  );
+
   it("shows a branch-tone PR icon when a pushed worktree can create a PR", () => {
     useGitStore.setState({
       worktreeStatuses: { "/wt/feature": makeStatus() },

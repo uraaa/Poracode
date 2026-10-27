@@ -26,6 +26,8 @@ export async function executeRepositoryCommand(
     const env: NodeJS.ProcessEnv = { ...process.env, ...spec.env };
     for (const key of omitEnv ?? []) delete env[key];
     options = { ...options, cwd: spec.cwd ?? location.path, env: { ...env, ...options.env } };
+  } else if (options.env) {
+    options = { ...options, env: { ...process.env, ...options.env } };
   }
   if (request.input === undefined) {
     const pending = execFileAsync(command, args, options);
