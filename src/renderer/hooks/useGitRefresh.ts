@@ -13,11 +13,12 @@ import { shouldPollProject } from "@/renderer/state/wslBackgroundActivity";
 import { GitWatcherScheduler } from "@/renderer/state/gitWatcherScheduler";
 import {
   cleanupGitRefreshProjects,
-  getProjectActiveWorktreePaths,
+  getProjectWorktreeTargets,
   getWatcherRefreshMode,
   prefetchBranchPrData,
   refreshGitProject,
   refreshGitWorktreePaths,
+  refreshProjectStatusOnly,
   stopPendingPrRefresh,
   syncPendingPrRefreshProjects,
   syncWatchedWorktreeProjects,
@@ -69,16 +70,33 @@ export function useGitRefresh(storeHydrated: boolean) {
     let previousPriorityProjectIds = new Set<string>();
     const isActiveCheck = () => isActive;
 
-    const watcherScheduler = new GitWatcherScheduler(async (projectId, paths, wholeProject) => {
+    const targetsByProject = new Map<string, ReturnType<typeof getProjectWorktreeTargets>>();
+    const watchedByProject = new Map<string, string[]>();
+    const visibleScheduler = new GitWatcherScheduler(async (projectId, paths, wholeProject) => {
       const project = activeProjects.find((item) => item.id === projectId);
       if (!isActive || !project) return;
-      await refreshGitProject(project, "watcher", getWatcherRefreshMode(project.id), {
-        isActive: isActiveCheck,
-        worktreePaths: [
-          ...new Set([...paths, ...(wholeProject ? getProjectActiveWorktreePaths(projectId) : [])]),
-        ],
-        includeProjectStatus: wholeProject,
-      });
+      const active = targetsByProject.get(projectId)?.active ?? [];
+      if (getWatcherRefreshMode(projectId) === "full")
+        await refreshGitProject(project, "watcher", "full", { isActive: isActiveCheck });
+      else
+        await refreshProjectStatusOnly(
+          project,
+          "watcher",
+          isActiveCheck,
+          wholeProject ? active : paths.filter((path) => active.includes(path)),
+          wholeProject,
+        );
+    }, 1500);
+    const backgroundScheduler = new GitWatcherScheduler(async (projectId, paths, wholeProject) => {
+      const project = activeProjects.find((item) => item.id === projectId);
+      if (!isActive || !project) return;
+      const watched = targetsByProject.get(projectId)?.watched ?? [];
+      await refreshGitWorktreePaths(
+        project,
+        wholeProject ? watched : paths.filter((path) => watched.includes(path)),
+        isActiveCheck,
+        wholeProject && paths.length === 0 ? "summary" : "full",
+      );
     });
 
     function getPriorityProjectIds(): Set<string> {
@@ -124,14 +142,18 @@ export function useGitRefresh(storeHydrated: boolean) {
     const previousWatchedPaths = new Map<string, string[]>();
     function syncActiveWorktrees() {
       if (!isActive) return;
-      syncWatchedWorktreeProjects(activeProjects);
-      syncPendingPrRefreshProjects(activeProjects);
       for (const project of activeProjects) {
-        const paths = getProjectActiveWorktreePaths(project.id);
+        const targets = getProjectWorktreeTargets(project.id);
+        targetsByProject.set(project.id, targets);
+        watchedByProject.set(project.id, targets.watched);
+      }
+      syncWatchedWorktreeProjects(activeProjects, watchedByProject);
+      syncPendingPrRefreshProjects(activeProjects, watchedByProject);
+      for (const project of activeProjects) {
+        const { active: paths, watched } = targetsByProject.get(project.id)!;
         const previous = previousActivePaths.get(project.id);
         previousActivePaths.set(project.id, paths);
         const opened = previous ? paths.filter((path) => !previous.includes(path)) : [];
-        const watched = getProjectActiveWorktreePaths(project.id, true);
         const previousWatched = previousWatchedPaths.get(project.id) ?? [];
         previousWatchedPaths.set(project.id, watched);
         const revealed = watched.filter(
@@ -165,7 +187,18 @@ export function useGitRefresh(storeHydrated: boolean) {
       if (event.type === "git-changed" || event.type === "project-tree-changed") {
         console.log(`[git-refresh] watcher-event ${event.type} project=${event.projectId}`);
         const project = activeProjects.find((p) => p.id === event.projectId);
-        if (project) watcherScheduler.schedule(project.id, event.worktreePath);
+        if (project) {
+          const targets = targetsByProject.get(project.id);
+          if (!event.worktreePath) {
+            visibleScheduler.schedule(project.id);
+            if (event.type === "git-changed") backgroundScheduler.schedule(project.id);
+          } else if (targets?.watched.includes(event.worktreePath)) {
+            if (targets.active.includes(event.worktreePath))
+              visibleScheduler.schedule(project.id, event.worktreePath);
+            if (!targets.active.includes(event.worktreePath) || event.type === "git-changed")
+              backgroundScheduler.schedule(project.id, event.worktreePath);
+          }
+        }
       }
       if (event.type === "project-tree-changed") {
         const editorRoot = useFileEditorStore.getState().rootContext;
@@ -187,7 +220,7 @@ export function useGitRefresh(storeHydrated: boolean) {
         state.prData !== prev.prData ||
         state.prDetails !== prev.prDetails
       ) {
-        syncPendingPrRefreshProjects(activeProjects);
+        syncPendingPrRefreshProjects(activeProjects, watchedByProject);
       }
     });
     const unsubActiveWorktreeApp = subscribeToFieldChanges(
@@ -312,7 +345,8 @@ export function useGitRefresh(storeHydrated: boolean) {
       clearTimeout(initialFetchTimer);
       clearInterval(fetchIntervalId);
       clearInterval(wslStatusPollIntervalId);
-      watcherScheduler.dispose();
+      visibleScheduler.dispose();
+      backgroundScheduler.dispose();
       unsubPendingPrRefresh();
       unsubActiveWorktreeApp();
       unsubBranchPrPrefetchApp();

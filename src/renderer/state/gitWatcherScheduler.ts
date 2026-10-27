@@ -18,6 +18,7 @@ export class GitWatcherScheduler {
       paths: string[],
       wholeProject: boolean,
     ) => Promise<void>,
+    private readonly minimumIntervalMs = 30_000,
   ) {}
 
   schedule(projectId: string, worktreePath?: string): void {
@@ -39,8 +40,8 @@ export class GitWatcherScheduler {
     if (this.running.has(projectId)) return;
     const now = Date.now();
     const due = Math.max(
-      Math.min(now + 500, entry.first + 30_000),
-      (this.lastStarted.get(projectId) ?? -Infinity) + 30_000,
+      Math.min(now + 500, entry.first + this.minimumIntervalMs),
+      (this.lastStarted.get(projectId) ?? -Infinity) + this.minimumIntervalMs,
     );
     entry.timer = setTimeout(
       () => {

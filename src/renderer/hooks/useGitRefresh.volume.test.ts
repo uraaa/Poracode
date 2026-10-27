@@ -7,12 +7,20 @@ import { useAppStore } from "../state/appStore";
 import { usePanelStore } from "../state/panelStore";
 import { useSidebarUiStore } from "../state/sidebarUiStore";
 import { useGitStore } from "../state/gitStore";
-import { cleanupGitRefreshProjects, refreshGitProject } from "../state/gitRefresh";
+import {
+  cleanupGitRefreshProjects,
+  prefetchBranchPrData,
+  refreshGitProject,
+} from "../state/gitRefresh";
 import { useGitRefresh } from "./useGitRefresh";
+import * as sidebarRows from "../views/MainView/parts/Sidebar/parts/sidebarProjectRows";
 
 const probes = vi.hoisted(() => ({
   git: vi.fn<(location: ProjectLocation, args: string[]) => Promise<string>>(),
   gh: vi.fn<(location: ProjectLocation, args: string[]) => Promise<string>>(),
+  stat: vi.fn<() => Promise<{ isFile: () => boolean; size: number; mtimeMs: number }>>(
+    async () => ({ isFile: () => false, size: 1, mtimeMs: 1 }),
+  ),
 }));
 vi.mock("@/supervisor/git/exec", async (original) => ({
   ...(await original<object>()),
@@ -21,19 +29,23 @@ vi.mock("@/supervisor/git/exec", async (original) => ({
 // Network lock identity is filesystem-derived; its real linked-worktree behavior
 // is covered by worktreeService.test.ts. Keep this clock-only volume model deterministic.
 vi.mock("@/supervisor/git/networkGate", () => ({ repositoryNetworkKey: async () => "/repo/.git" }));
-vi.mock("node:fs/promises", async (original) => ({
-  ...(await original<object>()),
-  stat: async () => ({ isFile: () => false, size: 1, mtimeMs: 1 }),
-  readFile: async () => {
-    throw new Error("ENOENT");
-  },
-}));
+vi.mock("node:fs/promises", async (original) => {
+  const fs = {
+    ...(await original<object>()),
+    stat: probes.stat,
+    readFile: async () => {
+      throw new Error("ENOENT");
+    },
+  };
+  return { ...fs, default: fs };
+});
 import { GitService } from "@/supervisor/git";
 import { GitHubService } from "@/supervisor/github";
 
 afterEach(() => {
   cleanupGitRefreshProjects(new Set());
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 it("measures 40 sidebar worktrees, 2 open panes, watcher bursts and real periodic timers", async () => {
   vi.useFakeTimers();
@@ -84,10 +96,13 @@ it("measures 40 sidebar worktrees, 2 open panes, watcher bursts and real periodi
     prDetails: {},
   });
   let dirty = false;
+  let lineCount = 2;
+  let commitsAhead = 0;
   probes.git.mockImplementation(async (_location, args: string[]) => {
     if (args[0] === "status")
       return "# branch.head main\n" + (dirty ? "1 .M N... 100644 100644 100644 a b file.ts\n" : "");
-    if (args[0] === "diff") return dirty ? "2\t1\tfile.ts\n" : "";
+    if (args[0] === "diff") return dirty ? `${lineCount}\t1\tfile.ts\n` : "";
+    if (args[0] === "rev-list") return `0\t${commitsAhead}\n`;
     if (args[0] === "remote")
       return args[1] === "-v" ? "origin\thttps://github.com/o/r (fetch)\n" : "origin\n";
     if (args[0] === "worktree")
@@ -109,6 +124,7 @@ it("measures 40 sidebar worktrees, 2 open panes, watcher bursts and real periodi
     value: {
       platform: "darwin",
       dbSyncAll: async () => undefined,
+      dbSetState: async () => undefined,
       gitWatchProject: async () => undefined,
       gitWatchWorktrees: async () => undefined,
       gitUnwatchProject: async () => undefined,
@@ -156,6 +172,11 @@ it("measures 40 sidebar worktrees, 2 open panes, watcher bursts and real periodi
       expect(useGitStore.getState().worktreeStatuses["/wt/39"]?.isRepo).toBe(true),
     );
   });
+  await act(async () => {
+    await vi.waitFor(() =>
+      expect(useGitStore.getState().worktreeSourceInfo["/wt/39"]?.commitsAhead).toBe(0),
+    );
+  });
   const initial = { git: probes.git.mock.calls.length, gh: probes.gh.mock.calls.length };
   expect(useGitStore.getState().worktreeStatuses["/wt/39"]?.isRepo).toBe(true);
   probes.git.mockClear();
@@ -192,11 +213,42 @@ it("measures 40 sidebar worktrees, 2 open panes, watcher bursts and real periodi
   }
   const activePerMinute = { git: probes.git.mock.calls.length, gh: probes.gh.mock.calls.length };
   console.log("POLLING_VOLUME", JSON.stringify({ initial, cycle, idlePerMinute, activePerMinute }));
-  expect(cycle.git).toBeLessThan(30);
-  expect(activePerMinute.git).toBeLessThanOrEqual(10);
+  expect(cycle.git).toBeLessThanOrEqual(170);
+  expect(activePerMinute.git).toBeGreaterThan(50);
+  expect(activePerMinute.git).toBeLessThanOrEqual(180);
+  expect(probes.stat).toHaveBeenCalled();
   expect(useGitStore.getState().worktreeStatuses["/wt/0"]?.totalInsertions).toBe(2);
+  // Visible edits stay responsive while a previously refreshed sidebar path waits.
+  lineCount = 7;
+  onEvent({ type: "project-tree-changed", projectId: project.id, worktreePath: "/wt/39" });
+  await act(() => vi.advanceTimersByTimeAsync(1000));
+  lineCount = 9;
+  onEvent({ type: "project-tree-changed", projectId: project.id, worktreePath: "/wt/39" });
+  onEvent({ type: "project-tree-changed", projectId: project.id, worktreePath: "/wt/0" });
+  for (let i = 0; i < 20; i++) await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(useGitStore.getState().worktreeStatuses["/wt/0"]?.totalInsertions).toBe(9);
+  expect(useGitStore.getState().worktreeStatuses["/wt/39"]?.totalInsertions).toBe(7);
+  commitsAhead = 5;
+  onEvent({ type: "git-changed", projectId: project.id });
+  for (let i = 0; i < 30; i++) await act(() => vi.advanceTimersByTimeAsync(1000));
+  expect(useGitStore.getState().worktreeSourceInfo["/wt/39"]?.commitsAhead).toBe(5);
+  await prefetchBranchPrData(project);
+  const rowBuild = vi.spyOn(sidebarRows, "buildSidebarProjectRows");
+  useAppStore.setState({
+    threads: threads.map((thread) => ({ ...thread, title: "Streaming update" })),
+  });
+  expect(rowBuild).toHaveBeenCalledTimes(1);
+  useGitStore
+    .getState()
+    .setStatus(project.id, { ...useGitStore.getState().statuses[project.id]!, ahead: 1 });
+  expect(rowBuild).toHaveBeenCalledTimes(1);
+  rowBuild.mockRestore();
   useAppStore.setState({ view: { kind: "thread", panes: ["volume-39"] } });
-  await act(() => vi.advanceTimersByTimeAsync(0));
-  expect(useGitStore.getState().worktreeStatuses["/wt/39"]?.totalInsertions).toBe(2);
+  await act(async () => {
+    await vi.waitFor(() =>
+      expect(useGitStore.getState().worktreeStatuses["/wt/39"]?.totalInsertions).toBe(9),
+    );
+  });
+  expect(useGitStore.getState().worktreeStatuses["/wt/39"]?.totalInsertions).toBe(9);
   unmount();
 });

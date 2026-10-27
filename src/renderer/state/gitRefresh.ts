@@ -11,7 +11,17 @@ import { useAppStore } from "@/renderer/state/appStore";
 import { useExperimentStore } from "@/renderer/state/experimentStore";
 import { useDevTerminalStore } from "@/renderer/state/devTerminalStore";
 import { summaryBackfillMissed, useGitStore } from "@/renderer/state/gitStore";
-import { readFreshWorktreeStatuses } from "./gitStatusReads";
+import {
+  readFreshGitBatch,
+  readFreshGitValue,
+  readFreshProjectSnapshot,
+  readFreshWorktreeStatuses,
+} from "./gitStatusReads";
+import {
+  cleanupManualGitRefresh,
+  coalesceManualGitRefresh,
+  forEachGitTarget,
+} from "./gitRefreshTasks";
 import { buildBranchNamePrKey, buildBranchPrKey } from "@/renderer/state/gitSelectors";
 import { usePanelStore } from "@/renderer/state/panelStore";
 import { useSidebarUiStore } from "@/renderer/state/sidebarUiStore";
@@ -68,6 +78,7 @@ const branchPrPrefetchLastRun = new Map<string, number>();
 const branchPrPrefetchInFlight = new Set<string>();
 const branchPrPrefetchCache = new Map<string, Record<string, PrData>>();
 const branchPrChecked = new Map<string, Set<string>>();
+const branchPrFallbackTimes = new Map<string, Map<string, number>>();
 
 function shouldApplyPrefetchedPr(
   existing: PrData | null | undefined,
@@ -177,6 +188,9 @@ export async function prefetchBranchPrData(project: {
     const prs = { ...bulkPrs };
     const checked = branchPrChecked.get(project.id) ?? new Set<string>();
     branchPrChecked.set(project.id, checked);
+    const fallbackTimes = branchPrFallbackTimes.get(project.id) ?? new Map<string, number>();
+    branchPrFallbackTimes.set(project.id, fallbackTimes);
+    const currentState = useGitStore.getState();
     // The bulk list is capped at 100 PRs. Preserve coverage for older displayed
     // PRs, and inspect previously unseen rows once. Null results need no repeat
     // query: newly created PRs appear in the periodic bulk list.
@@ -193,34 +207,42 @@ export async function prefetchBranchPrData(project: {
         continue;
       const key = buildBranchNamePrKey(project.id, thread.worktreeBranch);
       const known =
-        state.prData[key] !== undefined ? state.prData[key] : state.prData[thread.worktreePath];
+        currentState.prData[key] !== undefined
+          ? currentState.prData[key]
+          : currentState.prData[thread.worktreePath];
       if (known === null && checked.has(thread.worktreeBranch) && !thread.prNumber) continue;
+      const lastChecked = fallbackTimes.get(thread.worktreeBranch);
+      if (
+        known &&
+        lastChecked !== undefined &&
+        Date.now() - lastChecked < (known.state === "open" ? 60_000 : 300_000)
+      )
+        continue;
       const paths = missing.get(thread.worktreeBranch) ?? [];
       paths.push(thread.worktreePath);
       missing.set(thread.worktreeBranch, paths);
     }
-    await Promise.all(
-      [...missing].map(async ([branch, paths]) => {
-        try {
-          const pr = await readBridge().ghGetPrForBranch({
-            projectLocation: project.location,
-            branch,
-          });
-          if (pr !== undefined) checked.add(branch);
-          if (pr) prs[branch] = pr;
-          else if (pr === null)
-            useGitStore
-              .getState()
-              .setPrDataBatch(
-                Object.fromEntries(
-                  [buildBranchNamePrKey(project.id, branch), ...paths].map((key) => [key, null]),
-                ),
-              );
-        } catch {
-          /* A transient failure must leave the previous badge intact. */
-        }
-      }),
-    );
+    await forEachGitTarget([...missing], async ([branch, paths]) => {
+      try {
+        const pr = await readBridge().ghGetPrForBranch({
+          projectLocation: project.location,
+          branch,
+        });
+        if (pr !== undefined) checked.add(branch);
+        if (pr !== undefined) fallbackTimes.set(branch, Date.now());
+        if (pr) prs[branch] = pr;
+        else if (pr === null)
+          useGitStore
+            .getState()
+            .setPrDataBatch(
+              Object.fromEntries(
+                [buildBranchNamePrKey(project.id, branch), ...paths].map((key) => [key, null]),
+              ),
+            );
+      } catch {
+        /* A transient failure must leave the previous badge intact. */
+      }
+    });
     branchPrPrefetchCache.set(project.id, prs);
     applyPrefetchedPrData(project.id, prs, false);
   } catch (err) {
@@ -380,13 +402,31 @@ function addPanelContextWorktreePath(
   }
 }
 
-export function getProjectActiveWorktreePaths(projectId: string, includeSidebar = false): string[] {
+function addSidebarWorktreePaths(projectId: string, paths: Set<string>): void {
   const appState = useAppStore.getState();
   const panelState = usePanelStore.getState();
   const sidebarState = useSidebarUiStore.getState();
-  const paths = new Set<string>();
   const project = appState.projects.find((p) => p.id === projectId);
   const projectThreads = appState.threads.filter((t) => t.projectId === projectId && !t.archived);
+  if (project && !project.disabled && !(sidebarState.collapsedProjects[projectId] ?? false)) {
+    const rows = buildSidebarProjectRows({
+      projectId,
+      projectThreads,
+      sortMode: panelState.threadSortMode,
+      collapsedWorktrees: sidebarState.collapsedWorktrees,
+      visibleLimit: sidebarState.threadListLimits[projectId] ?? SIDEBAR_THREAD_LIST_PAGE_SIZE,
+    });
+    for (const row of rows) {
+      if (row.kind === "worktree-group") paths.add(row.group.worktreePath);
+      if (row.kind === "thread" && row.thread.worktreePath) paths.add(row.thread.worktreePath);
+    }
+  }
+}
+
+export function getProjectActiveWorktreePaths(projectId: string, includeSidebar = false): string[] {
+  const appState = useAppStore.getState();
+  const panelState = usePanelStore.getState();
+  const paths = new Set<string>();
   const experimentState = useExperimentStore.getState();
 
   for (const experiment of Object.values(experimentState.experiments)) {
@@ -402,25 +442,6 @@ export function getProjectActiveWorktreePaths(projectId: string, includeSidebar 
         (thread) => thread.id === candidate.threadId,
       )?.worktreePath;
       if (worktreePath) paths.add(worktreePath);
-    }
-  }
-
-  if (
-    includeSidebar &&
-    project &&
-    !project.disabled &&
-    !(sidebarState.collapsedProjects[projectId] ?? false)
-  ) {
-    const rows = buildSidebarProjectRows({
-      projectId,
-      projectThreads,
-      sortMode: panelState.threadSortMode,
-      collapsedWorktrees: sidebarState.collapsedWorktrees,
-      visibleLimit: sidebarState.threadListLimits[projectId] ?? SIDEBAR_THREAD_LIST_PAGE_SIZE,
-    });
-    for (const row of rows) {
-      if (row.kind === "worktree-group") paths.add(row.group.worktreePath);
-      if (row.kind === "thread" && row.thread.worktreePath) paths.add(row.thread.worktreePath);
     }
   }
 
@@ -460,16 +481,27 @@ export function getProjectActiveWorktreePaths(projectId: string, includeSidebar 
     paths.add(terminalState.activeWorktreePath);
   }
 
+  if (includeSidebar) addSidebarWorktreePaths(projectId, paths);
   return Array.from(paths).sort();
+}
+
+export function getProjectWorktreeTargets(projectId: string): {
+  active: string[];
+  watched: string[];
+} {
+  const active = getProjectActiveWorktreePaths(projectId);
+  const paths = new Set(active);
+  addSidebarWorktreePaths(projectId, paths);
+  return { active, watched: [...paths].sort() };
 }
 
 function getProjectActiveWorktreePathSet(projectId: string): Set<string> {
   return new Set(getProjectActiveWorktreePaths(projectId, true));
 }
 
-export function syncWatchedWorktreeProject(projectId: string): string[] {
+export function syncWatchedWorktreeProject(projectId: string, paths?: string[]): string[] {
   // Sidebar rows need change notifications, not repeated polling when another row changes.
-  const worktreePaths = getProjectActiveWorktreePaths(projectId, true);
+  const worktreePaths = paths ?? getProjectActiveWorktreePaths(projectId, true);
   const wtPaths = worktreePaths.join("\0");
   if (wtPaths !== watchedWorktreePaths.get(projectId)) {
     watchedWorktreePaths.set(projectId, wtPaths);
@@ -483,9 +515,12 @@ export function syncWatchedWorktreeProject(projectId: string): string[] {
   return worktreePaths;
 }
 
-export function syncWatchedWorktreeProjects(activeProjects: readonly ActiveGitProject[]): void {
+export function syncWatchedWorktreeProjects(
+  activeProjects: readonly ActiveGitProject[],
+  paths?: ReadonlyMap<string, string[]>,
+): void {
   for (const project of activeProjects) {
-    syncWatchedWorktreeProject(project.id);
+    syncWatchedWorktreeProject(project.id, paths?.get(project.id));
   }
 }
 
@@ -523,6 +558,7 @@ async function withRefreshTimeout<T>(
 
 function buildPendingPrRefreshTargets(
   activeProjects: readonly ActiveGitProject[],
+  paths?: ReadonlyMap<string, string[]>,
 ): Map<string, PendingPrRefreshTarget> {
   const targets = new Map<string, PendingPrRefreshTarget>();
   const gitState = useGitStore.getState();
@@ -551,7 +587,9 @@ function buildPendingPrRefreshTargets(
     if (status?.branch) {
       visitBranchPr(project, buildBranchPrKey(project.id), status.branch);
     }
-    const activeWorktreePaths = getProjectActiveWorktreePathSet(project.id);
+    const activeWorktreePaths = new Set(
+      paths?.get(project.id) ?? getProjectActiveWorktreePaths(project.id, true),
+    );
     for (const thread of appState.threads) {
       if (thread.projectId !== project.id || !thread.worktreePath || !thread.worktreeBranch) {
         continue;
@@ -716,9 +754,12 @@ export function startPostPushPrStatusRefresh(target: PostPushPrRefreshTarget): v
   });
 }
 
-export function syncPendingPrRefreshProjects(activeProjects: readonly ActiveGitProject[]): void {
+export function syncPendingPrRefreshProjects(
+  activeProjects: readonly ActiveGitProject[],
+  paths?: ReadonlyMap<string, string[]>,
+): void {
   pendingPrRefreshActiveProjects = activeProjects;
-  const targets = buildPendingPrRefreshTargets(activeProjects.filter(shouldPollProject));
+  const targets = buildPendingPrRefreshTargets(activeProjects.filter(shouldPollProject), paths);
   for (const [key, entry] of pendingPrRefreshEntries) {
     const target = targets.get(key);
     if (!target) {
@@ -760,6 +801,7 @@ export function stopPendingPrRefresh(): void {
 }
 
 export function cleanupGitRefreshProjects(activeProjectIds: ReadonlySet<string>): void {
+  cleanupManualGitRefresh(activeProjectIds);
   for (const id of pendingFullRefreshes.keys())
     if (!activeProjectIds.has(id)) pendingFullRefreshes.delete(id);
   for (const projectId of refreshingProjects) {
@@ -786,6 +828,7 @@ export function cleanupGitRefreshProjects(activeProjectIds: ReadonlySet<string>)
     branchPrPrefetchLastRun.delete(projectId);
     branchPrPrefetchInFlight.delete(projectId);
     branchPrChecked.delete(projectId);
+    branchPrFallbackTimes.delete(projectId);
   }
   for (const [key, entry] of postPushPrRefreshEntries) {
     if (activeProjectIds.has(entry.target.projectId)) continue;
@@ -794,7 +837,7 @@ export function cleanupGitRefreshProjects(activeProjectIds: ReadonlySet<string>)
   }
 }
 
-async function refreshProjectStatusOnly(
+export async function refreshProjectStatusOnly(
   project: { id: string; location: ProjectLocation },
   reason: GitRefreshReason,
   isActive: () => boolean,
@@ -803,15 +846,16 @@ async function refreshProjectStatusOnly(
 ): Promise<void> {
   const statusResult = !includeProjectStatus
     ? undefined
-    : await readBridge()
-        .getGitStatus({ projectLocation: project.location })
-        .catch(() => undefined);
+    : await readFreshGitValue(project.location, "project-status", () =>
+        readBridge().getGitStatus({ projectLocation: project.location }),
+      ).catch(() => undefined);
   if (!isActive()) return;
   if (statusResult) {
     useGitStore.getState().setStatus(project.id, statusResult);
   }
 
-  const threadWorktreePaths = worktreePaths ?? getProjectActiveWorktreePaths(project.id);
+  const threadWorktreePaths =
+    worktreePaths ?? getProjectActiveWorktreePaths(project.id, reason === "manual");
   if (threadWorktreePaths.length === 0) return;
   const statuses = await readFreshWorktreeStatuses(
     project.location,
@@ -821,6 +865,43 @@ async function refreshProjectStatusOnly(
   if (isActive() && statuses && Object.keys(statuses).length > 0) {
     applyWorktreeStatusBatch(project.location, statuses);
   }
+  if (reason === "manual") await refreshWorktreeSourceInfo(project, threadWorktreePaths, isActive);
+}
+
+async function refreshWorktreeSourceInfo(
+  project: ActiveGitProject,
+  paths: string[],
+  isActive: () => boolean,
+): Promise<void> {
+  const branches = new Map<string, string>();
+  for (const thread of useAppStore.getState().threads) {
+    if (thread.projectId === project.id && thread.worktreePath && thread.worktreeBranch)
+      branches.set(thread.worktreePath, thread.worktreeBranch);
+  }
+  for (const worktree of useGitStore.getState().worktrees[project.id] ?? []) {
+    if (!worktree.isMain && worktree.branch) branches.set(worktree.path, worktree.branch);
+  }
+  const updates = await readFreshGitBatch(project.location, "source", paths, async () => {
+    const result: Record<
+      string,
+      { sourceBranch: string | null; commitsAhead: number; sourceAhead: number }
+    > = {};
+    await forEachGitTarget(paths, async (path) => {
+      const branch = branches.get(path);
+      if (!branch || !isActive()) return;
+      try {
+        result[path] = await readBridge().gitGetWorktreeSourceBranch({
+          projectLocation: project.location,
+          branch,
+        });
+      } catch {
+        /* Preserve the previous source counts on failure. */
+      }
+    });
+    return result;
+  });
+  if (isActive() && Object.keys(updates).length)
+    useGitStore.getState().setWorktreeSourceInfoBatch(updates);
 }
 
 /** Initial/revealed sidebar rows and newly opened panes get one independent fresh read. */
@@ -828,15 +909,35 @@ export async function refreshGitWorktreePaths(
   project: ActiveGitProject,
   paths: string[],
   isActive: () => boolean,
+  detail: GitStatusDetail = "full",
+  sourceInfo = true,
 ): Promise<void> {
   if (paths.length === 0) return;
-  const statuses = await readFreshWorktreeStatuses(project.location, paths, "full").catch(
+  const statusesPromise = readFreshWorktreeStatuses(project.location, paths, detail).catch(
     () => undefined,
   );
+  const sourcePromise = sourceInfo
+    ? refreshWorktreeSourceInfo(project, paths, isActive)
+    : Promise.resolve();
+  const statuses = await statusesPromise;
   if (isActive() && statuses) applyWorktreeStatusBatch(project.location, statuses);
+  await sourcePromise;
 }
 
-export async function refreshGitProject(
+export function refreshGitProject(
+  project: ActiveGitProject,
+  reason: GitRefreshReason,
+  mode: GitRefreshMode = "full",
+  options: GitRefreshOptions = {},
+): Promise<void> {
+  return reason === "manual"
+    ? coalesceManualGitRefresh(project.id, { mode, options }, (request) =>
+        runGitProjectRefresh(project, reason, request.mode, request.options),
+      )
+    : runGitProjectRefresh(project, reason, mode, options);
+}
+
+async function runGitProjectRefresh(
   project: { id: string; location: ProjectLocation },
   reason: GitRefreshReason,
   mode: GitRefreshMode = "full",
@@ -908,12 +1009,9 @@ export async function refreshGitProject(
         // handshakes to one and lets the supervisor parallelize freely. Each
         // field writes to the store as soon as the bundle lands.
         const cachedGhAvailable = useGitStore.getState().ghAvailable[project.id] === true;
-        const snapshotPromise = readBridge()
-          .gitProjectSnapshot({
-            projectLocation: project.location,
-            includeGhCheck: !cachedGhAvailable,
-          })
+        const snapshotPromise = readFreshProjectSnapshot(project.location, !cachedGhAvailable)
           .then((snap) => {
+            if (!snap) return null;
             if (!isRefreshCurrent(project.id, refreshToken, isActive)) return snap;
             const store = useGitStore.getState();
             if (snap.status) store.setStatus(project.id, snap.status);
@@ -941,7 +1039,9 @@ export async function refreshGitProject(
         const ghAvailablePromise: Promise<boolean> = cachedGhAvailable
           ? Promise.resolve(true)
           : snapshotPromise.then((snap) => {
-              const platform = snap?.status?.remoteInfo?.platform;
+              const platform =
+                snap?.status?.remoteInfo?.platform ??
+                useGitStore.getState().statuses[project.id]?.remoteInfo?.platform;
               const mightBeGitHub = platform === "github" || platform === "unknown";
               if (!mightBeGitHub) return false;
               return snap?.ghAvailable === true;
@@ -952,19 +1052,11 @@ export async function refreshGitProject(
         const worktreeWorkPromise = worktreesPromise.then(async (worktrees) => {
           if (!worktrees) return;
           if (!isRefreshCurrent(project.id, refreshToken, isActive)) return;
-          const childWorktrees = worktrees.filter((wt) => !wt.isMain);
-          syncWatchedWorktreeProject(project.id);
-          const watchWorktreePaths = getProjectActiveWorktreePaths(
-            project.id,
-            reason === "initial",
-          );
-          const watchedWorktreePathSet = new Set(getProjectActiveWorktreePaths(project.id));
-          const activeChildWorktrees = childWorktrees.filter((wt) =>
-            watchedWorktreePathSet.has(wt.path),
-          );
+          const targets = getProjectWorktreeTargets(project.id);
+          syncWatchedWorktreeProject(project.id, targets.watched);
+          const watchWorktreePaths = targets.watched;
 
           const statusesPromise =
-            (reason === "fetch" && project.location.kind !== "wsl") ||
             watchWorktreePaths.length === 0
               ? Promise.resolve()
               : readFreshWorktreeStatuses(
@@ -980,34 +1072,9 @@ export async function refreshGitProject(
                   })
                   .catch(() => undefined);
 
-          const sourceInfoPromise = Promise.all(
-            activeChildWorktrees
-              .filter((wt) => wt.branch)
-              .map(async (wt) => {
-                try {
-                  const info = await readBridge().gitGetWorktreeSourceBranch({
-                    projectLocation: project.location,
-                    branch: wt.branch,
-                  });
-                  return [
-                    wt.path,
-                    {
-                      sourceBranch: info.sourceBranch,
-                      commitsAhead: info.commitsAhead,
-                      sourceAhead: info.sourceAhead,
-                    },
-                  ] as const;
-                } catch {
-                  return undefined;
-                }
-              }),
-          ).then((entries) => {
-            if (!isRefreshCurrent(project.id, refreshToken, isActive)) return;
-            const next = Object.fromEntries(entries.filter((e) => e !== undefined));
-            if (Object.keys(next).length > 0) {
-              useGitStore.getState().setWorktreeSourceInfoBatch(next);
-            }
-          });
+          const sourceInfoPromise = refreshWorktreeSourceInfo(project, watchWorktreePaths, () =>
+            isRefreshCurrent(project.id, refreshToken, isActive),
+          );
 
           await Promise.all([statusesPromise, sourceInfoPromise]);
         });

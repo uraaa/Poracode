@@ -1,6 +1,23 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { GitWatcherScheduler } from "./gitWatcherScheduler";
 afterEach(() => vi.useRealTimers());
+it("refreshes displayed edits within two seconds while sidebar edits remain throttled", async () => {
+  vi.useFakeTimers();
+  const visible = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const background = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const fast = new GitWatcherScheduler(visible, 1500);
+  const slow = new GitWatcherScheduler(background);
+  fast.schedule("p", "/open");
+  slow.schedule("p", "/sidebar");
+  await vi.advanceTimersByTimeAsync(500);
+  fast.schedule("p", "/open");
+  slow.schedule("p", "/sidebar");
+  await vi.advanceTimersByTimeAsync(1500);
+  expect(visible).toHaveBeenCalledTimes(2);
+  expect(background).toHaveBeenCalledTimes(1);
+  fast.dispose();
+  slow.dispose();
+});
 it("coalesces project/worktree bursts, bounds continuous churn, and enforces a minimum interval", async () => {
   vi.useFakeTimers();
   const refresh = vi

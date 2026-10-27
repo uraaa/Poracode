@@ -25,6 +25,7 @@ import {
   buildGitStatusSummaryFromOutput,
   expandUntrackedEntries,
   LS_FILES_UNTRACKED_ARGS,
+  GIT_STATUS_ARGS,
   nonRepoSummaryStatus,
   numstatFromBatchResult,
   parseDiffNumstat,
@@ -92,13 +93,9 @@ export class GitStatusService {
 
     let statusOutput: string;
     try {
-      statusOutput = await execGit(
-        location,
-        ["status", "--porcelain=v2", "-b", "--untracked-files=all"],
-        {
-          timeout: GIT_STATUS_TIMEOUT,
-        },
-      );
+      statusOutput = await execGit(location, GIT_STATUS_ARGS, {
+        timeout: GIT_STATUS_TIMEOUT,
+      });
     } catch (error) {
       // Only a failed membership probe means non-repo. A valid repo with a
       // broken/unreadable index must retain the existing status error behavior.
@@ -179,7 +176,7 @@ export class GitStatusService {
       const results = await execGitBatchWslBridge(
         location,
         [
-          { cwd: location.linuxPath, args: ["status", "--porcelain=v2", "-b"] },
+          { cwd: location.linuxPath, args: GIT_STATUS_ARGS },
           { cwd: location.linuxPath, args: LS_FILES_UNTRACKED_ARGS },
         ],
         GIT_STATUS_TIMEOUT,
@@ -196,16 +193,10 @@ export class GitStatusService {
     }
 
     try {
-      const [statusOutput, untrackedOutput] = await Promise.all([
-        execGit(location, ["status", "--porcelain=v2", "-b"], { timeout: GIT_STATUS_TIMEOUT }),
-        execGit(location, LS_FILES_UNTRACKED_ARGS, { timeout: GIT_STATUS_TIMEOUT }).catch(
-          (error) => {
-            console.warn("[git] ls-files untracked failed:", error);
-            return "";
-          },
-        ),
-      ]);
-      const summary = buildGitStatusSummaryFromOutput(statusOutput, untrackedOutput);
+      const statusOutput = await execGit(location, GIT_STATUS_ARGS, {
+        timeout: GIT_STATUS_TIMEOUT,
+      });
+      const summary = buildGitStatusSummaryFromOutput(statusOutput, "");
       await this.clearInheritedStartPointUpstream(location, summary);
       return summary;
     } catch (error) {
@@ -335,7 +326,7 @@ export class GitStatusService {
       location,
       [
         { cwd, args: ["rev-parse", "--is-inside-work-tree"] },
-        { cwd, args: ["status", "--porcelain=v2", "-b"] },
+        { cwd, args: GIT_STATUS_ARGS },
         { cwd, args: ["remote", "-v"] },
         { cwd, args: ["diff", "--cached", "--numstat"] },
         { cwd, args: ["diff", "--numstat"] },
@@ -370,7 +361,7 @@ export class GitStatusService {
     for (const cwd of worktreePaths) {
       bridgeCommands.push(
         { cwd, args: ["rev-parse", "--is-inside-work-tree"] },
-        { cwd, args: ["status", "--porcelain=v2", "-b"] },
+        { cwd, args: GIT_STATUS_ARGS },
         { cwd, args: ["remote", "-v"] },
         { cwd, args: ["diff", "--cached", "--numstat"] },
         { cwd, args: ["diff", "--numstat"] },
@@ -424,10 +415,7 @@ export class GitStatusService {
     const PER_WORKTREE_CMDS = 2;
     const bridgeCommands: { cwd: string; args: string[] }[] = [];
     for (const cwd of worktreePaths) {
-      bridgeCommands.push(
-        { cwd, args: ["status", "--porcelain=v2", "-b"] },
-        { cwd, args: LS_FILES_UNTRACKED_ARGS },
-      );
+      bridgeCommands.push({ cwd, args: GIT_STATUS_ARGS }, { cwd, args: LS_FILES_UNTRACKED_ARGS });
     }
     const results = await execGitBatchWslBridge(location, bridgeCommands, GIT_STATUS_TIMEOUT);
 

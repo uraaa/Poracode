@@ -1798,7 +1798,15 @@ describe("GitService.getStatus Windows path normalization", () => {
           commands: expect.arrayContaining([
             expect.objectContaining({
               cwd: "/home/demo/work/repo",
-              args: [...GIT_QUOTEPATH_PREFIX, "status", "--porcelain=v2", "-b"],
+              args: [
+                ...GIT_QUOTEPATH_PREFIX,
+                "status",
+                "--porcelain=v2",
+                "-b",
+                "--untracked-files=all",
+                "--",
+                ".",
+              ],
             }),
           ]),
         }),

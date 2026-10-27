@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   GitStatusResult,
+  GitProjectSnapshotResult,
+  GitGetWorktreeSourceBranchResult,
   PrData,
   PrDetails,
   Project,
@@ -24,6 +26,8 @@ import {
   PR_PENDING_REFRESH_INTERVAL_MS,
   PR_POST_PUSH_STATUS_POLL_MS,
   refreshGitProject,
+  refreshProjectStatusOnly,
+  refreshGitWorktreePaths,
   stopPendingPrRefresh,
   startPostPushPrStatusRefresh,
   syncPendingPrRefreshProjects,
@@ -333,7 +337,7 @@ describe("pending PR refresh", () => {
     });
     await prefetchBranchPrData(olderProject);
     expect(useGitStore.getState().prData["/repo-wt"]?.state).toBe("closed");
-    await vi.advanceTimersByTimeAsync(180_000);
+    await vi.advanceTimersByTimeAsync(300_001);
     ghGetPrForBranchMock.mockResolvedValue({
       ...basePr,
       state: "merged",
@@ -343,6 +347,46 @@ describe("pending PR refresh", () => {
     expect(useGitStore.getState().prData["/repo-wt"]?.state).toBe("merged");
     expect(ghGetPrForBranchMock).toHaveBeenCalledTimes(2);
   });
+
+  it.each(["open", "merged"] as const)(
+    "bounds and caches %s PR fallback queries outside the bulk list",
+    async (prState) => {
+      const id = `ttl-${prState}`;
+      const threads = Array.from({ length: 6 }, (_, i) => ({
+        ...worktreeThread,
+        id: `${id}-${i}`,
+        projectId: id,
+        worktreePath: `/${id}/${i}`,
+        worktreeBranch: `older/${i}`,
+      }));
+      useAppStore.setState({ projects: [{ ...project, id }], threads, view: { kind: "home" } });
+      useGitStore.setState({
+        statuses: { [id]: status },
+        ghAvailable: { [id]: true },
+        prData: Object.fromEntries(
+          threads.map((thread) => [thread.worktreePath, { ...basePr, state: prState }]),
+        ),
+      });
+      ghListPrsMock.mockImplementation(async () => ({ prs: {} }));
+      let active = 0;
+      let maximum = 0;
+      ghGetPrForBranchMock.mockImplementation(async () => {
+        maximum = Math.max(maximum, ++active);
+        await Promise.resolve();
+        active--;
+        return { ...basePr, state: prState };
+      });
+      const target = { ...project, id };
+      await prefetchBranchPrData(target);
+      expect(maximum).toBeLessThanOrEqual(3);
+      await vi.advanceTimersByTimeAsync(15_000);
+      await prefetchBranchPrData(target);
+      expect(ghGetPrForBranchMock).toHaveBeenCalledTimes(6);
+      await vi.advanceTimersByTimeAsync(prState === "open" ? 60_001 : 300_001);
+      await prefetchBranchPrData(target);
+      expect(ghGetPrForBranchMock).toHaveBeenCalledTimes(12);
+    },
+  );
 
   it("keeps running experiment worktrees active when the project and group are collapsed", () => {
     useSidebarUiStore.setState({ collapsedProjects: { [project.id]: true } });
@@ -684,6 +728,162 @@ describe("watcher git status refresh", () => {
     finishPoll({ ...status, branch: "old" });
     await poll;
     expect(useGitStore.getState().statuses.p1?.branch).toBe(status.branch);
+  });
+
+  it("coalesces repeated manual clicks into one fresh trailing read", async () => {
+    const first = Promise.withResolvers<GitStatusResult>();
+    const fresh = { ...status, branch: "after-click" };
+    const getGitStatus = vi
+      .fn<() => Promise<GitStatusResult>>()
+      .mockReturnValueOnce(first.promise)
+      .mockResolvedValue(fresh);
+    Object.defineProperty(window, "poracode", { configurable: true, value: { getGitStatus } });
+    const initial = refreshGitProject(project, "manual", "status");
+    const clicks = Array.from({ length: 8 }, () => refreshGitProject(project, "manual", "status"));
+    expect(getGitStatus).toHaveBeenCalledTimes(1);
+    first.resolve(status);
+    await Promise.all([initial, ...clicks]);
+    expect(getGitStatus).toHaveBeenCalledTimes(2);
+    expect(useGitStore.getState().statuses.p1?.branch).toBe("after-click");
+  });
+
+  it("does not let a slow independent watcher overwrite a manual project snapshot", async () => {
+    const watcher = Promise.withResolvers<GitStatusResult>();
+    Object.defineProperty(window, "poracode", {
+      configurable: true,
+      value: {
+        getGitStatus: () => watcher.promise,
+        gitProjectSnapshot: async () => ({
+          status: { ...status, branch: "after-commit" },
+          worktrees: [],
+          ghAvailable: false,
+        }),
+        gitWatchWorktrees: async () => undefined,
+      },
+    });
+    const pending = refreshProjectStatusOnly(project, "watcher", () => true);
+    await refreshGitProject(project, "manual", "full");
+    watcher.resolve(status);
+    await pending;
+    expect(useGitStore.getState().statuses.p1?.branch).toBe("after-commit");
+  });
+
+  it("keeps branch and worktree snapshot fields when a newer watcher status finishes first", async () => {
+    const snapshot = Promise.withResolvers<GitProjectSnapshotResult>();
+    Object.defineProperty(window, "poracode", {
+      configurable: true,
+      value: {
+        getGitStatus: async () => ({ ...status, branch: "newer" }),
+        gitProjectSnapshot: () => snapshot.promise,
+        gitWatchWorktrees: async () => undefined,
+      },
+    });
+    const manual = refreshGitProject(project, "manual", "full");
+    await refreshProjectStatusOnly(project, "watcher", () => true);
+    const branches = { current: "main", branches: [] };
+    snapshot.resolve({ status, branches, worktrees: [], ghAvailable: false });
+    await manual;
+    expect(useGitStore.getState().branches.p1).toEqual(branches);
+    expect(useGitStore.getState().worktrees.p1).toEqual([]);
+    expect(useGitStore.getState().statuses.p1?.branch).toBe("newer");
+  });
+
+  it("coalesces repeated full manual snapshots into one fresh trailing snapshot", async () => {
+    const initial = Promise.withResolvers<{ status: GitStatusResult }>();
+    const gitProjectSnapshot = vi
+      .fn<() => Promise<Partial<GitProjectSnapshotResult>>>()
+      .mockReturnValueOnce(initial.promise)
+      .mockResolvedValue({ status, worktrees: [], ghAvailable: false });
+    Object.defineProperty(window, "poracode", {
+      configurable: true,
+      value: {
+        gitProjectSnapshot,
+        gitWatchWorktrees: async () => undefined,
+      },
+    });
+    const first = refreshGitProject(project, "manual", "full");
+    const clicks = Array.from({ length: 8 }, () => refreshGitProject(project, "manual", "full"));
+    expect(gitProjectSnapshot).toHaveBeenCalledTimes(1);
+    initial.resolve({ status });
+    await Promise.all([first, ...clicks]);
+    expect(gitProjectSnapshot).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not let an older background source read overwrite fresh manual counts", async () => {
+    useAppStore.setState({ threads: [worktreeThread] });
+    const old = Promise.withResolvers<{
+      sourceBranch: string;
+      commitsAhead: number;
+      sourceAhead: number;
+    }>();
+    const fresh = { sourceBranch: "main", commitsAhead: 3, sourceAhead: 0 };
+    Object.defineProperty(window, "poracode", {
+      configurable: true,
+      value: {
+        getGitStatus: async () => status,
+        gitWorktreeStatusBatch: async () => ({ statuses: {} }),
+        gitGetWorktreeSourceBranch: vi
+          .fn<() => Promise<GitGetWorktreeSourceBranchResult>>()
+          .mockReturnValueOnce(old.promise)
+          .mockResolvedValue(fresh),
+      },
+    });
+    const background = refreshGitWorktreePaths(project, ["/repo-wt"], () => true);
+    await refreshGitProject(project, "manual", "status");
+    old.resolve({ ...fresh, commitsAhead: 2 });
+    await background;
+    expect(useGitStore.getState().worktreeSourceInfo["/repo-wt"]?.commitsAhead).toBe(3);
+  });
+
+  it("arbitrates source counts when a background batch is delayed by another path", async () => {
+    useAppStore.setState({ threads: [worktreeThread, hiddenWorktreeThread] });
+    const slow = Promise.withResolvers<GitGetWorktreeSourceBranchResult>();
+    const older = { sourceBranch: "main", commitsAhead: 2, sourceAhead: 0 };
+    const gitGetWorktreeSourceBranch = vi
+      .fn<() => Promise<GitGetWorktreeSourceBranchResult>>()
+      .mockResolvedValueOnce(older)
+      .mockReturnValueOnce(slow.promise)
+      .mockResolvedValue({ ...older, commitsAhead: 3 });
+    Object.defineProperty(window, "poracode", {
+      configurable: true,
+      value: {
+        getGitStatus: async () => status,
+        gitWorktreeStatusBatch: async () => ({ statuses: {} }),
+        gitGetWorktreeSourceBranch,
+      },
+    });
+    const background = refreshGitWorktreePaths(project, ["/repo-wt", "/repo-hidden"], () => true);
+    await vi.waitFor(() => expect(gitGetWorktreeSourceBranch).toHaveBeenCalledTimes(2));
+    await refreshGitProject(project, "manual", "status", { worktreePaths: ["/repo-wt"] });
+    slow.resolve(older);
+    await background;
+    expect(useGitStore.getState().worktreeSourceInfo["/repo-wt"]?.commitsAhead).toBe(3);
+  });
+
+  it("loads sidebar status and source counts on manual refresh and reveal", async () => {
+    useAppStore.setState({ threads: [worktreeThread], view: { kind: "home" } });
+    const gitWorktreeStatusBatch = vi
+      .fn<() => Promise<{ statuses: Record<string, GitStatusResult> }>>()
+      .mockResolvedValue({ statuses: { "/repo-wt": status } });
+    const gitGetWorktreeSourceBranch = vi
+      .fn<() => Promise<{ sourceBranch: string; commitsAhead: number; sourceAhead: number }>>()
+      .mockResolvedValue({ sourceBranch: "main", commitsAhead: 4, sourceAhead: 2 });
+    Object.defineProperty(window, "poracode", {
+      configurable: true,
+      value: {
+        getGitStatus: async () => status,
+        gitWorktreeStatusBatch,
+        gitGetWorktreeSourceBranch,
+        gitWatchWorktrees: async () => undefined,
+      },
+    });
+    await refreshGitProject(project, "manual", "status");
+    expect(gitWorktreeStatusBatch).toHaveBeenCalledWith({
+      projectLocation: location,
+      worktreePaths: ["/repo-wt"],
+      detail: "full",
+    });
+    expect(useGitStore.getState().worktreeSourceInfo["/repo-wt"]?.commitsAhead).toBe(4);
   });
 
   it("refreshes exact counts for a changed sidebar worktree without polling unrelated rows", async () => {
@@ -1039,7 +1239,11 @@ describe("watcher git status refresh", () => {
       projectLocation: location,
       includeGhCheck: true,
     });
-    expect(gitWorktreeStatusBatch).not.toHaveBeenCalled();
+    expect(gitWorktreeStatusBatch).toHaveBeenCalledWith({
+      projectLocation: location,
+      worktreePaths: ["/repo-wt"],
+      detail: "summary",
+    });
     expect(useGitStore.getState().worktreeStatuses["/repo-wt"]).toEqual(cachedWorktreeStatus);
   });
 
