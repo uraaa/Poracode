@@ -63,6 +63,12 @@ export const browserStateSchema = z.object({
 });
 export type BrowserState = z.infer<typeof browserStateSchema>;
 
+export interface ChromeExtensionStatus {
+  connected: boolean;
+  extensionPath: string | null;
+  extensionVersion: string | null;
+}
+
 export const browserCreateTabPayloadSchema = z.object({
   url: z.string().optional(),
   activate: z.boolean().optional(),
@@ -181,6 +187,14 @@ export const browserRecentHistoryPayloadSchema = z.object({
 });
 
 export const browserProcedures = {
+  browserGetChromeExtensionStatus: defineNoArgProcedure<ChromeExtensionStatus, "main-local">(
+    "browserGetChromeExtensionStatus",
+    "main-local",
+  ),
+  browserOpenChromeExtensionFolder: defineNoArgProcedure<void, "main-local">(
+    "browserOpenChromeExtensionFolder",
+    "main-local",
+  ),
   browserGetState: defineNoArgProcedure<BrowserState, "main-local">(
     "browserGetState",
     "main-local",

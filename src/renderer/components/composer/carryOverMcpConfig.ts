@@ -1,5 +1,6 @@
 import type {
   AgentCapability,
+  BuiltInMcpServerId,
   ProjectLocation,
   ThreadConfig,
   ThreadPresentationMode,
@@ -21,6 +22,8 @@ const ALWAYS_SCOPED: Pick<AgentCapability, "mcpScope"> = {
  * a flag is worth carrying to any provider — including one whose `mcpScope` is
  * "none". That scope only says the provider's composer offers no toggle; the
  * server still starts and the agent still gets it.
+ * Explicit per-thread opt-outs also follow the task so plugin defaults cannot
+ * silently turn a tool back on when the provider changes.
  *
  * Two things genuinely cannot honor a carried flag, and only those are dropped:
  *
@@ -37,11 +40,16 @@ const ALWAYS_SCOPED: Pick<AgentCapability, "mcpScope"> = {
 export function carryOverComposerMcpConfig(
   capabilities: AgentCapability,
   presentationMode: ThreadPresentationMode,
-  source: Pick<ThreadConfig, "browserMcp" | "chromeMcp" | "crossagentMcp" | "computerUse">,
+  source: Pick<
+    ThreadConfig,
+    "browserMcp" | "chromeMcp" | "crossagentMcp" | "computerUse" | "disabledBuiltInMcpServerIds"
+  >,
   projectLocation?: ProjectLocation,
 ): Partial<ThreadConfig> {
   if (providerOwnsMcpConfig(capabilities)) return {};
-  const carried: Partial<ThreadConfig> = {};
+  const carried: Partial<ThreadConfig> = source.disabledBuiltInMcpServerIds
+    ? { disabledBuiltInMcpServerIds: [...source.disabledBuiltInMcpServerIds] }
+    : {};
   for (const descriptor of composerMcpServers) {
     if (source[descriptor.configKey] !== true) continue;
     if (!descriptor.isAvailable(projectLocation)) continue;
@@ -68,5 +76,28 @@ export function composerMcpConfig(config: ThreadConfig): Partial<ThreadConfig> {
     chromeMcp: config.chromeMcp === true,
     crossagentMcp: config.crossagentMcp === true,
     computerUse: config.computerUse === true,
+    ...(config.disabledBuiltInMcpServerIds
+      ? { disabledBuiltInMcpServerIds: [...config.disabledBuiltInMcpServerIds] }
+      : {}),
   };
+}
+
+/** Keep explicit handoff choices authoritative over plugin-provided defaults. */
+export function applyComposerMcpConfigPatch(
+  config: ThreadConfig,
+  patch: Partial<ThreadConfig>,
+): ThreadConfig {
+  const next = { ...config, ...patch };
+  const toggles: Array<{ configKey: keyof ThreadConfig; id: BuiltInMcpServerId }> = [
+    ...composerMcpServers,
+    { configKey: "computerUse", id: "computer-use" },
+  ];
+  const changed = toggles.filter(({ configKey }) => typeof patch[configKey] === "boolean");
+  if (changed.length === 0) return next;
+  const disabled = new Set(next.disabledBuiltInMcpServerIds);
+  for (const { configKey, id } of changed) {
+    if (patch[configKey] === true) disabled.delete(id);
+    else disabled.add(id);
+  }
+  return { ...next, disabledBuiltInMcpServerIds: [...disabled] };
 }

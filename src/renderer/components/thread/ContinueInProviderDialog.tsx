@@ -67,7 +67,11 @@ import {
   resolveLocalSlashCommandAction,
   slashCommandDisplayId,
 } from "./threadSlashCommands";
-import { carryOverComposerMcpConfig, composerMcpConfig } from "../composer/carryOverMcpConfig";
+import {
+  applyComposerMcpConfigPatch,
+  carryOverComposerMcpConfig,
+  composerMcpConfig,
+} from "../composer/carryOverMcpConfig";
 import { useAttachments, type SaveClipboardImage } from "../composer/useAttachments";
 import { flattenSegments } from "../composer/serializeMentions";
 import { PresentationModeTabs } from "./PresentationModeTabs";
@@ -436,7 +440,7 @@ export function ContinueInProviderDialog(props: {
       resolveDefaultConfig(
         visibleCapabilities(selectedAgent, targetPresentationMode, allHiddenModels),
         targetPresentationMode,
-        { ...prev, ...patch },
+        applyComposerMcpConfigPatch(prev, patch),
         props.projectLocation,
       ),
     );

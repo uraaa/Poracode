@@ -8,6 +8,9 @@
  */
 
 const messages = {
+  "browser.chromeExtensionUnavailable":
+    "Chrome extension files are unavailable. Reinstall or update Poracode to restore them.",
+  "browser.chromeExtensionOpenFailed": "Unable to open the Chrome extension folder.",
   "voice.unavailable": "Live voice is unavailable for this thread.",
   "voice.alreadyConnected": "A voice conversation is already active.",
   "voice.subscriptionRequired": "Live voice requires a subscription sign-in for this provider.",
@@ -15,6 +18,8 @@ const messages = {
   "voice.connectionFailed": "The voice connection failed. Try again.",
   "voice.cancelled": "The voice connection was cancelled.",
   "supervisor.sendTerminalInput": "Send terminal input",
+  "supervisor.threadNotIdleResumable":
+    "Wait for the current reply to finish before changing tools.",
   // ── Git: general ──────────────────────────────────────────
   "git.commandFailed": "Git {command} failed: {detail}",
   "github.accountUnavailable":

@@ -630,6 +630,42 @@ describe("ThreadSessionManager start guards", () => {
     expect(internal.recentlyRemovedThreadIds.has("reused-thread")).toBe(false);
   });
 
+  it("publishes launch-time custom MCP names in snapshots and live state without transports", async () => {
+    const structuredSession = createStructuredSession(Promise.resolve());
+    const adapter = createAdapter("test-agent", structuredSession);
+    const events: SupervisorEvent[] = [];
+    const manager = createManager("test-agent", adapter, (event) => events.push(event));
+    await manager.startThread({
+      threadId: "custom-mcp-thread",
+      projectLocation: { kind: "windows", path: "C:/repo" },
+      agentKind: "test-agent",
+      config: { model: "test-model" },
+      prompt: "hello",
+      initialSize: { cols: 80, rows: 24 },
+      presentationMode: "gui",
+      mcpServers: [
+        {
+          id: "crm-server",
+          name: "crm",
+          description: "CRM server",
+          enabled: true,
+          timeoutMs: 30000,
+          transport: {
+            type: "http",
+            url: "https://crm.example/mcp",
+            headers: { Authorization: "secret-test-value" },
+          },
+        },
+      ],
+    });
+    const snapshot = manager.getThreadSnapshots()[0];
+    expect(snapshot?.mcpLaunchCustomServerNames).toEqual(["crm"]);
+    expect(JSON.stringify(snapshot)).not.toContain("secret-test-value");
+    expect(events).toContainEqual(
+      expect.objectContaining({ type: "thread-state", mcpLaunchCustomServerNames: ["crm"] }),
+    );
+  });
+
   it("passes an empty MCP set to provider-owned structured sessions", async () => {
     const structuredSession = createStructuredSession(Promise.resolve());
     const adapter = createAdapter("opencode", structuredSession);

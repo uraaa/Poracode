@@ -34,11 +34,7 @@ import { ComposerAddMenu } from "../composer/ComposerAddMenu";
 import { ComposerVoiceInput } from "../composer/ComposerVoiceInput";
 import { LiveVoiceButton, LiveVoicePanel } from "../composer/LiveVoiceControls";
 import { liveVoice, useLiveVoice } from "@/renderer/speech/liveVoice";
-import {
-  composerMcpServers,
-  COMPUTER_USE_MCP_ID,
-  providerOwnsMcpConfig,
-} from "../composer/composerMcpServers";
+import { composerMcpServers, COMPUTER_USE_MCP_ID } from "../composer/composerMcpServers";
 import { openAttachmentLightbox } from "../composer/ImageLightbox";
 import {
   pluginLabelsForMcpServers,
@@ -102,6 +98,7 @@ import {
   usePluginMentionItems,
   useSkillSlashCommandState,
 } from "@/renderer/components/skills/useSkills";
+import { useThreadMcpControls } from "./useThreadMcpControls";
 import { useDelayedPendingSteer } from "./useDelayedPendingSteer";
 import { revertedPromptToDraft, useRevertedPromptStore } from "./revertedPrompt";
 
@@ -286,37 +283,14 @@ function ThreadComposerSectionInner(props: ThreadComposerSectionProps & { thread
   const usesTerminalPresentation = presentationMode === "terminal";
   const appControlsAvailable =
     useSharedSettings((s) => s.disabledBuiltInMcpServers["app-controls"]) !== true;
-  // Composer MCP servers are bound at session-create time for the active
-  // thread, so the "+" menu shows this run's bindings read-only: the enabled
-  // built-ins (from thread config), the custom servers recorded at launch,
-  // and Computer Use. Users change servers in the draft composer or settings
-  // before launching a new thread.
-  // Bindings are display-only for an active session; toggles are no-ops.
-  const providerOwnsMcp = effectiveAgentStatus
-    ? providerOwnsMcpConfig(effectiveAgentStatus.capabilities)
-    : false;
-  const runtimeLaunchConfig = useAppStore((s) => s.runtimeLaunchConfigByThreadId[thread.id]);
-  const effectiveMcpConfig = providerOwnsMcp
-    ? (runtimeLaunchConfig ?? thread.config)
-    : thread.config;
-  const mcpServers = composerMcpServers.map((descriptor) => ({
-    descriptor,
-    enabled: effectiveMcpConfig?.[descriptor.configKey] === true,
-    visible:
-      descriptor.isAvailable(projectLocation) &&
-      effectiveMcpConfig?.[descriptor.configKey] === true,
-    onToggle: () => {},
-  }));
-  const launchCustomMcpNames = useAppStore(
-    (s) => s.mcpLaunchCustomServerNamesByThreadId[thread.id],
+  const mcpControls = useThreadMcpControls(
+    thread,
+    effectiveAgentStatus,
+    projectLocation,
+    presentationMode,
   );
-  const customMcpServers = (
-    providerOwnsMcp && usesRemoteTransport ? [] : (launchCustomMcpNames ?? [])
-  ).map((name) => ({
-    id: name,
-    name,
-    enabled: true,
-  }));
+  const { effectiveMcpConfig, mcpServers, customMcpServers } = mcpControls;
+  const providerOwnsMcp = effectiveAgentStatus?.capabilities.mcpConfigSource === "agentSettings";
   const mcpMentions: McpMentionItem[] = [
     ...(appControlsAvailable && !providerOwnsMcp
       ? [
@@ -340,12 +314,14 @@ function ThreadComposerSectionInner(props: ThreadComposerSectionProps & { thread
         icon: descriptor.icon,
         enabled: true,
       })),
-    ...customMcpServers.map((server) => ({
-      id: server.id,
-      name: server.name,
-      icon: Webhook,
-      enabled: true,
-    })),
+    ...customMcpServers
+      .filter((server) => server.enabled)
+      .map((server) => ({
+        id: server.id,
+        name: server.name,
+        icon: Webhook,
+        enabled: true,
+      })),
     ...(effectiveMcpConfig?.computerUse === true && projectLocation?.kind !== "wsl"
       ? [
           {
@@ -507,7 +483,10 @@ function ThreadComposerSectionInner(props: ThreadComposerSectionProps & { thread
   });
   const isCliThread = usesTerminalPresentation;
   const canSubmit =
-    (canSubmitServerInput || canSubmitTerminalInput) && !isSubmitting && !authRequired;
+    (canSubmitServerInput || canSubmitTerminalInput) &&
+    !isSubmitting &&
+    !mcpControls.busy &&
+    !authRequired;
   const canInterruptStructuredTurn = canShowRuntimeChrome && thread.status === "working";
   const pendingSteer = useAppStore((s) => s.pendingSteerByThreadId[thread.id]);
   const followUpBehavior = useSharedSettings((state) => state.followUpBehavior);
@@ -1113,14 +1092,11 @@ function ThreadComposerSectionInner(props: ThreadComposerSectionProps & { thread
                           customMcpServers={customMcpServers}
                           onManageMcpServers={openMcpServersSettings}
                           pluginLabels={composerPluginLabels}
-                          readOnly
-                          computerUse={{
-                            enabled: effectiveMcpConfig?.computerUse === true,
-                            visible:
-                              effectiveMcpConfig?.computerUse === true &&
-                              projectLocation?.kind !== "wsl",
-                            onToggle: () => {},
-                          }}
+                          readOnly={mcpControls.readOnly}
+                          caption={mcpControls.caption}
+                          customReadOnly={mcpControls.customReadOnly}
+                          customCaption={mcpControls.customCaption}
+                          computerUse={mcpControls.computerUse}
                           showFileOption={!usesRemoteTransport || props.pickFiles !== undefined}
                           onPickFiles={() => {
                             void (

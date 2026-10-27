@@ -59,11 +59,10 @@ export interface ThreadSlice {
    */
   lastViewedAtByThreadId: Record<string, number>;
   /**
-   * Names of the custom (user/project) MCP servers that were enabled when the
-   * thread's current session launched. Written by the launch effect right
-   * before `startThread`; shown read-only in the active composer's MCP menu.
-   * Not persisted — sessions do not survive an app restart, and a resume goes
-   * back through the launch effect which repopulates it.
+   * Names of custom MCP servers resolved for the current session, including
+   * plugin contributions. Supervisor events and snapshots are authoritative;
+   * the renderer launch effect seeds optimistic names until the runtime replies.
+   * Not persisted; rebuilt from live snapshots after renderer reload.
    */
   mcpLaunchCustomServerNamesByThreadId: Record<string, readonly string[]>;
   setThreadMcpLaunchCustomServerNames: (threadId: string, names: readonly string[]) => void;
@@ -127,6 +126,7 @@ export interface ThreadSlice {
       config?: ThreadConfig;
       /** Undefined preserves the current snapshot; null clears an authoritative snapshot. */
       launchConfig?: ThreadConfig | null;
+      mcpLaunchCustomServerNames?: string[];
       threadMentionToolsAvailable?: boolean;
       sessionRef?: SessionRef;
       slashCommands?: Thread["slashCommands"];
@@ -211,12 +211,14 @@ export const createThreadSlice: SliceCreator<ThreadSlice> = (set) => ({
       });
 
       const hasLaunchState =
+        Object.keys(state.mcpLaunchCustomServerNamesByThreadId).length > 0 ||
         Object.keys(state.runtimeLaunchConfigByThreadId).length > 0 ||
         Object.keys(state.threadMentionToolsAvailableByThreadId).length > 0;
       return changed || hasLaunchState
         ? {
             threads,
             runtimeLaunchConfigByThreadId: {},
+            mcpLaunchCustomServerNamesByThreadId: {},
             threadMentionToolsAvailableByThreadId: {},
           }
         : {};
@@ -723,6 +725,15 @@ export const createThreadSlice: SliceCreator<ThreadSlice> = (set) => ({
                 },
               };
       }
+      const customServerNamesPatch =
+        input.mcpLaunchCustomServerNames === undefined
+          ? undefined
+          : {
+              mcpLaunchCustomServerNamesByThreadId: {
+                ...state.mcpLaunchCustomServerNamesByThreadId,
+                [threadId]: input.mcpLaunchCustomServerNames,
+              },
+            };
       const mentionToolsPatch =
         input.threadMentionToolsAvailable === undefined
           ? undefined
@@ -737,6 +748,7 @@ export const createThreadSlice: SliceCreator<ThreadSlice> = (set) => ({
         return {
           ...(runtimeConfigMapPatch ?? {}),
           ...(launchConfigMapPatch ?? {}),
+          ...(customServerNamesPatch ?? {}),
           ...(mentionToolsPatch ?? {}),
         };
       }
@@ -747,6 +759,7 @@ export const createThreadSlice: SliceCreator<ThreadSlice> = (set) => ({
         ...(turnsChanged ? turnUpdate : {}),
         ...(runtimeConfigMapPatch ?? {}),
         ...(launchConfigMapPatch ?? {}),
+        ...(customServerNamesPatch ?? {}),
         ...(mentionToolsPatch ?? {}),
       };
     }),
@@ -915,6 +928,8 @@ export const createThreadSlice: SliceCreator<ThreadSlice> = (set) => ({
         turnUpdate.runtimeCompletedTurnsByThread !== state.runtimeCompletedTurnsByThread;
       const { [threadId]: droppedLaunchConfig, ...runtimeLaunchConfigByThreadId } =
         state.runtimeLaunchConfigByThreadId;
+      const { [threadId]: droppedCustomServerNames, ...mcpLaunchCustomServerNamesByThreadId } =
+        state.mcpLaunchCustomServerNamesByThreadId;
       const { [threadId]: droppedMentionTools, ...threadMentionToolsAvailableByThreadId } =
         state.threadMentionToolsAvailableByThreadId;
       // Background work dies with the agent process, and a session can exit
@@ -923,6 +938,9 @@ export const createThreadSlice: SliceCreator<ThreadSlice> = (set) => ({
       const { [threadId]: droppedBackgroundTasks, ...runtimeBackgroundTasksByThread } =
         state.runtimeBackgroundTasksByThread;
       const launchConfigPatch = droppedLaunchConfig ? { runtimeLaunchConfigByThreadId } : undefined;
+      const customServerNamesPatch = droppedCustomServerNames
+        ? { mcpLaunchCustomServerNamesByThreadId }
+        : undefined;
       const mentionToolsPatch = droppedMentionTools
         ? { threadMentionToolsAvailableByThreadId }
         : undefined;
@@ -933,6 +951,7 @@ export const createThreadSlice: SliceCreator<ThreadSlice> = (set) => ({
         return {
           ...(turnsChanged ? turnUpdate : {}),
           ...(launchConfigPatch ?? {}),
+          ...(customServerNamesPatch ?? {}),
           ...(mentionToolsPatch ?? {}),
           ...(backgroundTasksPatch ?? {}),
         };
@@ -941,6 +960,7 @@ export const createThreadSlice: SliceCreator<ThreadSlice> = (set) => ({
         threads,
         ...(turnsChanged ? turnUpdate : {}),
         ...(launchConfigPatch ?? {}),
+        ...(customServerNamesPatch ?? {}),
         ...(mentionToolsPatch ?? {}),
         ...(backgroundTasksPatch ?? {}),
       };
@@ -984,6 +1004,13 @@ export const createThreadSlice: SliceCreator<ThreadSlice> = (set) => ({
       const runtimeLaunchConfigByThreadId = Object.fromEntries(
         snapshots.flatMap((snapshot) =>
           snapshot.launchConfig ? [[snapshot.threadId, snapshot.launchConfig]] : [],
+        ),
+      );
+      const mcpLaunchCustomServerNamesByThreadId = Object.fromEntries(
+        snapshots.flatMap((snapshot) =>
+          snapshot.mcpLaunchCustomServerNames === undefined
+            ? []
+            : [[snapshot.threadId, snapshot.mcpLaunchCustomServerNames]],
         ),
       );
       const threadMentionToolsAvailableByThreadId = Object.fromEntries(
@@ -1111,6 +1138,7 @@ export const createThreadSlice: SliceCreator<ThreadSlice> = (set) => ({
           ...(turnsChanged ? turnUpdate : {}),
           ...(runtimeConfigPatch ?? {}),
           runtimeLaunchConfigByThreadId,
+          mcpLaunchCustomServerNamesByThreadId,
           threadMentionToolsAvailableByThreadId,
         };
       }
@@ -1119,6 +1147,7 @@ export const createThreadSlice: SliceCreator<ThreadSlice> = (set) => ({
         ...(turnsChanged ? turnUpdate : {}),
         ...(runtimeConfigPatch ?? {}),
         runtimeLaunchConfigByThreadId,
+        mcpLaunchCustomServerNamesByThreadId,
         threadMentionToolsAvailableByThreadId,
       };
     }),
