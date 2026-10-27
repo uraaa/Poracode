@@ -166,27 +166,12 @@ export function useAppHydration(options: { runtimeOwner?: boolean } = {}) {
         const snapshots = await snapshotsPromise;
         if (!isActive) return;
 
-        const currentView = useAppStore.getState().view;
-        const selectedIds = collectRetainedThreadIds(currentView);
-        const storeThreadIds = new Set(useAppStore.getState().threads.map((thread) => thread.id));
-
-        for (const snapshot of snapshots) {
-          if (!selectedIds.has(snapshot.threadId) && storeThreadIds.has(snapshot.threadId)) {
-            void readBridge()
-              .closeThread({ threadId: snapshot.threadId })
-              .catch((error: unknown) => {
-                captureRendererException(error, { featureArea: "hydration" });
-              });
-          }
-        }
-
+        // A renderer reload can leave every supervisor session alive. Reattach
+        // all of them, including background threads: the selected view controls
+        // visibility, not session lifetime. Missing sessions still become
+        // inactive through reconciliation after a full app restart.
         startTransition(() => {
-          reconcileRuntimeSnapshots(
-            selectedIds.size > 0
-              ? snapshots.filter((snapshot) => selectedIds.has(snapshot.threadId))
-              : [],
-            requestedThreadIds,
-          );
+          reconcileRuntimeSnapshots(snapshots, requestedThreadIds);
         });
       } catch (error) {
         captureRendererException(error, { featureArea: "hydration" });

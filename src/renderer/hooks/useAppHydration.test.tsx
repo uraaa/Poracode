@@ -164,16 +164,59 @@ describe("useAppHydration experiments", () => {
   });
 
   it("retains every running candidate even when the board is not the active view", async () => {
-    renderHook(() => useAppHydration());
+    const { result } = renderHook(() => useAppHydration());
 
-    await waitFor(() => {
-      expect(mocks.bridge.closeThread).toHaveBeenCalledWith({ threadId: "unrelated" });
-    });
-    expect(mocks.bridge.closeThread).not.toHaveBeenCalledWith({ threadId: "candidate-1" });
-    expect(mocks.bridge.closeThread).not.toHaveBeenCalledWith({ threadId: "candidate-2" });
+    await waitFor(() => expect(result.current.runtimeSnapshotsReady).toBe(true));
+    expect(mocks.bridge.closeThread).not.toHaveBeenCalled();
+    expect(useAppStore.getState().threads.map((item) => item.status)).toEqual([
+      "working",
+      "working",
+      "working",
+    ]);
     expect(mocks.hydrateThreadRuntimeItems).toHaveBeenCalledWith("candidate-1");
     expect(mocks.hydrateThreadRuntimeItems).toHaveBeenCalledWith("candidate-2");
   });
+
+  it.each(["home", "thread", "experiment"] as const)(
+    "reattaches background GUI and terminal sessions after a reload into %s",
+    async (viewKind) => {
+      useAppStore.setState({
+        threads: [
+          { ...thread("candidate-1"), status: "inactive", attention: "none" },
+          { ...thread("background-gui"), status: "inactive", attention: "none" },
+          {
+            ...thread("background-terminal"),
+            status: "inactive",
+            attention: "none",
+            presentationMode: "terminal",
+          },
+          { ...thread("stopped"), status: "inactive", attention: "none" },
+        ],
+        view:
+          viewKind === "thread"
+            ? { kind: "thread", panes: ["candidate-1"] }
+            : viewKind === "experiment"
+              ? { kind: "experiment", experimentId: "experiment-1", projectId: project.id }
+              : { kind: "home" },
+      });
+      mocks.bridge.getThreadSnapshots.mockResolvedValue([
+        snapshot("candidate-1"),
+        snapshot("background-gui"),
+        snapshot("background-terminal"),
+      ]);
+
+      const { result } = renderHook(() => useAppHydration());
+
+      await waitFor(() => expect(result.current.runtimeSnapshotsReady).toBe(true));
+      expect(mocks.bridge.closeThread).not.toHaveBeenCalled();
+      expect(useAppStore.getState().threads.map((item) => [item.id, item.status])).toEqual([
+        ["candidate-1", "working"],
+        ["background-gui", "working"],
+        ["background-terminal", "working"],
+        ["stopped", "inactive"],
+      ]);
+    },
+  );
 
   it("shows persisted threads while live runtime snapshots reconcile in the background", async () => {
     let resolveSnapshots!: (snapshots: ThreadRuntimeSnapshot[]) => void;
@@ -196,6 +239,21 @@ describe("useAppHydration experiments", () => {
         "working",
       );
     });
+  });
+
+  it("marks persisted sessions inactive when a full app restart leaves no live snapshots", async () => {
+    useExperimentStore.setState({ experiments: {} });
+    mocks.bridge.getThreadSnapshots.mockResolvedValue([]);
+
+    const { result } = renderHook(() => useAppHydration());
+
+    await waitFor(() => expect(result.current.runtimeSnapshotsReady).toBe(true));
+    expect(mocks.bridge.closeThread).not.toHaveBeenCalled();
+    expect(useAppStore.getState().threads.map((item) => item.status)).toEqual([
+      "inactive",
+      "inactive",
+      "inactive",
+    ]);
   });
 
   it("recovers candidate worktree paths from their durable branches before showing the UI", async () => {
