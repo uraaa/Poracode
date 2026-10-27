@@ -147,6 +147,18 @@ describe("effectiveLaunchConfig — single gate for built-in MCP disables", () =
       chromeMcp: false,
     });
   });
+
+  it("honors an explicit thread override without changing legacy plugin enablement", () => {
+    const legacy = { ...baseConfig, browserMcp: false };
+    expect(effectiveLaunchConfig(legacy, [], ["browser"]).browserMcp).toBe(true);
+    expect(
+      effectiveLaunchConfig(
+        { ...legacy, disabledBuiltInMcpServerIds: ["browser"] },
+        [],
+        ["browser"],
+      ).browserMcp,
+    ).toBe(false);
+  });
 });
 
 describe("workspaceLaunchConfig — Home scope unrestricted for every agent", () => {

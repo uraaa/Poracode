@@ -216,6 +216,80 @@ describe("SupervisorRuntime thread input", () => {
     appendFileMock.mockReset();
   });
 
+  it.each(["launching", "working", "needs_approval", "needs_reply"])(
+    "refuses an idle-only MCP close while the thread is %s",
+    async (status) => {
+      const runtime = makeRuntime(() => {});
+      const session = createRuntimeSession({
+        status,
+        sessionRef: { providerSessionId: "session-1", discoveredAt: new Date().toISOString() },
+      });
+      const sessions = (runtime as unknown as { sessions: Map<string, typeof session> }).sessions;
+      sessions.set(session.threadId, session);
+      await expect(
+        runtime.threadSessionManager.closeThread({ threadId: session.threadId, onlyIfIdle: true }),
+      ).rejects.toThrow("Wait for the current reply to finish before changing tools.");
+      expect(sessions.get(session.threadId)).toBe(session);
+      expect(session.structuredSession.dispose).not.toHaveBeenCalled();
+      expect(session.pty.kill).not.toHaveBeenCalled();
+    },
+  );
+
+  it("refuses an idle-only close without a resumable reference", async () => {
+    const runtime = makeRuntime(() => {});
+    const session = createRuntimeSession();
+    const sessions = (runtime as unknown as { sessions: Map<string, typeof session> }).sessions;
+    sessions.set(session.threadId, session);
+    await expect(
+      runtime.threadSessionManager.closeThread({ threadId: session.threadId, onlyIfIdle: true }),
+    ).rejects.toThrow("Wait for the current reply to finish before changing tools.");
+    expect(sessions.get(session.threadId)).toBe(session);
+    expect(session.structuredSession.dispose).not.toHaveBeenCalled();
+  });
+
+  it("refuses an idle-only close if its provider cannot resume", async () => {
+    const runtime = makeRuntime(() => {});
+    const session = createRuntimeSession({
+      sessionRef: { providerSessionId: "session-1", discoveredAt: new Date().toISOString() },
+    });
+    session.adapter.capabilities.supportsResume = false;
+    const sessions = (runtime as unknown as { sessions: Map<string, typeof session> }).sessions;
+    sessions.set(session.threadId, session);
+    await expect(
+      runtime.threadSessionManager.closeThread({ threadId: session.threadId, onlyIfIdle: true }),
+    ).rejects.toThrow("Wait for the current reply to finish before changing tools.");
+    expect(sessions.get(session.threadId)).toBe(session);
+  });
+
+  it("refuses an idle-only close during a pending start without aborting it", async () => {
+    const runtime = makeRuntime(() => {});
+    const manager = runtime.threadSessionManager as unknown as {
+      startLocks: Map<string, Promise<void>>;
+      pendingStartAborts: Set<string>;
+    };
+    manager.startLocks.set("pending", Promise.resolve());
+    await expect(
+      runtime.threadSessionManager.closeThread({ threadId: "pending", onlyIfIdle: true }),
+    ).rejects.toThrow("Wait for the current reply to finish before changing tools.");
+    expect(manager.pendingStartAborts.has("pending")).toBe(false);
+    manager.startLocks.delete("pending");
+  });
+
+  it("closes an idle resumable session when requested", async () => {
+    const runtime = makeRuntime(() => {});
+    const session = createRuntimeSession({
+      sessionRef: { providerSessionId: "session-1", discoveredAt: new Date().toISOString() },
+    });
+    const sessions = (runtime as unknown as { sessions: Map<string, typeof session> }).sessions;
+    sessions.set(session.threadId, session);
+    await runtime.threadSessionManager.closeThread({
+      threadId: session.threadId,
+      onlyIfIdle: true,
+    });
+    expect(sessions.has(session.threadId)).toBe(false);
+    expect(session.structuredSession.dispose).toHaveBeenCalledOnce();
+  });
+
   it("routes server-controlled thread input through structured turn start", async () => {
     const emitted: unknown[] = [];
     const runtime = makeRuntime((event) => {

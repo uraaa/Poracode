@@ -1,6 +1,7 @@
 import { watch } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { prepareChromeExtension } from "./browser/external/chromeExtensionSetup";
 import {
   app,
   BrowserWindow,
@@ -1049,6 +1050,18 @@ if (!hasSingleInstanceLock) {
       });
       chromeMcpIngress = new ChromeMcpIngress();
       chromeMcpIngress.setConnectionAccessor(() => chromeBridgeServer?.getConnection() ?? null);
+      const preparedChromeExtension = (() => {
+        const source = app.isPackaged
+          ? join(process.resourcesPath, "chrome-extension")
+          : join(__dirname, "..", "..", "chrome-extension");
+        try {
+          return prepareChromeExtension(source, paths.baseDir);
+        } catch (error) {
+          console.warn("[poracode] could not prepare Chrome extension:", error);
+          return null;
+        }
+      })();
+      chromeMcpIngress.setExtensionPath(preparedChromeExtension?.extensionPath ?? null);
       primeBrowserAllowFlags(initialSettings);
       const mcpInfoReady = browserMcpIngress.start().catch((err) => {
         console.error("[poracode] browser MCP ingress failed to start:", err);
@@ -1178,6 +1191,14 @@ if (!hasSingleInstanceLock) {
         localHandlers: createLocalIpcHandlers({
           getMainWindow: () => mainWindow,
           getBrowserPanelManager: () => browserPanelManager,
+          getChromeExtensionStatus: () => ({
+            connected: chromeBridgeServer?.getConnection() != null,
+            extensionPath: preparedChromeExtension?.extensionPath ?? null,
+            extensionVersion:
+              chromeBridgeServer?.getConnection()?.extensionVersion ??
+              preparedChromeExtension?.extensionVersion ??
+              null,
+          }),
           getRemoteAccessServer: controller.getServer,
           setRemoteAccessEnabled: controller.setEnabled,
           getRemoteAccessTailscaleStatus: controller.getTailscaleStatus,

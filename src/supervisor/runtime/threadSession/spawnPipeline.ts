@@ -132,6 +132,10 @@ export function effectiveLaunchConfig(
   disabledBuiltInMcpServerIds: readonly BuiltInMcpServerId[],
   pluginBuiltInMcpServerIds: readonly BuiltInMcpServerId[] = [],
 ): ThreadConfig {
+  disabledBuiltInMcpServerIds = [
+    ...disabledBuiltInMcpServerIds,
+    ...(config.disabledBuiltInMcpServerIds ?? []),
+  ];
   if (disabledBuiltInMcpServerIds.length === 0 && pluginBuiltInMcpServerIds.length === 0) {
     return config;
   }

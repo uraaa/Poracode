@@ -4,6 +4,27 @@ import type { ExternalChromeConnection } from "./ExternalChromeConnection";
 import { dispatchChromeTool } from "./chromeTools";
 
 describe("dispatchChromeTool", () => {
+  it("gives an exact installation path and steps when Chrome is disconnected", async () => {
+    const result = await dispatchChromeTool(
+      "status",
+      {},
+      {
+        connection: null,
+        allowEval: false,
+        allowDataAccess: false,
+        extensionPath: "C:\\Users\\test\\.poracode\\chrome-extension",
+      },
+    );
+    expect(result).toMatchObject({
+      connected: false,
+      installation: {
+        extensionPath: "C:\\Users\\test\\.poracode\\chrome-extension",
+        extensionsPage: "chrome://extensions",
+      },
+    });
+    expect(JSON.stringify(result)).toContain("Load unpacked");
+    expect(JSON.stringify(result)).toContain("Developer mode");
+  });
   it.each([
     ["Space", " ", "Space"],
     ["Esc", "Escape", "Escape"],

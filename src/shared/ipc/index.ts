@@ -55,6 +55,7 @@ export {
   type BrowserPickResult,
   type BrowserRect,
   type BrowserState,
+  type ChromeExtensionStatus,
   type BrowserStartPickerResult,
   type BrowserSuggestResult,
   type BrowserTabGroupColor,
