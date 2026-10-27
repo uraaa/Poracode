@@ -159,6 +159,8 @@ export const MAIN_LOCAL_PROCEDURE_NAMES = [
   "startUpdateDownload",
   "installUpdate",
   "browserGetState",
+  "browserGetChromeExtensionStatus",
+  "browserOpenChromeExtensionFolder",
   "browserCreateTab",
   "browserCloseTab",
   "browserActivateTab",

@@ -2,7 +2,11 @@
 
 import { describe, expect, it } from "vitest";
 import type { AgentCapability } from "@/shared/contracts";
-import { carryOverComposerMcpConfig, composerMcpConfig } from "./carryOverMcpConfig";
+import {
+  applyComposerMcpConfigPatch,
+  carryOverComposerMcpConfig,
+  composerMcpConfig,
+} from "./carryOverMcpConfig";
 
 function capabilities(overrides: Partial<AgentCapability> = {}): AgentCapability {
   return {
@@ -27,6 +31,19 @@ const allEnabled = {
 } as const;
 
 describe("carryOverComposerMcpConfig", () => {
+  it("preserves explicit tool opt-outs through reseeding and provider handoff", () => {
+    const source = composerMcpConfig({
+      model: "source",
+      browserMcp: false,
+      disabledBuiltInMcpServerIds: ["browser", "computer-use"],
+    });
+    expect(carryOverComposerMcpConfig(capabilities(), "gui", source)).toEqual({
+      disabledBuiltInMcpServerIds: ["browser", "computer-use"],
+    });
+    expect(
+      carryOverComposerMcpConfig(capabilities({ mcpConfigSource: "agentSettings" }), "gui", source),
+    ).toEqual({});
+  });
   it("carries every enabled server into a target that supports them", () => {
     expect(
       carryOverComposerMcpConfig(capabilities(), "gui", allEnabled, {
@@ -92,6 +109,52 @@ describe("carryOverComposerMcpConfig", () => {
     expect(carryOverComposerMcpConfig(capabilities(), "gui", { browserMcp: true })).toEqual({
       browserMcp: true,
     });
+  });
+});
+
+describe("applyComposerMcpConfigPatch", () => {
+  it("clears only the enabled tool's opt-out and preserves other configuration", () => {
+    expect(
+      applyComposerMcpConfigPatch(
+        {
+          model: "target",
+          disabledBuiltInMcpServerIds: ["browser", "computer-use"],
+        },
+        { browserMcp: true },
+      ),
+    ).toEqual({
+      model: "target",
+      browserMcp: true,
+      disabledBuiltInMcpServerIds: ["computer-use"],
+    });
+  });
+
+  it("adds explicit plugin opt-outs for disabled tools, including Computer Use", () => {
+    expect(
+      applyComposerMcpConfigPatch(
+        { model: "target", browserMcp: true },
+        {
+          browserMcp: false,
+          computerUse: false,
+        },
+      ),
+    ).toEqual({
+      model: "target",
+      browserMcp: false,
+      computerUse: false,
+      disabledBuiltInMcpServerIds: ["browser", "computer-use"],
+    });
+  });
+
+  it("does not invent opt-outs for unrelated patches on legacy configurations", () => {
+    expect(
+      applyComposerMcpConfigPatch(
+        { model: "target", browserMcp: false },
+        {
+          effort: "high",
+        },
+      ),
+    ).toEqual({ model: "target", browserMcp: false, effort: "high" });
   });
 });
 

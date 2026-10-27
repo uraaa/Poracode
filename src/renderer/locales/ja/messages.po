@@ -435,7 +435,7 @@ msgstr "{agentLead}が続行するには入力が必要です。"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "{alreadyImported} session(s) were already imported."
-msgstr ""
+msgstr "{alreadyImported} 件のセッションはすでにインポートされています。"
 
 #: src/mobile/views/pr/PrOverviewPage.tsx
 msgid "{commitsCount, plural, one {# commit} other {# commits}}"
@@ -2370,6 +2370,10 @@ msgstr "変更がリクエストされました"
 msgid "Changes unavailable"
 msgstr "変更を取得できません"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Changing tools reconnects this conversation and keeps its history."
+msgstr "ツールを変更すると、この会話に再接続し、履歴は保持されます。"
+
 #. About page label: release channel (stable/nightly)
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
 msgid "Channel"
@@ -2441,6 +2445,10 @@ msgstr "確認中"
 #: src/renderer/components/mcp/McpServersManager.tsx
 msgid "Checking {serverName}"
 msgstr "{serverName} を確認中"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Checking connection..."
+msgstr "接続を確認中..."
 
 #: src/mobile/views/DesktopsView.tsx
 msgid "Checking host…"
@@ -2605,6 +2613,15 @@ msgstr "Chrome"
 msgid "Chrome Control"
 msgstr "Chrome 操作"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Chrome extension"
+msgstr "Chrome 拡張機能"
+
+#: src/renderer/i18n/sharedMessages.ts
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Chrome extension files are unavailable. Reinstall or update Poracode to restore them."
+msgstr "Chrome 拡張機能のファイルが見つかりません。Poracode を再インストールまたは更新して復元してください。"
+
 #: src/renderer/components/composer/composerMcpServers.ts
 msgid "Chrome MCP enabled for this thread"
 msgstr "このスレッドに対して Chrome MCP が有効になっています"
@@ -2703,6 +2720,10 @@ msgstr "CLIフック"
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "Click a shortcut to record a new key, or ＋ to add another."
 msgstr "ショートカットをクリックして新しいキーを記録するか、＋で別のキーを追加します。"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Click Load unpacked and select the extension folder shown below."
+msgstr "「パッケージ化されていない拡張機能を読み込む」をクリックし、以下に表示されている拡張機能フォルダーを選択してください。"
 
 #: src/mobile/views/ManageProjectsView.tsx
 #: src/renderer/views/MainView/parts/CreateProject/CloneProjectModal.tsx
@@ -3326,6 +3347,10 @@ msgstr "接続"
 #~ msgid "Connect a server"
 #~ msgstr "サーバーに接続"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Connect agents to your existing Chrome tabs and signed-in sessions."
+msgstr "エージェントを既存の Chrome タブやログイン済みのセッションに接続します。"
+
 #: src/renderer/actions/prAutomationActions.ts
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/PrWatchControls.tsx
 msgid "Connect an agent before watching PRs."
@@ -3365,6 +3390,7 @@ msgstr "OpenCode が使用できる AI プロバイダーをここで接続し�
 
 #: src/renderer/components/mcp/McpServersManager.tsx
 #: src/renderer/components/plugins/PluginDetail.tsx
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
 msgid "Connected"
 msgstr "接続済み"
 
@@ -3666,7 +3692,7 @@ msgstr "ファイルを読み取れませんでした。"
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "Could not search messages."
-msgstr ""
+msgstr "メッセージを検索できませんでした。"
 
 #: src/renderer/components/mcp/useMcpServerOauth.ts
 msgid "Could not sign in to {serverName}: {message}"
@@ -4931,6 +4957,10 @@ msgstr "{tierLabel}の推論レベルを有効化"
 #: src/renderer/components/mcp/McpServersManager.tsx
 msgid "Enable {tool}"
 msgstr "{tool} を有効にする"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Enable Developer mode."
+msgstr "デベロッパー モードを有効にしてください。"
 
 #: src/renderer/views/SettingsOverlay/parts/GeneralSettings.tsx
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
@@ -6470,7 +6500,7 @@ msgstr "改善"
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "In messages"
-msgstr ""
+msgstr "メッセージ内"
 
 #: src/renderer/views/GitHubActionsView/GitHubActionsRunList.tsx
 msgid "In progress"
@@ -7303,6 +7333,14 @@ msgstr "対応エージェントの起動時にPoracodeが追加するMCPサー�
 #~ msgid "Manage the skills Poracode makes available to supported agents. Project skills can be managed in each project's settings."
 #~ msgstr "Poracode が対応エージェントに提供するスキルを管理します。プロジェクトスキルは各プロジェクトの設定で管理できます。"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Manage tools in the provider settings."
+msgstr "プロバイダーの設定でツールを管理してください。"
+
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Manage tools on the paired desktop."
+msgstr "ペアリング済みのデスクトップでツールを管理してください。"
+
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarWorkspaceSwitcher.tsx
 #~ msgid "Manage workspaces"
 #~ msgstr "ワークスペースを管理"
@@ -7895,7 +7933,7 @@ msgstr "クリーンなワークツリーに移動"
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Move to Project"
-msgstr ""
+msgstr "プロジェクトに移動"
 
 #: src/renderer/components/workspace/workspaceMenuItems.tsx
 msgid "Move to Workspace"
@@ -8526,7 +8564,7 @@ msgstr "MCPツールはまだ使用されていません。"
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "No messages match."
-msgstr ""
+msgstr "一致するメッセージはありません。"
 
 #: src/renderer/components/thread/ChatPane/ChatPane.tsx
 msgid "No messages yet"
@@ -8765,6 +8803,10 @@ msgstr "Git リポジトリではありません"
 #~ msgid "Not available for remote threads"
 #~ msgstr "リモートスレッドでは利用できません"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Not connected"
+msgstr "未接続"
+
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeRows.tsx
 msgid "Not detected on this machine yet."
 msgstr "このマシンではまだ検出されていません。"
@@ -8944,6 +8986,10 @@ msgstr "{0} を開く"
 msgid "Open {label}"
 msgstr "{label}を開く"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Open <0>chrome://extensions</0> in the signed-in Chrome profile you want agents to use."
+msgstr "エージェントに使用させたいログイン済みの Chrome プロフィールで <0>chrome://extensions</0> を開いてください。"
+
 #: src/renderer/commands/registry.ts
 msgid "Open a new browser tab"
 msgstr "新しいブラウザタブを開く"
@@ -9021,6 +9067,10 @@ msgstr "実験を開く"
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Open experiment board"
 msgstr "実験ボードを開く"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Open extension folder"
+msgstr "拡張機能フォルダーを開く"
 
 #: src/renderer/commands/registry.ts
 msgid "Open File"
@@ -10478,6 +10528,10 @@ msgstr "再接続中"
 msgid "Reconnecting to your desktop…"
 msgstr "デスクトップに再接続しています…"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Reconnecting tools…"
+msgstr "ツールに再接続中…"
+
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
 #: src/renderer/views/SettingsOverlay/parts/UsageSettings.tsx
 msgid "Reconstructed from local logs at public API rates — it does not reflect your real bill on subscription plans. Shown only in the usage panel."
@@ -11775,7 +11829,7 @@ msgstr "スレッドの検索"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "Search title or folder everywhere, message text in what's shown"
-msgstr ""
+msgstr "タイトルやフォルダーは全体から、メッセージ本文は表示中の内容から検索"
 
 #: src/renderer/components/sessionImport/SearchableSelect.tsx
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
@@ -12219,7 +12273,7 @@ msgstr "{0, plural, other {# 件のスキル}}を表示中"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "Showing the 200 most recent — narrow the filters to see more"
-msgstr ""
+msgstr "最新の 200 件を表示中 — フィルターを絞り込むと、ほかの結果も表示できます"
 
 #: src/mobile/views/HostFolderPicker.tsx
 #: src/renderer/views/SettingsOverlay/parts/RemoteHostFolderPicker.tsx
@@ -13427,7 +13481,7 @@ msgstr "キューに入ったフォローアップにはスレッドセッショ
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "The thread was stopped to move it — start it again in its new project."
-msgstr ""
+msgstr "移動するためにスレッドを停止しました — 移動先のプロジェクトで再開してください。"
 
 #: src/renderer/components/thread/MoveThreadToWorktreeDialog.tsx
 #~ msgid "The thread will run in a separate worktree on a new branch."
@@ -13644,7 +13698,7 @@ msgstr "このプロジェクトのリモートサーバーはオフラインで
 
 #: src/renderer/components/thread/ThreadAccountLabel.tsx
 msgid "This provider reports no signed-in account."
-msgstr ""
+msgstr "このプロバイダーから、サインイン済みのアカウントがないと報告されています。"
 
 #: src/renderer/components/thread/ThreadFollowUpQueue.tsx
 #: src/renderer/i18n/sharedMessages.ts
@@ -13696,7 +13750,7 @@ msgstr "このスレッドはキューに入ったフォローアップをサポ
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "This thread is hosted on another desktop; it can't be moved to a local project."
-msgstr ""
+msgstr "このスレッドは別のデスクトップで実行されているため、ローカルプロジェクトには移動できません。"
 
 #: src/renderer/i18n/sharedMessages.ts
 msgid "This thread is not ready for Steer."
@@ -13942,6 +13996,10 @@ msgstr "ツール検索"
 msgid "Tools"
 msgstr "ツール"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Tools can only be changed in a new thread for this provider."
+msgstr "このプロバイダーでは、新しいスレッドでのみツールを変更できます。"
+
 #: src/renderer/components/skills/SkillMarketplaceModal.tsx
 msgid "Total installs"
 msgstr "合計インストール数"
@@ -14061,6 +14119,10 @@ msgstr "ページに入力（先にフィールドをタップ）"
 msgid "Unable to authenticate {0}."
 msgstr "{0}を認証できません。"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Unable to check Chrome extension status."
+msgstr "Chrome 拡張機能の状態を確認できませんでした。"
+
 #. placeholder {0}: friendlyError(error)
 #: src/renderer/actions/experimentDecisionActions.ts
 msgid "Unable to compare candidates: {0}"
@@ -14158,6 +14220,11 @@ msgstr "{0}ログインを開けません。"
 #: src/renderer/commands/registry.ts
 msgid "Unable to open file"
 msgstr "ファイルを開けません"
+
+#: src/renderer/i18n/sharedMessages.ts
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Unable to open the Chrome extension folder."
+msgstr "Chrome 拡張機能のフォルダーを開けませんでした。"
 
 #: src/mobile/routeComponents.tsx
 #: src/mobile/useRemoteDesktop.ts
@@ -14987,6 +15054,12 @@ msgstr "勝者をマージする前に、すべての候補が完了するまで
 msgid "Wait for every candidate to finish before opening a pull request."
 msgstr "プルリクエストを開く前に、すべての候補が完了するまで待ってください。"
 
+#: src/renderer/actions/threadMcpActions.ts
+#: src/renderer/components/thread/useThreadMcpControls.ts
+#: src/renderer/i18n/sharedMessages.ts
+msgid "Wait for the current reply to finish before changing tools."
+msgstr "現在の返信が完了してからツールを変更してください。"
+
 #: src/mobile/useRemoteDesktop.ts
 #: src/renderer/actions/moveThreadToWorktreeActions.ts
 msgid "Wait for the thread to finish starting before moving it to a worktree."
@@ -14994,7 +15067,7 @@ msgstr "ワークツリーに移動する前に、スレッドの起動が完了
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "Wait for the thread to finish starting before moving it to another project."
-msgstr ""
+msgstr "スレッドの起動が完了してから、別のプロジェクトに移動してください。"
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Wait for the thread to finish starting."
@@ -15454,7 +15527,7 @@ msgstr "WSL：{distro}"
 
 #: src/renderer/views/ThreadSearchOverlay/parts/MessageSearchResultRow.tsx
 msgid "You"
-msgstr ""
+msgstr "あなた"
 
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CommitSyncPanel.tsx
 msgid "Your local changes are stashed and will be re-applied when you commit or abort this merge."

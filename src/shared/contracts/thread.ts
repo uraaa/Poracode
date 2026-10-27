@@ -86,6 +86,8 @@ export interface ThreadRuntimeSnapshot {
   config?: z.infer<typeof threadConfigSchema>;
   /** Effective launch-time config after plugin and global MCP policy is applied. */
   launchConfig?: z.infer<typeof threadConfigSchema>;
+  /** Custom MCP names resolved at launch, including plugin contributions; no credentials. */
+  mcpLaunchCustomServerNames?: string[];
   /** Whether this live session launched with Poracode's read_thread tool available. */
   threadMentionToolsAvailable?: boolean;
   sessionRef?: z.infer<typeof sessionRefSchema>;
@@ -574,6 +576,8 @@ export type ResizeTerminalPayload = z.infer<typeof resizeTerminalPayloadSchema>;
 
 export const closeThreadPayloadSchema = z.object({
   threadId: z.string().min(1),
+  /** Refuse teardown unless the current session is idle and can be resumed. */
+  onlyIfIdle: z.boolean().optional(),
 });
 export type CloseThreadPayload = z.infer<typeof closeThreadPayloadSchema>;
 

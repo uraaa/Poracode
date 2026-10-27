@@ -435,7 +435,7 @@ msgstr "{agentLead} потребує вашого введення, щоб пр�
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "{alreadyImported} session(s) were already imported."
-msgstr ""
+msgstr "Уже імпортовано сеансів: {alreadyImported}."
 
 #: src/mobile/views/pr/PrOverviewPage.tsx
 msgid "{commitsCount, plural, one {# commit} other {# commits}}"
@@ -2371,6 +2371,10 @@ msgstr "Запитано зміни"
 msgid "Changes unavailable"
 msgstr "Зміни недоступні"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Changing tools reconnects this conversation and keeps its history."
+msgstr "Зміна інструментів перепідключає цю розмову та зберігає її історію."
+
 #. About page label: release channel (stable/nightly)
 #: src/renderer/views/SettingsOverlay/parts/AboutSettings.tsx
 msgid "Channel"
@@ -2442,6 +2446,10 @@ msgstr "Перевірка"
 #: src/renderer/components/mcp/McpServersManager.tsx
 msgid "Checking {serverName}"
 msgstr "Перевірка {serverName}"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Checking connection..."
+msgstr "Перевірка підключення..."
 
 #: src/mobile/views/DesktopsView.tsx
 msgid "Checking host…"
@@ -2606,6 +2614,15 @@ msgstr "Chrome"
 msgid "Chrome Control"
 msgstr "Керування Chrome"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Chrome extension"
+msgstr "Розширення Chrome"
+
+#: src/renderer/i18n/sharedMessages.ts
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Chrome extension files are unavailable. Reinstall or update Poracode to restore them."
+msgstr "Файли розширення Chrome недоступні. Перевстановіть або оновіть Poracode, щоб відновити їх."
+
 #: src/renderer/components/composer/composerMcpServers.ts
 msgid "Chrome MCP enabled for this thread"
 msgstr "Chrome MCP увімкнено для цього треду"
@@ -2704,6 +2721,10 @@ msgstr "Хуки CLI"
 #: src/renderer/views/SettingsOverlay/parts/ShortcutsSettings.tsx
 msgid "Click a shortcut to record a new key, or ＋ to add another."
 msgstr "Натисніть комбінацію клавіш, щоб записати нову клавішу, або ＋, щоб додати ще одну."
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Click Load unpacked and select the extension folder shown below."
+msgstr "Натисніть «Завантажити розпаковане розширення» та виберіть папку розширення, указану нижче."
 
 #: src/mobile/views/ManageProjectsView.tsx
 #: src/renderer/views/MainView/parts/CreateProject/CloneProjectModal.tsx
@@ -3327,6 +3348,10 @@ msgstr "Підключити"
 #~ msgid "Connect a server"
 #~ msgstr "Підключити сервер"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Connect agents to your existing Chrome tabs and signed-in sessions."
+msgstr "Підключіть агентів до відкритих вкладок Chrome і сеансів із виконаним входом."
+
 #: src/renderer/actions/prAutomationActions.ts
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/PrWatchControls.tsx
 msgid "Connect an agent before watching PRs."
@@ -3366,6 +3391,7 @@ msgstr "Підключайте постачальників AI, які може 
 
 #: src/renderer/components/mcp/McpServersManager.tsx
 #: src/renderer/components/plugins/PluginDetail.tsx
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
 msgid "Connected"
 msgstr "Підключено"
 
@@ -3667,7 +3693,7 @@ msgstr "Не вдалося прочитати файл."
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "Could not search messages."
-msgstr ""
+msgstr "Не вдалося виконати пошук у повідомленнях."
 
 #: src/renderer/components/mcp/useMcpServerOauth.ts
 msgid "Could not sign in to {serverName}: {message}"
@@ -4932,6 +4958,10 @@ msgstr "Увімкнути рівень зусиль {tierLabel}"
 #: src/renderer/components/mcp/McpServersManager.tsx
 msgid "Enable {tool}"
 msgstr "Увімкнути {tool}"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Enable Developer mode."
+msgstr "Увімкніть режим розробника."
 
 #: src/renderer/views/SettingsOverlay/parts/GeneralSettings.tsx
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
@@ -6471,7 +6501,7 @@ msgstr "Покращено"
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "In messages"
-msgstr ""
+msgstr "У повідомленнях"
 
 #: src/renderer/views/GitHubActionsView/GitHubActionsRunList.tsx
 msgid "In progress"
@@ -7304,6 +7334,14 @@ msgstr "Керуйте конфігураціями серверів MCP, які
 #~ msgid "Manage the skills Poracode makes available to supported agents. Project skills can be managed in each project's settings."
 #~ msgstr "Керуйте навичками, які Poracode надає підтримуваним агентам. Навичками проєкту можна керувати в налаштуваннях кожного проєкту."
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Manage tools in the provider settings."
+msgstr "Керуйте інструментами в налаштуваннях провайдера."
+
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Manage tools on the paired desktop."
+msgstr "Керуйте інструментами на сполученому комп’ютері."
+
 #: src/renderer/views/MainView/parts/Sidebar/parts/SidebarWorkspaceSwitcher.tsx
 #~ msgid "Manage workspaces"
 #~ msgstr "Керування робочими областями"
@@ -7897,7 +7935,7 @@ msgstr "Перемістити в чистий worktree"
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Move to Project"
-msgstr ""
+msgstr "Перемістити до проєкту"
 
 #: src/renderer/components/workspace/workspaceMenuItems.tsx
 msgid "Move to Workspace"
@@ -8528,7 +8566,7 @@ msgstr "Інструменти MCP ще не використовувалися.
 
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
 msgid "No messages match."
-msgstr ""
+msgstr "Немає відповідних повідомлень."
 
 #: src/renderer/components/thread/ChatPane/ChatPane.tsx
 msgid "No messages yet"
@@ -8767,6 +8805,10 @@ msgstr "Не репозиторій Git"
 #~ msgid "Not available for remote threads"
 #~ msgstr "Недоступно для віддалених тредів"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Not connected"
+msgstr "Не підключено"
+
 #: src/renderer/views/SettingsOverlay/parts/machineScope/MachineScopeRows.tsx
 msgid "Not detected on this machine yet."
 msgstr "На цьому комп’ютері ще не виявлено."
@@ -8946,6 +8988,10 @@ msgstr "Відкрити {0}"
 msgid "Open {label}"
 msgstr "Відкрити {label}"
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Open <0>chrome://extensions</0> in the signed-in Chrome profile you want agents to use."
+msgstr "Відкрийте <0>chrome://extensions</0> у профілі Chrome із виконаним входом, який мають використовувати агенти."
+
 #: src/renderer/commands/registry.ts
 msgid "Open a new browser tab"
 msgstr "Відкрити нову вкладку браузера"
@@ -9023,6 +9069,10 @@ msgstr "Відкрити експеримент"
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Open experiment board"
 msgstr "Відкрити дошку експерименту"
+
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Open extension folder"
+msgstr "Відкрити папку розширення"
 
 #: src/renderer/commands/registry.ts
 msgid "Open File"
@@ -10480,6 +10530,10 @@ msgstr "Перепідключення"
 msgid "Reconnecting to your desktop…"
 msgstr "Перепідключення до десктопа…"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Reconnecting tools…"
+msgstr "Перепідключення інструментів…"
+
 #: src/renderer/views/SettingsOverlay/parts/settingsSearchIndex.ts
 #: src/renderer/views/SettingsOverlay/parts/UsageSettings.tsx
 msgid "Reconstructed from local logs at public API rates — it does not reflect your real bill on subscription plans. Shown only in the usage panel."
@@ -11777,7 +11831,7 @@ msgstr "Пошук тредів"
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "Search title or folder everywhere, message text in what's shown"
-msgstr ""
+msgstr "Пошук за назвою або папкою всюди, за текстом повідомлень — серед показаних"
 
 #: src/renderer/components/sessionImport/SearchableSelect.tsx
 #: src/renderer/views/ThreadSearchOverlay/ThreadSearchOverlay.tsx
@@ -12221,7 +12275,7 @@ msgstr "Показано {0, plural, one {# навичку} few {# навичк�
 
 #: src/renderer/components/sessionImport/ImportSessionsPanel.tsx
 msgid "Showing the 200 most recent — narrow the filters to see more"
-msgstr ""
+msgstr "Показано 200 найновіших — уточніть фільтри, щоб побачити більше"
 
 #: src/mobile/views/HostFolderPicker.tsx
 #: src/renderer/views/SettingsOverlay/parts/RemoteHostFolderPicker.tsx
@@ -13429,7 +13483,7 @@ msgstr "Сесія треду недоступна для повідомлень
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "The thread was stopped to move it — start it again in its new project."
-msgstr ""
+msgstr "Тред зупинено для переміщення — запустіть його знову в новому проєкті."
 
 #: src/renderer/components/thread/MoveThreadToWorktreeDialog.tsx
 #~ msgid "The thread will run in a separate worktree on a new branch."
@@ -13646,7 +13700,7 @@ msgstr "Віддалений сервер цього проєкту офлайн
 
 #: src/renderer/components/thread/ThreadAccountLabel.tsx
 msgid "This provider reports no signed-in account."
-msgstr ""
+msgstr "Цей провайдер повідомляє, що вхід в обліковий запис не виконано."
 
 #: src/renderer/components/thread/ThreadFollowUpQueue.tsx
 #: src/renderer/i18n/sharedMessages.ts
@@ -13698,7 +13752,7 @@ msgstr "Цей тред не підтримує повідомлення в че
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "This thread is hosted on another desktop; it can't be moved to a local project."
-msgstr ""
+msgstr "Цей тред розміщено на іншому комп’ютері; його не можна перемістити до локального проєкту."
 
 #: src/renderer/i18n/sharedMessages.ts
 msgid "This thread is not ready for Steer."
@@ -13944,6 +13998,10 @@ msgstr "Пошук інструментів"
 msgid "Tools"
 msgstr "Інструменти"
 
+#: src/renderer/components/thread/useThreadMcpControls.ts
+msgid "Tools can only be changed in a new thread for this provider."
+msgstr "Для цього провайдера інструменти можна змінити лише в новому треді."
+
 #: src/renderer/components/skills/SkillMarketplaceModal.tsx
 msgid "Total installs"
 msgstr "Усього встановлень"
@@ -14063,6 +14121,10 @@ msgstr "Вводите на странице (сначала коснитесь 
 msgid "Unable to authenticate {0}."
 msgstr "Не вдалося автентифікувати {0}."
 
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Unable to check Chrome extension status."
+msgstr "Не вдалося перевірити стан розширення Chrome."
+
 #. placeholder {0}: friendlyError(error)
 #: src/renderer/actions/experimentDecisionActions.ts
 msgid "Unable to compare candidates: {0}"
@@ -14160,6 +14222,11 @@ msgstr "Не вдалося відкрити вхід у {0}."
 #: src/renderer/commands/registry.ts
 msgid "Unable to open file"
 msgstr "Не вдалося відкрити файл"
+
+#: src/renderer/i18n/sharedMessages.ts
+#: src/renderer/views/SettingsOverlay/parts/ChromeExtensionSettings.tsx
+msgid "Unable to open the Chrome extension folder."
+msgstr "Не вдалося відкрити папку розширення Chrome."
 
 #: src/mobile/routeComponents.tsx
 #: src/mobile/useRemoteDesktop.ts
@@ -14989,6 +15056,12 @@ msgstr "Зачекайте, доки всі кандидати завершат�
 msgid "Wait for every candidate to finish before opening a pull request."
 msgstr "Зачекайте, доки всі кандидати завершать роботу, перш ніж відкривати pull request."
 
+#: src/renderer/actions/threadMcpActions.ts
+#: src/renderer/components/thread/useThreadMcpControls.ts
+#: src/renderer/i18n/sharedMessages.ts
+msgid "Wait for the current reply to finish before changing tools."
+msgstr "Зачекайте, доки завершиться поточна відповідь, перш ніж змінювати інструменти."
+
 #: src/mobile/useRemoteDesktop.ts
 #: src/renderer/actions/moveThreadToWorktreeActions.ts
 msgid "Wait for the thread to finish starting before moving it to a worktree."
@@ -14996,7 +15069,7 @@ msgstr "Дочекайтеся завершення запуску треда, �
 
 #: src/renderer/actions/moveThreadToProjectActions.ts
 msgid "Wait for the thread to finish starting before moving it to another project."
-msgstr ""
+msgstr "Зачекайте, доки тред завершить запуск, перш ніж переміщувати його до іншого проєкту."
 
 #: src/renderer/views/MainView/parts/Sidebar/parts/ThreadContextMenu.tsx
 msgid "Wait for the thread to finish starting."
@@ -15456,7 +15529,7 @@ msgstr "WSL: {distro}"
 
 #: src/renderer/views/ThreadSearchOverlay/parts/MessageSearchResultRow.tsx
 msgid "You"
-msgstr ""
+msgstr "Ви"
 
 #: src/renderer/views/GitReviewOverlay/parts/GitReviewSidebar/parts/CommitSyncPanel.tsx
 msgid "Your local changes are stashed and will be re-applied when you commit or abort this merge."

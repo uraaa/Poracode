@@ -452,6 +452,40 @@ describe("ThreadComposerSection", () => {
     expect(screen.getByTestId("control-kinds")).toBeEmptyDOMElement();
   });
 
+  it("offers disabled browsers and configured MCP servers in an existing resumable thread", () => {
+    useSharedSettings.setState({
+      disabledBuiltInMcpServers: {},
+      mcpServers: [
+        {
+          id: "web-tools",
+          name: "web-tools",
+          enabled: false,
+          description: "",
+          disabledTools: [],
+          transport: { type: "stdio", command: "node", args: ["server.js"], env: {} },
+          timeoutMs: 60_000,
+        },
+      ],
+    });
+    renderComposer();
+    const menu = composerAddMenuSpy.mock.lastCall?.[0] as {
+      readOnly: boolean;
+      mcpServers: Array<{ descriptor: { id: string }; visible: boolean }>;
+      customMcpServers: Array<{ name: string; enabled: boolean; onToggle?: unknown }>;
+    };
+    expect(menu.readOnly).toBe(false);
+    expect(menu.mcpServers.find((row) => row.descriptor.id === "browser")?.visible).toBe(true);
+    expect(menu.customMcpServers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "web-tools",
+          enabled: false,
+          onToggle: expect.any(Function),
+        }),
+      ]),
+    );
+  });
+
   it("does not offer plugin-backed MCPs as @ mentions", () => {
     const rangeRectDescriptor = Object.getOwnPropertyDescriptor(
       Range.prototype,

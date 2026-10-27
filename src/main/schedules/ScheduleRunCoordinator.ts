@@ -15,7 +15,7 @@ import type { SharedSettings } from "@/shared/settings";
 import { DEFAULT_TERMINAL_SIZE, resolveMcpLaunchSnapshot } from "@/shared/contracts";
 import type { SupervisorEvent } from "@/shared/ipc";
 import type { ScheduleRunPatch } from "../db/scheduleRuns";
-import { resolveUnrestrictedThreadPermissions } from "../threads/threadLaunchConfig";
+import { resolveAutomatedThreadConfig } from "../threads/threadLaunchConfig";
 
 /**
  * A `thread-state` transition ends the run only once the turn fully settles.
@@ -114,7 +114,8 @@ export class ScheduleRunCoordinator {
     const threadId = (this.deps.newId ?? randomUUID)();
     const nowIso = this.nowIso();
 
-    const config = await this.buildThreadConfig(task, project.location);
+    const settings = this.deps.getSharedSettings();
+    const config = await this.buildThreadConfig(task, project.location, settings);
     const thread: Thread = {
       id: threadId,
       projectId: project.id,
@@ -179,7 +180,7 @@ export class ScheduleRunCoordinator {
       prompt: task.prompt,
       initialSize: DEFAULT_TERMINAL_SIZE,
       presentationMode: "gui",
-      ...resolveMcpLaunchSnapshot(this.deps.getSharedSettings(), project.mcpServers ?? []),
+      ...resolveMcpLaunchSnapshot(settings, project.mcpServers ?? []),
     };
 
     try {
@@ -221,15 +222,17 @@ export class ScheduleRunCoordinator {
   private async buildThreadConfig(
     task: ScheduledTask,
     location: ProjectLocation,
+    settings: SharedSettings,
   ): Promise<ThreadConfig> {
     return {
       model: task.config.model,
       ...(task.config.effort !== undefined ? { effort: task.config.effort } : {}),
       ...(task.config.fast !== undefined ? { fast: task.config.fast } : {}),
-      ...(await resolveUnrestrictedThreadPermissions(
+      ...(await resolveAutomatedThreadConfig(
         this.deps.getAgentStatuses,
         task.agentKind,
         location,
+        settings,
       )),
     };
   }

@@ -595,6 +595,31 @@ describe("Poracode app control tools — threads", () => {
     );
   });
 
+  it("create_thread carries source one-off MCP opt-ins without copying disabled flags", async () => {
+    const flags = { browserMcp: true, chromeMcp: true, crossagentMcp: true, computerUse: true };
+    const { ctx, createThread } = context({
+      threads: [makeThread({ ...thread, config: { ...thread.config, ...flags } })],
+    });
+    await dispatchTool(
+      "create_thread",
+      { projectId: "project-9", prompt: "Research CRM contacts" },
+      ctx,
+    );
+    expect(createThread).toHaveBeenCalledWith(expect.objectContaining(flags));
+
+    const disabled = context({
+      threads: [makeThread({ ...thread, config: { ...thread.config, browserMcp: false } })],
+    });
+    await dispatchTool(
+      "create_thread",
+      { projectId: "project-9", prompt: "Research CRM contacts" },
+      disabled.ctx,
+    );
+    expect(disabled.createThread).toHaveBeenCalledWith(
+      expect.not.objectContaining({ browserMcp: false }),
+    );
+  });
+
   it("update_thread dispatches the matching remote thread commands", async () => {
     const threads = [makeThread({ id: "a" })];
     const { ctx, emitRemoteThreadCommand, updatedRows } = context({ threads });

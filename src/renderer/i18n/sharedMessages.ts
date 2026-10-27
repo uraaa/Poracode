@@ -11,6 +11,13 @@ import { i18n } from "./i18n";
  * arguments resolved with the values passed to `msg()`.
  */
 const SHARED_MESSAGE_DESCRIPTORS: Record<MessageKey, MessageDescriptor> = {
+  "browser.chromeExtensionUnavailable": msg({
+    message:
+      "Chrome extension files are unavailable. Reinstall or update Poracode to restore them.",
+  }),
+  "browser.chromeExtensionOpenFailed": msg({
+    message: "Unable to open the Chrome extension folder.",
+  }),
   "voice.unavailable": msg({ message: "Live voice is unavailable for this thread." }),
   "voice.alreadyConnected": msg({ message: "A voice conversation is already active." }),
   "voice.subscriptionRequired": msg({
@@ -20,6 +27,9 @@ const SHARED_MESSAGE_DESCRIPTORS: Record<MessageKey, MessageDescriptor> = {
   "voice.connectionFailed": msg({ message: "The voice connection failed. Try again." }),
   "voice.cancelled": msg({ message: "The voice connection was cancelled." }),
   "supervisor.sendTerminalInput": msg({ message: "Send terminal input" }),
+  "supervisor.threadNotIdleResumable": msg({
+    message: "Wait for the current reply to finish before changing tools.",
+  }),
   "supervisor.followUpQueue.guiOnly": msg({
     message: "Queued follow-ups are only supported for chat threads.",
   }),
