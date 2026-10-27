@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const execFileAsyncMock = vi.hoisted(() =>
   vi.fn<(...args: unknown[]) => Promise<{ stdout: string }>>(),
 );
+const resolvedGhPathMock = vi.hoisted(() => vi.fn<(command: string) => string | undefined>());
 const buildAgentCommandMock = vi.hoisted(() =>
   vi.fn<
     (
@@ -47,6 +48,9 @@ vi.mock("./agents/base", () => ({
   buildAgentCommand: buildAgentCommandMock,
   primeProjectShellEnv: primeProjectShellEnvMock,
 }));
+vi.mock("./agents/base/processRuntime", () => ({
+  resolveExecutablePathCached: resolvedGhPathMock,
+}));
 
 import {
   GitHubService,
@@ -69,6 +73,7 @@ const wslLocation = {
 describe("GitHubService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resolvedGhPathMock.mockReturnValue(undefined);
     buildAgentCommandMock.mockImplementation((_loc, command, args) => ({
       command,
       args,
@@ -84,6 +89,19 @@ describe("GitHubService", () => {
   });
 
   describe("checkGhAvailable", () => {
+    it("passes the cached executable to the Windows gh command builder", async () => {
+      resolvedGhPathMock.mockReturnValue("C:\\tools\\gh.exe");
+      execFileAsyncMock.mockResolvedValue({ stdout: "gh version 2.50.0\n" });
+      await new GitHubService().checkGhAvailable(location);
+      expect(resolvedGhPathMock).toHaveBeenCalledWith("gh");
+      expect(buildAgentCommandMock).toHaveBeenCalledWith(
+        location,
+        "gh",
+        ["--version"],
+        "C:\\tools\\gh.exe",
+        undefined,
+      );
+    });
     it("returns available true when gh --version succeeds", async () => {
       execFileAsyncMock.mockResolvedValue({ stdout: "gh version 2.50.0\n" });
 

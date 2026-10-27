@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProjectLocation } from "@/shared/contracts";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { join, resolve as resolvePath } from "node:path";
 
 const mocks = vi.hoisted(() => ({
   execGit: vi.fn<(location: unknown, args: string[], options?: unknown) => Promise<string>>(),
@@ -41,6 +43,78 @@ describe("GitWorktreeService pull", () => {
     expect(mocks.execGit).toHaveBeenCalledWith(location, ["pull", "--no-rebase", "origin"], {
       timeout: GIT_NETWORK_TIMEOUT,
     });
+  });
+
+  it("serializes fetch options and pull for a repository", async () => {
+    let finish!: (value: string) => void;
+    let started!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    mocks.execGit.mockImplementation(async (_location, args) => {
+      if (args[0] === "remote") return "origin\n";
+      if (args[0] === "rev-parse") return "/repo/.git\n";
+      if (args[0] === "fetch") {
+        started();
+        return new Promise<string>((resolve) => {
+          finish = resolve;
+        });
+      }
+      return "";
+    });
+    const service = new GitWorktreeService();
+    const fetch = service.fetch(location, "origin", true);
+    await ready;
+    const pull = service.pull(location, "origin");
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(mocks.execGit.mock.calls.some(([, args]) => args[0] === "pull")).toBe(false);
+    finish("");
+    await Promise.all([fetch, pull]);
+  });
+
+  it("serializes different fetch options and Pull across linked worktrees sharing refs", async () => {
+    await mkdir(resolvePath("tmp"), { recursive: true });
+    const root = await mkdtemp(resolvePath("tmp/network-gate-"));
+    try {
+      const common = join(root, "main", ".git");
+      const linked = join(root, "linked");
+      const admin = join(common, "worktrees", "linked");
+      await mkdir(admin, { recursive: true });
+      await mkdir(linked);
+      await writeFile(join(linked, ".git"), `gitdir: ${admin}\n`);
+      await writeFile(join(admin, "commondir"), "../..\n");
+      const started = Promise.withResolvers<void>();
+      const release = Promise.withResolvers<string>();
+      let active = 0;
+      let maximum = 0;
+      let networkCalls = 0;
+      mocks.execGit.mockImplementation(async (_location, args) => {
+        if (args[0] === "remote") return "origin\n";
+        if (args[0] === "fetch" || args[0] === "pull") {
+          networkCalls++;
+          active++;
+          maximum = Math.max(maximum, active);
+          started.resolve();
+          await release.promise;
+          active--;
+        }
+        return "";
+      });
+      const service = new GitWorktreeService();
+      const main: ProjectLocation = { kind: "posix", path: join(root, "main") };
+      const wt: ProjectLocation = { kind: "posix", path: linked };
+      const first = service.fetch(main, "origin", true);
+      await started.promise;
+      const second = service.fetch(wt, "origin", false);
+      const pull = service.pull(wt, "origin");
+      release.resolve("");
+      await Promise.all([first, second, pull]);
+      expect(maximum).toBe(1);
+      expect(networkCalls).toBe(3);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it("uses an explicit rebase strategy for rebase pulls", async () => {

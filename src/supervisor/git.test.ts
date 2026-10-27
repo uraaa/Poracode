@@ -20,11 +20,12 @@ const { execFileMock, mkdirMock, readFileMock, readWslCommandOutputAsync, rmMock
         ) => void
       >(),
     mkdirMock: vi.fn<() => Promise<void>>(),
-    readFileMock: vi.fn<() => Promise<string | Buffer>>(),
+    readFileMock: vi.fn<(path?: unknown, options?: unknown) => Promise<string | Buffer>>(),
     readWslCommandOutputAsync:
       vi.fn<() => Promise<{ ok: boolean; stdout: string; stderr: string }>>(),
     rmMock: vi.fn<() => Promise<void>>(),
-    statMock: vi.fn<() => Promise<{ isFile(): boolean; size: number; mtimeMs: number }>>(),
+    statMock:
+      vi.fn<(path?: unknown) => Promise<{ isFile(): boolean; size: number; mtimeMs: number }>>(),
   }));
 
 vi.mock("./agents/base", async () => {
@@ -1163,6 +1164,7 @@ describe("GitService.addRemote", () => {
 describe("GitService WSL bridge exec", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    readFileMock.mockRejectedValue(new Error("ENOENT"));
   });
 
   it("routes non-status WSL Git commands through the bridge", async () => {
@@ -3393,20 +3395,22 @@ describe("GitService.getStatus Windows untracked expansion", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    statMock.mockResolvedValue({
+    statMock.mockImplementation(async () => ({
       isFile: () => true,
       size: 12,
       mtimeMs: 100,
-    });
+    }));
     readFileMock.mockResolvedValue("line-1\nline-2");
   });
 
-  it("expands untracked entries via git ls-files instead of directory recursion", async () => {
+  it("expands untracked entries in git status instead of directory recursion", async () => {
     mockGitCommands((args) => {
       if (args[0] === "rev-parse") return { stdout: "true\n" };
       if (args[0] === "status")
         return {
-          stdout: ["# branch.head main", "# branch.ab +0 -0", "? src"].join("\n"),
+          stdout: ["# branch.head main", "# branch.ab +0 -0", "? src/a.ts", "? src/b.ts"].join(
+            "\n",
+          ),
         };
       if (args[0] === "remote") return { stdout: "" };
       if (args[0] === "diff") return { stdout: "" };
@@ -3420,7 +3424,9 @@ describe("GitService.getStatus Windows untracked expansion", () => {
       expect.objectContaining({ path: "src/a.ts", status: "?", insertions: 2, deletions: 0 }),
       expect.objectContaining({ path: "src/b.ts", status: "?", insertions: 2, deletions: 0 }),
     ]);
-    expect(readFileMock).toHaveBeenCalledTimes(2);
+    expect(readFileMock.mock.calls.filter(([path]) => String(path).endsWith(".ts"))).toHaveLength(
+      2,
+    );
   });
 
   it("reuses cached untracked file stats when size and mtime are unchanged", async () => {
@@ -3428,7 +3434,7 @@ describe("GitService.getStatus Windows untracked expansion", () => {
       if (args[0] === "rev-parse") return { stdout: "true\n" };
       if (args[0] === "status")
         return {
-          stdout: ["# branch.head main", "# branch.ab +0 -0", "? src"].join("\n"),
+          stdout: ["# branch.head main", "# branch.ab +0 -0", "? src/a.ts"].join("\n"),
         };
       if (args[0] === "remote") return { stdout: "" };
       if (args[0] === "diff") return { stdout: "" };
@@ -3440,7 +3446,9 @@ describe("GitService.getStatus Windows untracked expansion", () => {
     await service.getStatus(location);
     await service.getStatus(location);
 
-    expect(readFileMock).toHaveBeenCalledTimes(1);
+    expect(readFileMock.mock.calls.filter(([path]) => String(path).endsWith(".ts"))).toHaveLength(
+      1,
+    );
   });
 
   it("does not count binary untracked files as inserted text lines", async () => {
@@ -3478,23 +3486,17 @@ describe("GitService.getStatus Windows untracked expansion", () => {
   });
 
   it("refreshes cached untracked file stats when file metadata changes", async () => {
-    statMock
-      .mockResolvedValueOnce({
-        isFile: () => true,
-        size: 12,
-        mtimeMs: 100,
-      })
-      .mockResolvedValueOnce({
-        isFile: () => true,
-        size: 14,
-        mtimeMs: 200,
-      });
+    let fileReads = 0;
+    statMock.mockImplementation(async (path) => {
+      if (String(path).endsWith("a.ts")) fileReads++;
+      return { isFile: () => true, size: 12, mtimeMs: fileReads * 100 };
+    });
 
     mockGitCommands((args) => {
       if (args[0] === "rev-parse") return { stdout: "true\n" };
       if (args[0] === "status")
         return {
-          stdout: ["# branch.head main", "# branch.ab +0 -0", "? src"].join("\n"),
+          stdout: ["# branch.head main", "# branch.ab +0 -0", "? src/a.ts"].join("\n"),
         };
       if (args[0] === "remote") return { stdout: "" };
       if (args[0] === "diff") return { stdout: "" };
@@ -3506,7 +3508,9 @@ describe("GitService.getStatus Windows untracked expansion", () => {
     await service.getStatus(location);
     await service.getStatus(location);
 
-    expect(readFileMock).toHaveBeenCalledTimes(2);
+    expect(readFileMock.mock.calls.filter(([path]) => String(path).endsWith(".ts"))).toHaveLength(
+      2,
+    );
   });
 });
 
