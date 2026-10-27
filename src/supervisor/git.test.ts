@@ -1,6 +1,11 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("./repositoryCommands/client", async () => {
+  const { executeRepositoryCommand } = await import("./repositoryCommands/execute");
+  return { runRepositoryCommand: executeRepositoryCommand };
+});
 import type {
   WslBridgeClient,
   WslGitExecInput,

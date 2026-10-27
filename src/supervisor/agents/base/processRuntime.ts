@@ -227,6 +227,14 @@ export function findPosixExecutableInWellKnownDirs(binary: string): string | und
 }
 
 export function resolveExecutablePath(command: string): string | undefined {
+  const cached = execPathCache.get(command);
+  if (cached && Date.now() - cached.ts < EXEC_CACHE_TTL_MS) return cached.path;
+  const path = resolveExecutablePathUncached(command);
+  execPathCache.set(command, { path, ts: Date.now() });
+  return path;
+}
+
+function resolveExecutablePathUncached(command: string): string | undefined {
   if (process.platform === "win32") {
     const resolved = resolveWindowsExecutablePath(command);
     if (resolved) return resolved;
@@ -494,6 +502,8 @@ export function isWslInteropBinaryPath(path: string): boolean {
 }
 
 const execPathCache = new Map<string, { path: string | undefined; ts: number }>();
+const pendingExecPaths = new Map<string, Promise<string | undefined>>();
+let executablePathCacheGeneration = 0;
 const EXEC_CACHE_TTL_MS = 60_000;
 let primedPosixEnv: Record<string, string> | undefined;
 const projectShellEnvCache = new Map<string, Promise<Record<string, string> | undefined>>();
@@ -526,8 +536,15 @@ function wslProjectShellEnvKey(distro: string, cwd: string): string {
  * "is this binary installed" and are expensive to rebuild.
  */
 export function invalidateExecutablePathCache(): void {
+  executablePathCacheGeneration++;
+  pendingExecPaths.clear();
   execPathCache.clear();
   cachedWindowsSearchPath = null;
+}
+
+/** Propagate explicit refreshes to command workers, which own their own lookup cache. */
+export function getExecutablePathCacheGeneration(): number {
+  return executablePathCacheGeneration;
 }
 
 export function clearExecutablePathCache(): void {
@@ -819,6 +836,24 @@ export async function resolveExecutablePathAsync(command: string): Promise<strin
     return cached.path;
   }
 
+  const pending = pendingExecPaths.get(command);
+  if (pending) return pending;
+  const generation = executablePathCacheGeneration;
+  const promise = resolveExecutablePathAsyncUncached(command)
+    .then((path) => {
+      if (generation === executablePathCacheGeneration) {
+        execPathCache.set(command, { path, ts: Date.now() });
+      }
+      return path;
+    })
+    .finally(() => {
+      if (pendingExecPaths.get(command) === promise) pendingExecPaths.delete(command);
+    });
+  pendingExecPaths.set(command, promise);
+  return promise;
+}
+
+async function resolveExecutablePathAsyncUncached(command: string): Promise<string | undefined> {
   let resolved: string | undefined;
   try {
     resolved =
@@ -869,9 +904,7 @@ export async function resolveExecutablePathAsync(command: string): Promise<strin
   } catch {
     resolved = undefined;
   }
-  const finalPath = resolved ?? findPosixExecutableInWellKnownDirs(command);
-  execPathCache.set(command, { path: finalPath, ts: Date.now() });
-  return finalPath;
+  return resolved ?? findPosixExecutableInWellKnownDirs(command);
 }
 
 export async function readCommandOutputAsync(

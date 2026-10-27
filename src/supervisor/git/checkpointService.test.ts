@@ -3,9 +3,14 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ProjectLocation } from "@/shared/contracts";
 import { GitCheckpointService } from "./checkpointService";
+
+vi.mock("../repositoryCommands/client", async () => {
+  const { executeRepositoryCommand } = await import("../repositoryCommands/execute");
+  return { runRepositoryCommand: executeRepositoryCommand };
+});
 
 function hasGit(): boolean {
   try {

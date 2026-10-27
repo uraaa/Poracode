@@ -353,6 +353,8 @@ export const gitFetchPayloadSchema = z.object({
   projectLocation: projectLocationSchema,
   remote: z.string().default("origin"),
   prune: z.boolean().default(false),
+  /** Optional scheduling hint; older callers retain interactive fetch behavior. */
+  background: z.boolean().optional(),
 });
 export type GitFetchPayload = z.infer<typeof gitFetchPayloadSchema>;
 

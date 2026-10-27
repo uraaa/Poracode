@@ -1,5 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
+vi.mock("./repositoryCommands/client", async () => {
+  const { executeRepositoryCommand } = await import("./repositoryCommands/execute");
+  return { runRepositoryCommand: executeRepositoryCommand };
+});
+
 // Mock child_process.execFile (used by execGit internally)
 const mockExecFile =
   vi.fn<

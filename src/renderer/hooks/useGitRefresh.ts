@@ -251,18 +251,10 @@ export function useGitRefresh(storeHydrated: boolean) {
             `[git-refresh] fetch-start project=${project.id} priority=${isPriority} promoted=${promoted}`,
           );
           lastFetchTimes.set(project.id, now);
-          try {
-            await readBridge().gitFetch({
-              projectLocation: project.location,
-              remote: "origin",
-              prune: true,
-            });
-          } catch {
-            // ignore — remote may be unreachable
-          }
-          if (isActive) {
-            void refreshGitProject(project, "fetch", "full", { isActive: isActiveCheck });
-          }
+          await refreshGitProject(project, "fetch", "full", {
+            isActive: isActiveCheck,
+            fetchRemote: true,
+          });
         }),
       );
     }

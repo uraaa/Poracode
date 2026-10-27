@@ -60,6 +60,7 @@ describe.skipIf(process.platform !== "win32")("Windows executable path fallback"
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     Object.defineProperty(process, "platform", { value: originalPlatform, configurable: true });
     if (originalPath === undefined) {
       delete process.env.Path;
@@ -85,6 +86,48 @@ describe.skipIf(process.platform !== "win32")("Windows executable path fallback"
     for (const dir of tempDirs) {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it("shares positive and negative lookup results between sync and async callers until expiry", async () => {
+    vi.useFakeTimers();
+    spawnSyncMock.mockReturnValue({ status: 0, stdout: "C:\\tools\\gh.exe\r\n" });
+    for (let i = 0; i < 20; i++) expect(resolveExecutablePath("gh")).toBe("C:\\tools\\gh.exe");
+    await expect(resolveExecutablePathAsync("gh")).resolves.toBe("C:\\tools\\gh.exe");
+    expect(spawnSyncMock).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(60_001);
+    expect(resolveExecutablePath("gh")).toBe("C:\\tools\\gh.exe");
+    expect(spawnSyncMock).toHaveBeenCalledTimes(2);
+    invalidateExecutablePathCache();
+    expect(resolveExecutablePath("gh")).toBe("C:\\tools\\gh.exe");
+    expect(spawnSyncMock).toHaveBeenCalledTimes(3);
+
+    invalidateExecutablePathCache();
+    spawnSyncMock.mockReturnValue({ status: 1, stdout: "" });
+    resolveExecutablePath("missing");
+    const probes = spawnSyncMock.mock.calls.length;
+    for (let i = 0; i < 20; i++) expect(resolveExecutablePath("missing")).toBeUndefined();
+    await expect(resolveExecutablePathAsync("missing")).resolves.toBeUndefined();
+    expect(spawnSyncMock).toHaveBeenCalledTimes(probes);
+  });
+
+  it("coalesces concurrent async lookups and does not cache a pre-invalidation result", async () => {
+    let finish!: (result: { stdout: string }) => void;
+    execFileAsyncMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const pending = Array.from({ length: 20 }, () => resolveExecutablePathAsync("gh"));
+    expect(execFileAsyncMock).toHaveBeenCalledTimes(1);
+    invalidateExecutablePathCache();
+    finish({ stdout: "C:\\old\\gh.exe\r\n" });
+    await Promise.all(pending);
+    execFileAsyncMock.mockResolvedValue({ stdout: "C:\\new\\gh.exe\r\n" });
+    await expect(resolveExecutablePathAsync("gh")).resolves.toBe("C:\\new\\gh.exe");
+    expect(execFileAsyncMock).toHaveBeenCalledTimes(2);
+    expect(resolveExecutablePath("gh")).toBe("C:\\new\\gh.exe");
+    expect(spawnSyncMock).not.toHaveBeenCalled();
   });
 
   it("falls back to the registry-backed Windows Path when ambient lookup misses", () => {

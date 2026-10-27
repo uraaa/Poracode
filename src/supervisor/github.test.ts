@@ -46,7 +46,16 @@ vi.mock("node:fs/promises", () => ({
 vi.mock("./agents/base", () => ({
   buildAgentCommand: buildAgentCommandMock,
   primeProjectShellEnv: primeProjectShellEnvMock,
+  getProjectShellEnv: () => undefined,
+  resolveExecutablePathAsync: async () => undefined,
 }));
+
+// Service tests exercise argv/env behavior; the real worker transport has its
+// own regression suite with slow spawning, failures and shutdown.
+vi.mock("./repositoryCommands/client", async () => {
+  const { executeRepositoryCommand } = await import("./repositoryCommands/execute");
+  return { runRepositoryCommand: executeRepositoryCommand };
+});
 
 import {
   GitHubService,
@@ -323,6 +332,28 @@ describe("GitHubService", () => {
   });
 
   describe("listPrs", () => {
+    it("includes viewer authorship for bulk reuse and only resolves the viewer once", async () => {
+      execFileAsyncMock.mockImplementation(async (_command, args) => ({
+        stdout:
+          (args as string[])[0] === "api"
+            ? "demo\n"
+            : JSON.stringify([
+                { number: 1, headRefName: "mine", state: "OPEN", author: { login: "demo" } },
+                { number: 2, headRefName: "theirs", state: "OPEN", author: { login: "someone" } },
+              ]),
+      }));
+      const service = new GitHubService();
+      const prs = await service.listPrs(location);
+      expect(prs.mine?.viewerDidAuthor).toBe(true);
+      expect(prs.theirs?.viewerDidAuthor).toBe(false);
+      const listArgs = buildAgentCommandMock.mock.calls.find((call) => call[2][0] === "pr")?.[2];
+      expect(listArgs?.at(-1)?.split(",")).toContain("author");
+      await service.listPrs(location);
+      expect(
+        execFileAsyncMock.mock.calls.filter((call) => (call[1] as string[])[0] === "api"),
+      ).toHaveLength(1);
+    });
+
     it("keys PRs by head branch and maps PR data", async () => {
       const prJson = JSON.stringify([
         {
@@ -438,7 +469,7 @@ describe("GitHubService", () => {
       });
       execFileAsyncMock.mockResolvedValue({ stdout: "[]" });
 
-      await new GitHubService().listPrs(location);
+      await new GitHubService().listPrs(posixLocation);
 
       expect(execFileAsyncMock.mock.calls[0]?.[0]).toBe("gh");
       expect(execFileAsyncMock.mock.calls[0]?.[1]).toEqual(

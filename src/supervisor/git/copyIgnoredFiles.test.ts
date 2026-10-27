@@ -10,9 +10,14 @@ import { tmpdir } from "node:os";
 import { execFile } from "node:child_process";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseCopyPatterns } from "@/shared/worktree";
 import { copyIgnoredFilesIntoWorktree, matchIgnoredCopyEntries } from "./copyIgnoredFiles";
+
+vi.mock("../repositoryCommands/client", async () => {
+  const { executeRepositoryCommand } = await import("../repositoryCommands/execute");
+  return { runRepositoryCommand: executeRepositoryCommand };
+});
 
 const execFileAsync = promisify(execFile);
 

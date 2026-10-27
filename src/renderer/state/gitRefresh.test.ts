@@ -14,6 +14,7 @@ import { buildBranchPrKey } from "./gitSelectors";
 import { usePanelStore } from "./panelStore";
 import { useSidebarUiStore } from "./sidebarUiStore";
 import { useDevTerminalStore } from "./devTerminalStore";
+import type { PoracodeBridge } from "@/shared/ipc";
 import { shouldPollProject } from "./wslBackgroundActivity";
 import {
   cleanupGitRefreshProjects,
@@ -612,6 +613,160 @@ describe("watcher git status refresh", () => {
 
   afterEach(() => {
     cleanupGitRefreshProjects(new Set());
+    vi.useRealTimers();
+  });
+
+  it("keeps a timed-out cycle locked until the underlying status request settles", async () => {
+    vi.useFakeTimers();
+    const stalled = Promise.withResolvers<GitStatusResult>();
+    const getGitStatus = vi
+      .fn<PoracodeBridge["getGitStatus"]>()
+      .mockReturnValueOnce(stalled.promise)
+      .mockResolvedValue(status);
+    Object.defineProperty(window, "poracode", {
+      configurable: true,
+      value: { platform: "darwin", getGitStatus },
+    });
+    const first = refreshGitProject(project, "watcher", "status");
+    await vi.advanceTimersByTimeAsync(30_000);
+    await first;
+    const second = refreshGitProject(project, "poll", "status");
+    try {
+      await vi.advanceTimersByTimeAsync(0);
+      expect(getGitStatus).toHaveBeenCalledTimes(1);
+    } finally {
+      stalled.resolve(status);
+      await second;
+    }
+    expect(getGitStatus).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(["manual", "fetch"] as const)(
+    "coalesces watcher and poll bursts while retaining a %s full refresh and fetch",
+    async (reason) => {
+      const stalled = Promise.withResolvers<GitStatusResult>();
+      const getGitStatus = vi
+        .fn<PoracodeBridge["getGitStatus"]>()
+        .mockReturnValueOnce(stalled.promise)
+        .mockResolvedValue(status);
+      const gitProjectSnapshot = vi.fn<PoracodeBridge["gitProjectSnapshot"]>().mockResolvedValue({
+        status,
+        branches: { current: status.branch, branches: [] },
+        worktrees: [],
+        ghAvailable: false,
+      });
+      const gitFetch = vi.fn<PoracodeBridge["gitFetch"]>().mockResolvedValue(undefined);
+      Object.defineProperty(window, "poracode", {
+        configurable: true,
+        value: {
+          platform: "darwin",
+          getGitStatus,
+          gitProjectSnapshot,
+          gitFetch,
+          gitWatchWorktrees: vi
+            .fn<PoracodeBridge["gitWatchWorktrees"]>()
+            .mockResolvedValue(undefined),
+        },
+      });
+      const first = refreshGitProject(project, "watcher", "status");
+      const manual = refreshGitProject(project, reason, "full", { fetchRemote: true });
+      const requests = Array.from({ length: 20 }, () => [
+        refreshGitProject(project, "watcher", "status"),
+        refreshGitProject(project, "poll", "status"),
+      ]).flat();
+      stalled.resolve(status);
+      await Promise.all([first, manual, ...requests]);
+      expect(getGitStatus).toHaveBeenCalledTimes(1);
+      expect(gitProjectSnapshot).toHaveBeenCalledTimes(1);
+      expect(gitFetch).toHaveBeenCalledTimes(1);
+      expect(gitFetch).toHaveBeenCalledWith({
+        projectLocation: project.location,
+        remote: "origin",
+        prune: true,
+        ...(reason === "fetch" ? { background: true } : {}),
+      });
+      expect(useGitStore.getState().statuses.p1).toEqual(status);
+    },
+  );
+
+  it("keeps real work locked across cleanup and runs a newly mounted refresh afterwards", async () => {
+    const stalled = Promise.withResolvers<GitStatusResult>();
+    const getGitStatus = vi
+      .fn<PoracodeBridge["getGitStatus"]>()
+      .mockReturnValueOnce(stalled.promise)
+      .mockResolvedValue(status);
+    Object.defineProperty(window, "poracode", {
+      configurable: true,
+      value: { platform: "darwin", getGitStatus },
+    });
+    let active = true;
+    const first = refreshGitProject(project, "watcher", "status", { isActive: () => active });
+    await Promise.resolve();
+    active = false;
+    cleanupGitRefreshProjects(new Set());
+    const next = refreshGitProject(project, "poll", "status");
+    try {
+      await Promise.resolve();
+      expect(getGitStatus).toHaveBeenCalledTimes(1);
+    } finally {
+      stalled.resolve(status);
+      await Promise.all([first, next]);
+    }
+    expect(getGitStatus).toHaveBeenCalledTimes(2);
+    expect(useGitStore.getState().statuses.p1).toEqual(status);
+  });
+
+  it("shares bulk PR results with branch lookups and dedupes fallback worktree branches", async () => {
+    const bulk = Promise.withResolvers<{ prs: Record<string, PrData> }>();
+    const bulkPr = { ...basePr, number: 101, state: "merged" as const };
+    const fallbackPr = { ...basePr, number: 102, viewerDidAuthor: true };
+    const ghListPrs = vi.fn<PoracodeBridge["ghListPrs"]>().mockReturnValue(bulk.promise);
+    const ghGetPrForBranch = vi
+      .fn<PoracodeBridge["ghGetPrForBranch"]>()
+      .mockResolvedValue(fallbackPr);
+    Object.defineProperty(window, "poracode", {
+      configurable: true,
+      value: {
+        platform: "darwin",
+        gitProjectSnapshot: vi.fn<PoracodeBridge["gitProjectSnapshot"]>().mockResolvedValue({
+          status,
+          branches: { current: status.branch, branches: [] },
+          worktrees: [],
+          ghAvailable: true,
+        }),
+        gitWorktreeStatusBatch: vi
+          .fn<PoracodeBridge["gitWorktreeStatusBatch"]>()
+          .mockResolvedValue({ statuses: {} }),
+        gitWatchWorktrees: vi
+          .fn<PoracodeBridge["gitWatchWorktrees"]>()
+          .mockResolvedValue(undefined),
+        ghListPrs,
+        ghGetPrForBranch,
+      },
+    });
+    useAppStore.setState({ threads: [worktreeThread, { ...worktreeThread, id: "t2" }] });
+    useGitStore.setState({
+      statuses: { p1: status },
+      ghAvailable: { p1: true },
+      prData: { [buildBranchPrKey("p1")]: { ...bulkPr, viewerDidAuthor: true } },
+    });
+    // A sidebar prefetch already owns the bulk request when the cycle starts.
+    const prefetch = prefetchBranchPrData(project);
+    const refresh = refreshGitProject(project, "initial", "full");
+    bulk.resolve({ prs: { [status.branch]: bulkPr } });
+    await Promise.all([prefetch, refresh]);
+    expect(ghListPrs).toHaveBeenCalledTimes(1);
+    expect(ghGetPrForBranch).toHaveBeenCalledTimes(1);
+    expect(ghGetPrForBranch).toHaveBeenCalledWith({
+      projectLocation: location,
+      branch: "feature/wt",
+    });
+    expect(useGitStore.getState().prData[buildBranchPrKey("p1")]).toEqual({
+      ...bulkPr,
+      viewerDidAuthor: true,
+    });
+    expect(useGitStore.getState().prData["/repo-wt"]).toEqual(fallbackPr);
+    expect(useAppStore.getState().threads.map((thread) => thread.prNumber)).toEqual([102, 102]);
   });
 
   it("refreshes thread worktree statuses before the full worktree cache catches up", async () => {

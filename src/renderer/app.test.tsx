@@ -1624,6 +1624,7 @@ describe("App", () => {
       projectLocation: location,
       remote: "origin",
       prune: true,
+      background: true,
     });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(30 * 60_000);

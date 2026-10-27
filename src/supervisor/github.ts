@@ -1,8 +1,6 @@
-import { execFile } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { promisify } from "node:util";
 import {
   type ProjectLocation,
   type PrCheck,
@@ -43,11 +41,11 @@ import { msg as sharedMsg } from "@/shared/messages";
 // Re-export the pure mappers previously defined inline here so the module's
 // public surface stays identical for github.test.ts and bridge consumers.
 export { aggregateChecksStatus, mapGitHubApiRepo, parseGhAuthAccounts } from "./githubMappers";
-import { buildAgentCommand, primeProjectShellEnv } from "./agents/base";
+import { getProjectShellEnv, primeProjectShellEnv } from "./agents/base";
+import { runRepositoryCommand } from "./repositoryCommands/client";
 import { resolveClonedProjectPath } from "./git/exec";
 import type { WslBridgeClient, WslProcessExecResult } from "./wsl/bridge/client";
 
-const execFileAsync = promisify(execFile);
 const GH_TIMEOUT = 30_000;
 // Cloning can pull a lot of history; give it room before timing out.
 const GH_CLONE_TIMEOUT = 600_000;
@@ -66,11 +64,11 @@ const CREATE_PR_STATUS_WAIT_MS = 15_000;
 const CREATE_PR_STATUS_POLL_MS = 5_000;
 const PR_VIEW_FIELDS =
   "number,url,state,title,baseRefName,headRefOid,isDraft,reviewDecision,statusCheckRollup,updatedAt,mergeable,mergeStateStatus,author";
-// Bulk list: adds `headRefName` (to key per branch) and drops `author` (the icon
-// doesn't need viewerDidAuthor, so we skip the extra `gh api user` lookup).
+// Bulk rows also replace worktree PR lookups, so they must retain author metadata
+// for review controls as well as `headRefName` for branch keys.
 const PR_LIST_FIELDS =
-  "number,headRefName,headRefOid,url,state,title,baseRefName,isDraft,reviewDecision,statusCheckRollup,updatedAt,mergeable,mergeStateStatus";
-const PULL_REQUEST_LIST_FIELDS = `${PR_LIST_FIELDS},author,additions,deletions,reviewRequests`;
+  "number,headRefName,headRefOid,url,state,title,baseRefName,isDraft,reviewDecision,statusCheckRollup,updatedAt,mergeable,mergeStateStatus,author";
+const PULL_REQUEST_LIST_FIELDS = `${PR_LIST_FIELDS},additions,deletions,reviewRequests`;
 const PR_CHECK_FIELDS = "name,state,bucket,link,startedAt,completedAt,workflow";
 const PR_CHECK_PENDING_STATES = new Set([
   "EXPECTED",
@@ -261,17 +259,6 @@ function isMachineReadableGhCommand(args: readonly string[]): boolean {
   );
 }
 
-/**
- * `gh` gives GH_REPO precedence over the repository at cwd. Project-scoped
- * operations must never inherit that process-wide override, or a command can
- * be sent to an unrelated repository.
- */
-function projectGhEnvironment(overrides?: Record<string, string>): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env };
-  delete env.GH_REPO;
-  return { ...env, ...overrides };
-}
-
 function accountGhEnvironment(
   account: GitHubAccountRef,
   token: string,
@@ -377,19 +364,25 @@ async function runGh(
   if ((machineReadable || scopedPosix) && location.kind === "posix") {
     await primeProjectShellEnv(location.path);
   }
-  const spec = buildAgentCommand(location, "gh", args, undefined, options?.env);
-  const cwd = spec.cwd ?? location.path;
-  const { stdout } = await execFileAsync(
-    machineReadable || scopedPosix ? "gh" : spec.command,
-    machineReadable || scopedPosix ? args : spec.args,
-    {
+  const shellEnv = getProjectShellEnv(location.path);
+  const { stdout } = await runRepositoryCommand({
+    command: "gh",
+    args,
+    preparation: {
+      location,
+      direct: machineReadable || scopedPosix,
+      // Ambient GH_REPO overrides cwd. Only explicit account/repository scope
+      // may supply it; inherited shell/process values must not redirect a call.
+      omitEnv: ["GH_REPO"],
+      ...(shellEnv ? { shellEnv } : {}),
+    },
+    options: {
       windowsHide: true,
       timeout: timeoutMs,
-      ...(cwd ? { cwd } : {}),
       ...(options?.maxBufferBytes ? { maxBuffer: options.maxBufferBytes } : {}),
-      env: projectGhEnvironment({ ...spec.env, ...options?.env }),
+      ...(options?.env ? { env: options.env } : {}),
     },
-  );
+  });
   return stdout;
 }
 
@@ -523,12 +516,12 @@ export class GitHubService {
       throw processResultToError(result);
     }
     if (location.kind === "posix") await primeProjectShellEnv(location.path);
-    const spec = buildAgentCommand(location, "git", ["remote", "-v"]);
-    const { stdout } = await execFileAsync(spec.command, spec.args, {
-      windowsHide: true,
-      timeout: GH_TIMEOUT,
-      cwd: spec.cwd ?? location.path,
-      env: projectGhEnvironment(spec.env),
+    const shellEnv = getProjectShellEnv(location.path);
+    const { stdout } = await runRepositoryCommand({
+      command: "git",
+      args: ["remote", "-v"],
+      preparation: { location, omitEnv: ["GH_REPO"], ...(shellEnv ? { shellEnv } : {}) },
+      options: { windowsHide: true, timeout: GH_TIMEOUT },
     });
     return stdout;
   }
@@ -941,7 +934,7 @@ export class GitHubService {
       }
     }
 
-    // Non-WSL: per-call spawn overhead is negligible — keep simple Promise.all.
+    // Native commands share the bounded background command queue.
     try {
       const [stdout, viewerLogin] = await Promise.all([
         this.runGh(location, prListArgs),
@@ -958,14 +951,17 @@ export class GitHubService {
   }
 
   /**
-   * List every PR in the repo in a single `gh` call, keyed by head branch name
-   * (latest PR per branch). Powers PR-status icons for all branches in the
-   * branch selector without a per-branch fetch.
+   * List the latest 100 PRs, keyed by head branch name (latest PR per branch).
+   * Viewer lookup is cached per location; bulk rows can safely replace branch
+   * lookups without losing viewerDidAuthor on first load or after a new PR.
    */
   async listPrs(location: ProjectLocation): Promise<Record<string, PrData>> {
     const args = ["pr", "list", "--state", "all", "--limit", "100", "--json", PR_LIST_FIELDS];
     try {
-      const stdout = await this.runGh(location, args);
+      const [stdout, viewerLogin] = await Promise.all([
+        this.runGh(location, args),
+        this.getViewerLogin(location),
+      ]);
       const items = JSON.parse(stdout);
       if (!Array.isArray(items)) return {};
       // Group PRs by head branch, then reuse the single-branch "highest PR number
@@ -982,7 +978,7 @@ export class GitHubService {
       const result: Record<string, PrData> = {};
       for (const [branch, group] of byBranch) {
         const latest = selectLatestPr(group);
-        if (latest) result[branch] = mapPrData(latest);
+        if (latest) result[branch] = mapPrData(latest, viewerLogin);
       }
       return result;
     } catch (err) {

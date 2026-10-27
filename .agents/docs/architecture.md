@@ -47,13 +47,14 @@ Companion selector modules (`fileEditorSelectors.ts`, `gitSelectors.ts`, `hooks/
 
 ## Build Pipeline
 
-| Target       | Tool              | Entry                     | Output                     | Format                                                                     |
-| ------------ | ----------------- | ------------------------- | -------------------------- | -------------------------------------------------------------------------- |
-| Renderer     | Vite 8 (Rolldown) | `src/renderer/main.tsx`   | `dist/renderer/`           | ESM, manual chunks (xterm, git-diff, monaco, shiki, ui, framework, vendor) |
-| Main process | tsdown            | `src/main/main.ts`        | `dist/main/main.cjs`       | CJS, Node 24                                                               |
-| Preload      | tsdown            | `src/main/preload.ts`     | `dist/main/preload.cjs`    | CJS, Node 24                                                               |
-| Supervisor   | tsdown            | `src/supervisor/index.ts` | `dist/main/supervisor.cjs` | CJS, Node 24                                                               |
-| Distribution | electron-builder  | —                         | `release/`                 | NSIS (Win), AppImage+deb (Linux), DMG (macOS)                              |
+| Target            | Tool              | Entry                                         | Output                                  | Format                                                                     |
+| ----------------- | ----------------- | --------------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------- |
+| Renderer          | Vite 8 (Rolldown) | `src/renderer/main.tsx`                       | `dist/renderer/`                        | ESM, manual chunks (xterm, git-diff, monaco, shiki, ui, framework, vendor) |
+| Main process      | tsdown            | `src/main/main.ts`                            | `dist/main/main.cjs`                    | CJS, Node 24                                                               |
+| Preload           | tsdown            | `src/main/preload.ts`                         | `dist/main/preload.cjs`                 | CJS, Node 24                                                               |
+| Supervisor        | tsdown            | `src/supervisor/index.ts`                     | `dist/main/supervisor.cjs`              | CJS, Node 24                                                               |
+| Repository worker | tsdown            | `src/supervisor/repositoryCommands/worker.ts` | `dist/main/repositoryCommandWorker.cjs` | CJS, Node 24                                                               |
+| Distribution      | electron-builder  | —                                             | `release/`                              | NSIS (Win), AppImage+deb (Linux), DMG (macOS)                              |
 
 Native modules (`node-pty`, `better-sqlite3`, `electron`) are excluded from bundling and unpacked from ASAR.
 
@@ -63,7 +64,13 @@ SQLite via Drizzle ORM (`src/main/db.ts`, `db.schema.ts`). Drizzle tables: `proj
 
 ## Git Integration
 
-`src/supervisor/git.ts` runs git directly via `execFile` (`node:child_process`) — no `simple-git` dependency — with location-aware path resolution (Windows native runs locally; WSL projects route through a bridge client). Operations: status, diff (single + batch), stage/unstage/revert, commit, branch listing, fetch, worktree CRUD.
+`src/supervisor/git.ts` routes native git commands through `repositoryCommands/client.ts`. Persistent worker threads own executable resolution, command preparation and `execFile`, including the synchronous Windows process-creation cost. Native GitHub CLI commands use the same transport. WSL projects retain their bridge client. Operations: status, diff (single + batch), stage/unstage/revert, commit, branch listing, fetch, worktree CRUD.
+
+`repositoryCommands/scheduling.ts` limits native background commands to two in flight globally and shares identical queued/running reads. Polling IPC handlers establish background priority through async context and share pending requests. Mutations, user-requested diffs and agent-critical work use an independent interactive worker; thread RPCs never enter the repository queue. Automatic fetch requests declare the optional `background` hint; explicit fetches retain interactive priority. Worker failures reject pending commands without replaying them; only new commands start a replacement worker.
+
+Renderer project refreshes retain a lock until their actual work finishes, independently of the caller's timeout. Bursts merge into a follow-up refresh, preserving full/manual/fetch requirements. Bulk PR rows include authorship metadata and replace branch lookups only for returned branches; the capped list cannot establish that an absent branch has no PR.
+
+The worker and supervisor are built together in one tsdown entry group, so the supervisor SSH manifest includes the worker and shared chunks. The manifest format remains compatible; its content hash changes when these artifacts change. Their private worker protocol starts at version 1, with no persisted or independently updated copy.
 
 Commit message generation (`src/supervisor/commitMessageGenerator.ts`) spawns a one-shot agent CLI call with a conventional-commits prompt piped to stdin. Falls back across providers if the preferred one fails.
 

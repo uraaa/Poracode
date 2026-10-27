@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ProjectLocation } from "@/shared/contracts";
 import { execGit } from "./exec";
+
+vi.mock("../repositoryCommands/client", async () => {
+  const { executeRepositoryCommand } = await import("../repositoryCommands/execute");
+  return { runRepositoryCommand: executeRepositoryCommand };
+});
 
 const location: ProjectLocation = { kind: "posix", path: process.cwd() };
 

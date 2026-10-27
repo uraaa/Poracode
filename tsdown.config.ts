@@ -146,7 +146,10 @@ export default defineConfig([
     ...shared,
   },
   {
-    entry: { supervisor: "src/supervisor/index.ts" },
+    entry: {
+      supervisor: "src/supervisor/index.ts",
+      repositoryCommandWorker: "src/supervisor/repositoryCommands/worker.ts",
+    },
     clean: false,
     plugins: [sshRuntimeManifest("supervisor")],
     ...shared,
