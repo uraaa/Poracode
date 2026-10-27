@@ -1,4 +1,4 @@
-import { createReadStream, existsSync, statSync } from "node:fs";
+import { createReadStream, existsSync, readFile, statSync } from "node:fs";
 import { extname, join, normalize, resolve, sep } from "node:path";
 import type { ServerResponse } from "node:http";
 
@@ -43,6 +43,26 @@ function streamFile(filePath: string, res: ServerResponse): boolean {
   const stat = statSync(normalized);
   if (!stat.isFile()) {
     return false;
+  }
+  if (extname(normalized) === ".html") {
+    readFile(normalized, "utf8", (error, html) => {
+      if (error) {
+        res.writeHead(500, { "content-type": "text/plain; charset=utf-8" });
+        res.end("Internal Server Error");
+        return;
+      }
+      // The shared Electron build uses relative asset URLs for file://. At
+      // /app/ or a nested history route those otherwise resolve below /app,
+      // where the SPA fallback returns HTML in place of JavaScript and CSS.
+      // Apply the HTTP base at delivery time so older built bundles work too.
+      const body = html.replace(/<head\b[^>]*>/i, '$&<base href="/">');
+      res.writeHead(200, {
+        "content-type": CONTENT_TYPES[".html"],
+        "cache-control": "no-cache",
+      });
+      res.end(body);
+    });
+    return true;
   }
   const stream = createReadStream(normalized);
   // A read error after statSync (file deleted / permissions / IO race) would
