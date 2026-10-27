@@ -1,6 +1,40 @@
 {
   "releases": [
     {
+      "version": "1.9.3",
+      "tagline": "Steady Threads",
+      "date": "2026-10-27",
+      "title": "Threads stay where you put them",
+      "summary": "Moved threads keep their project after a restart, background sessions survive a window reload, and the mobile app opens from any address.",
+      "changes": [
+        {
+          "kind": "fixed",
+          "label": "Threads",
+          "text": "A thread moved to another project stays there after the app restarts, and deleting the project it came from no longer deletes the moved thread or its transcript."
+        },
+        {
+          "kind": "fixed",
+          "label": "Sessions",
+          "text": "Reloading the window keeps background conversations and terminal sessions running instead of stopping every thread outside the current view."
+        },
+        {
+          "kind": "fixed",
+          "label": "Mobile",
+          "text": "The mobile app loads when opened at /app/ or reloaded on a nested page, instead of receiving an HTML page where its scripts should be."
+        },
+        {
+          "kind": "fixed",
+          "label": "Composer",
+          "text": "Pressing Enter sends a message that contains only an attachment, the same as the send button."
+        },
+        {
+          "kind": "fixed",
+          "label": "Chat",
+          "text": "Long lines in plain text blocks and list items wrap inside the message instead of being cut off."
+        }
+      ]
+    },
+    {
       "version": "1.9.2",
       "tagline": "Chrome Companion",
       "date": "2026-09-25",
