@@ -6,6 +6,7 @@ Universal AI agent orchestrator — Electron desktop app managing Claude, Codex,
 
 - **Before making changes, read [docs/FORK_WORKFLOW.md](docs/FORK_WORKFLOW.md) and [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md), including its Pull request flow.** This is required in every new task/session; do not assume the documents were read in a previous chat. The fork workflow defines the worktree, PR target, CI, merge, and release rules for this repository.
 - **Deliver changes through a pull request unless the user explicitly requests otherwise.** Work on a dedicated branch, run the required checks, commit and push the task's changes, then open a PR against `master` in the intended repository. For fork work, confirm the target from the configured remotes and task context; do not default to the upstream project.
+- **Never write to upstream (`Porabuild/Poracode`) without an explicit command from the owner.** This covers pushes, PRs, comments, merges and closes. All work targets the fork `uraaa/Poracode`; pass `-R uraaa/Poracode` to `gh` (see [docs/FORK_WORKFLOW.md](docs/FORK_WORKFLOW.md) §8).
 - Include the PR link and validation results in the final response. Local edits or a successful build alone do not complete an implementation task. If publication is blocked, report the exact blocker and the remaining steps; do not claim the task is complete.
 
 ## Quick Reference
