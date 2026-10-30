@@ -1,6 +1,53 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { GitWatcherScheduler } from "./gitWatcherScheduler";
 afterEach(() => vi.useRealTimers());
+it("absorbs fetch invalidations without dropping targeted edits or later external ref changes", async () => {
+  vi.useFakeTimers();
+  const refresh = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const scheduler = new GitWatcherScheduler(refresh);
+  const fetch = Promise.withResolvers<void>();
+  scheduler.schedule("p");
+  const covered = scheduler.coverProjectRefresh(
+    "p",
+    () => fetch.promise,
+    async () => undefined,
+  );
+  scheduler.schedule("p");
+  scheduler.schedule("p", "/changed-sidebar");
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(refresh).not.toHaveBeenCalled();
+  fetch.resolve();
+  await vi.advanceTimersByTimeAsync(300);
+  scheduler.schedule("p"); // Debounced delivery after the fetch reply is covered by the future read.
+  await vi.advanceTimersByTimeAsync(200);
+  await covered;
+  await vi.advanceTimersByTimeAsync(30_000);
+  expect(refresh).toHaveBeenCalledExactlyOnceWith("p", ["/changed-sidebar"], false);
+  scheduler.schedule("p"); // A later external ref update must still refresh everything.
+  await vi.advanceTimersByTimeAsync(30_000);
+  expect(refresh).toHaveBeenLastCalledWith("p", [], true);
+  scheduler.dispose();
+});
+it("replays external ref changes received during or just after the covering snapshot", async () => {
+  vi.useFakeTimers();
+  const refresh = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+  const scheduler = new GitWatcherScheduler(refresh);
+  const snapshot = Promise.withResolvers<void>();
+  const covered = scheduler.coverProjectRefresh(
+    "p",
+    async () => undefined,
+    () => snapshot.promise,
+  );
+  await vi.advanceTimersByTimeAsync(500);
+  scheduler.schedule("p"); // Another worktree/ref changes after a sibling has already been read.
+  snapshot.resolve();
+  await covered;
+  await vi.advanceTimersByTimeAsync(500);
+  scheduler.schedule("p"); // Also exercise the old post-snapshot suppression window.
+  await vi.advanceTimersByTimeAsync(30_000);
+  expect(refresh).toHaveBeenCalledExactlyOnceWith("p", [], true);
+  scheduler.dispose();
+});
 it("refreshes displayed edits within two seconds while sidebar edits remain throttled", async () => {
   vi.useFakeTimers();
   const visible = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
