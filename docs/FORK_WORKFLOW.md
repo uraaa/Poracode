@@ -145,7 +145,23 @@ A release happens when the owner asks for one, never per fix:
 ## 8. Upstream stays untouched
 
 `upstream` is `Porabuild/Poracode`. Nothing is pushed there and no PR is opened
-there for now. Once the fork's changes have been used long enough to trust,
+there for now.
+
+No write of any kind goes to upstream without an explicit command from the
+owner: no push, PR, comment, review, merge, close, label, issue or workflow
+run. The fork is `origin` = `uraaa/Poracode`; every PR, merge and release
+happens there. Reading upstream is fine.
+
+The two repositories share PR numbers, so a command aimed at the wrong one does
+not fail loudly. It acts on an unrelated upstream PR. This has happened: a
+comment meant for fork #24 landed on upstream #24. To prevent it:
+
+- Pass `-R uraaa/Poracode` to every `gh` command that writes.
+- Keep `gh repo set-default uraaa/Poracode` set in each checkout and worktree.
+  Tools that wrap `gh` without a repository argument use this default.
+  Without it they can resolve to upstream.
+
+Once the fork's changes have been used long enough to trust,
 the ones that are not fork-specific can be offered back — the two upstream bug
 fixes listed in `FORK_CHANGES.md` are the obvious first candidates.
 
