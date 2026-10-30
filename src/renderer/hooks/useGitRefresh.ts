@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { parseDraftProjectId } from "@/shared/paneId";
+import { getProjectPosixPath } from "@/shared/wsl";
 import { readBridge } from "@/renderer/bridge";
 import { useAppStore } from "@/renderer/state/appStore";
 import { useExperimentStore } from "@/renderer/state/experimentStore";
@@ -76,6 +77,7 @@ export function useGitRefresh(storeHydrated: boolean) {
       const project = activeProjects.find((item) => item.id === projectId);
       if (!isActive || !project) return;
       const active = targetsByProject.get(projectId)?.active ?? [];
+      const projectRoot = getProjectPosixPath(project.location);
       if (getWatcherRefreshMode(projectId) === "full")
         await refreshGitProject(project, "watcher", "full", { isActive: isActiveCheck });
       else
@@ -83,8 +85,10 @@ export function useGitRefresh(storeHydrated: boolean) {
           project,
           "watcher",
           isActiveCheck,
-          wholeProject ? active : paths.filter((path) => active.includes(path)),
-          wholeProject,
+          (wholeProject ? active : paths.filter((path) => active.includes(path))).filter(
+            (path) => path !== projectRoot,
+          ),
+          wholeProject || paths.includes(projectRoot),
         );
     }, 1500);
     const backgroundScheduler = new GitWatcherScheduler(async (projectId, paths, wholeProject) => {
@@ -192,6 +196,8 @@ export function useGitRefresh(storeHydrated: boolean) {
           if (!event.worktreePath) {
             visibleScheduler.schedule(project.id);
             if (event.type === "git-changed") backgroundScheduler.schedule(project.id);
+          } else if (event.worktreePath === getProjectPosixPath(project.location)) {
+            visibleScheduler.schedule(project.id, event.worktreePath);
           } else if (targets?.watched.includes(event.worktreePath)) {
             if (targets.active.includes(event.worktreePath))
               visibleScheduler.schedule(project.id, event.worktreePath);
@@ -300,18 +306,25 @@ export function useGitRefresh(storeHydrated: boolean) {
             `[git-refresh] fetch-start project=${project.id} priority=${isPriority} promoted=${promoted}`,
           );
           lastFetchTimes.set(project.id, now);
-          try {
-            await readBridge().gitFetch({
-              projectLocation: project.location,
-              remote: "origin",
-              prune: true,
-            });
-          } catch {
-            // ignore — remote may be unreachable
-          }
-          if (isActive) {
-            void refreshGitProject(project, "fetch", "full", { isActive: isActiveCheck });
-          }
+          await backgroundScheduler.coverProjectRefresh(
+            project.id,
+            async () => {
+              try {
+                await readBridge().gitFetch({
+                  projectLocation: project.location,
+                  remote: "origin",
+                  prune: true,
+                });
+              } catch {
+                // ignore — remote may be unreachable
+              }
+            },
+            async () => {
+              if (isActive) {
+                await refreshGitProject(project, "fetch", "full", { isActive: isActiveCheck });
+              }
+            },
+          );
         }),
       );
     }
