@@ -1,6 +1,30 @@
 {
   "releases": [
     {
+      "version": "1.9.4",
+      "tagline": "Quiet Git",
+      "date": "2026-10-30",
+      "title": "Far fewer background git commands",
+      "summary": "Poracode now runs a small fraction of the git and GitHub CLI commands it used to while agents work, so long sessions with many worktrees no longer slow Windows down.",
+      "changes": [
+        {
+          "kind": "improved",
+          "label": "Git",
+          "text": "Background refreshes read only the worktrees you can see, merge bursts of file changes into one update, and ignore checkpoint and object writes, cutting git commands during active edits by about 99%."
+        },
+        {
+          "kind": "improved",
+          "label": "Git",
+          "text": "Open panes and the Git panel still update within about two seconds of a change, while sidebar rows refresh in the background and after each fetch."
+        },
+        {
+          "kind": "fixed",
+          "label": "Git",
+          "text": "Pull and Sync wait for a background fetch on the same repository to finish instead of running a second fetch alongside it."
+        }
+      ]
+    },
+    {
       "version": "1.9.3",
       "tagline": "Steady Threads",
       "date": "2026-10-27",
