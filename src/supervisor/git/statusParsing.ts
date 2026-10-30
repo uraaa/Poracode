@@ -217,6 +217,15 @@ function parseUntrackedPaths(output: string): string[] {
 
 /** Lists untracked, non-ignored files NUL-separated — one path per file. */
 export const LS_FILES_UNTRACKED_ARGS = ["ls-files", "--others", "--exclude-standard", "-z"];
+/** Explicit visibility and cwd pathspec keep full/summary and subfolder projects aligned. */
+export const GIT_STATUS_ARGS = [
+  "status",
+  "--porcelain=v2",
+  "-b",
+  "--untracked-files=all",
+  "--",
+  ".",
+];
 
 export function parseStatusPorcelainV2(output: string): ParsedPorcelainStatus {
   let branch = "";

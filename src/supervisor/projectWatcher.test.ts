@@ -172,7 +172,10 @@ describe("ProjectWatcher WSL worktrees", () => {
     onEvent({ subscriptionId: "sub", scope: "worktree", paths: ["src/App.tsx"] });
 
     await vi.advanceTimersByTimeAsync(300);
-    expect(onTreeChanged).toHaveBeenCalledWith("project-1");
+    expect(onTreeChanged).toHaveBeenCalledWith(
+      "project-1",
+      "/home/demo/.poracode/worktrees/repo/feature",
+    );
     await watcher.dispose();
   });
 
@@ -312,7 +315,7 @@ describe("ProjectWatcher WSL worktrees", () => {
       paths: ["src/App.tsx"],
     });
     await vi.advanceTimersByTimeAsync(300);
-    expect(onTreeChanged).toHaveBeenCalledWith("project-1");
+    expect(onTreeChanged).toHaveBeenCalledWith("project-1", worktreePath);
 
     await watcher.dispose();
   });

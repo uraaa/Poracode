@@ -226,6 +226,15 @@ export function findPosixExecutableInWellKnownDirs(binary: string): string | und
   return undefined;
 }
 
+/** Opt-in sync lookup sharing the async probe's TTL and explicit invalidation. */
+export function resolveExecutablePathCached(command: string): string | undefined {
+  const cached = execPathCache.get(command);
+  if (cached?.path && Date.now() - cached.ts < EXEC_CACHE_TTL_MS) return cached.path;
+  const path = resolveExecutablePath(command);
+  if (path) execPathCache.set(command, { path, ts: Date.now() });
+  return path;
+}
+
 export function resolveExecutablePath(command: string): string | undefined {
   if (process.platform === "win32") {
     const resolved = resolveWindowsExecutablePath(command);

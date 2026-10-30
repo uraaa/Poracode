@@ -44,6 +44,7 @@ import { msg as sharedMsg } from "@/shared/messages";
 // public surface stays identical for github.test.ts and bridge consumers.
 export { aggregateChecksStatus, mapGitHubApiRepo, parseGhAuthAccounts } from "./githubMappers";
 import { buildAgentCommand, primeProjectShellEnv } from "./agents/base";
+import { resolveExecutablePathCached } from "./agents/base/processRuntime";
 import { resolveClonedProjectPath } from "./git/exec";
 import type { WslBridgeClient, WslProcessExecResult } from "./wsl/bridge/client";
 
@@ -377,7 +378,13 @@ async function runGh(
   if ((machineReadable || scopedPosix) && location.kind === "posix") {
     await primeProjectShellEnv(location.path);
   }
-  const spec = buildAgentCommand(location, "gh", args, undefined, options?.env);
+  const spec = buildAgentCommand(
+    location,
+    "gh",
+    args,
+    location.kind === "windows" ? resolveExecutablePathCached("gh") : undefined,
+    options?.env,
+  );
   const cwd = spec.cwd ?? location.path;
   const { stdout } = await execFileAsync(
     machineReadable || scopedPosix ? "gh" : spec.command,

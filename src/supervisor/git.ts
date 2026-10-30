@@ -48,6 +48,7 @@ import { GitMergeService } from "./git/mergeService";
 import {
   buildGitStatusResultFromOutputs,
   numstatFromBatchResult,
+  GIT_STATUS_ARGS,
   parseStatusPorcelainV2,
 } from "./git/statusParsing";
 import { GitExperimentService } from "./git/experimentService";
@@ -138,7 +139,7 @@ export class GitService {
     const branchListArgs = buildBranchListArgs(true);
     const gitCommands = [
       { cwd, args: ["rev-parse", "--is-inside-work-tree"] },
-      { cwd, args: ["status", "--porcelain=v2", "-b"] },
+      { cwd, args: GIT_STATUS_ARGS },
       { cwd, args: ["remote", "-v"] },
       { cwd, args: ["diff", "--cached", "--numstat"] },
       { cwd, args: ["diff", "--numstat"] },

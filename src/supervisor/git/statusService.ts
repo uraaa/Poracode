@@ -10,6 +10,7 @@ import {
 } from "@/shared/contracts";
 import { getProjectFsPath, toWslUncPath } from "@/shared/wsl";
 import type { WslBridgeClient } from "../wsl/bridge/client";
+import { GitRemoteCache } from "./remoteCache";
 import {
   execGit,
   execGitBatchWslBridge,
@@ -24,6 +25,7 @@ import {
   buildGitStatusSummaryFromOutput,
   expandUntrackedEntries,
   LS_FILES_UNTRACKED_ARGS,
+  GIT_STATUS_ARGS,
   nonRepoSummaryStatus,
   numstatFromBatchResult,
   parseDiffNumstat,
@@ -76,6 +78,7 @@ function countTextLines(buffer: Buffer): number {
 }
 
 export class GitStatusService {
+  private readonly remoteCache = new GitRemoteCache();
   private readonly untrackedStatsCache = new Map<string, UntrackedStatsCacheEntry>();
   private wslClient: WslBridgeClient | undefined;
 
@@ -88,52 +91,67 @@ export class GitStatusService {
       return this.getStatusBatchedWsl(location);
     }
 
+    let statusOutput: string;
     try {
-      await execGit(location, ["rev-parse", "--is-inside-work-tree"], {
+      statusOutput = await execGit(location, GIT_STATUS_ARGS, {
         timeout: GIT_STATUS_TIMEOUT,
       });
-    } catch {
-      return {
-        isRepo: false,
-        branch: "",
-        tracking: "",
-        hasRemote: false,
-        remoteInfo: null,
-        ahead: 0,
-        behind: 0,
-        staged: [],
-        unstaged: [],
-        totalInsertions: 0,
-        totalDeletions: 0,
-      };
+    } catch (error) {
+      // Only a failed membership probe means non-repo. A valid repo with a
+      // broken/unreadable index must retain the existing status error behavior.
+      try {
+        await execGit(location, ["rev-parse", "--is-inside-work-tree"], {
+          timeout: GIT_STATUS_TIMEOUT,
+        });
+      } catch {
+        return {
+          isRepo: false,
+          branch: "",
+          tracking: "",
+          hasRemote: false,
+          remoteInfo: null,
+          ahead: 0,
+          behind: 0,
+          staged: [],
+          unstaged: [],
+          totalInsertions: 0,
+          totalDeletions: 0,
+        };
+      }
+      throw error;
     }
 
-    const [statusOutput, remoteOutput, stagedNumstat, unstagedNumstat] = await Promise.all([
-      execGit(location, ["status", "--porcelain=v2", "-b"], { timeout: GIT_STATUS_TIMEOUT }),
-      execGit(location, ["remote", "-v"], { timeout: GIT_STATUS_TIMEOUT }).catch((error) => {
+    const parsed = parseStatusPorcelainV2(statusOutput);
+    const [remoteOutput, stagedNumstat, unstagedNumstat] = await Promise.all([
+      this.remoteCache.read(location).catch((error) => {
         console.warn("[git] 'remote -v' failed:", error);
         return "";
       }),
       // `null` on failure, NOT "" — an empty numstat is a real answer ("no file
       // has a diff") that `applyNumstatCounts` prunes against.
-      execGit(location, ["diff", "--cached", "--numstat"], { timeout: GIT_STATUS_TIMEOUT }).catch(
-        (error) => {
-          console.warn("[git] 'diff --cached --numstat' failed:", error);
-          return null;
-        },
-      ),
-      execGit(location, ["diff", "--numstat"], { timeout: GIT_STATUS_TIMEOUT }).catch((error) => {
-        console.warn("[git] 'diff --numstat' failed:", error);
-        return null;
-      }),
+      parsed.staged.length === 0
+        ? ""
+        : execGit(location, ["diff", "--cached", "--numstat"], {
+            timeout: GIT_STATUS_TIMEOUT,
+          }).catch((error) => {
+            console.warn("[git] 'diff --cached --numstat' failed:", error);
+            return null;
+          }),
+      !parsed.unstaged.some((file) => file.status !== "?")
+        ? ""
+        : execGit(location, ["diff", "--numstat"], { timeout: GIT_STATUS_TIMEOUT }).catch(
+            (error) => {
+              console.warn("[git] 'diff --numstat' failed:", error);
+              return null;
+            },
+          ),
     ]);
 
-    const parsed = parseStatusPorcelainV2(statusOutput);
     await this.clearInheritedStartPointUpstream(location, parsed);
     const { hasRemote, remoteInfo } = parseRemoteInfo(remoteOutput);
     applyNumstatCounts(parsed, stagedNumstat, unstagedNumstat);
 
-    await this.replaceUntrackedEntries(location, parsed);
+    await this.replaceUntrackedEntries(location, parsed, true);
 
     const { totalInsertions, totalDeletions } = sumChangeTotals(parsed);
 
@@ -158,7 +176,7 @@ export class GitStatusService {
       const results = await execGitBatchWslBridge(
         location,
         [
-          { cwd: location.linuxPath, args: ["status", "--porcelain=v2", "-b"] },
+          { cwd: location.linuxPath, args: GIT_STATUS_ARGS },
           { cwd: location.linuxPath, args: LS_FILES_UNTRACKED_ARGS },
         ],
         GIT_STATUS_TIMEOUT,
@@ -175,16 +193,10 @@ export class GitStatusService {
     }
 
     try {
-      const [statusOutput, untrackedOutput] = await Promise.all([
-        execGit(location, ["status", "--porcelain=v2", "-b"], { timeout: GIT_STATUS_TIMEOUT }),
-        execGit(location, LS_FILES_UNTRACKED_ARGS, { timeout: GIT_STATUS_TIMEOUT }).catch(
-          (error) => {
-            console.warn("[git] ls-files untracked failed:", error);
-            return "";
-          },
-        ),
-      ]);
-      const summary = buildGitStatusSummaryFromOutput(statusOutput, untrackedOutput);
+      const statusOutput = await execGit(location, GIT_STATUS_ARGS, {
+        timeout: GIT_STATUS_TIMEOUT,
+      });
+      const summary = buildGitStatusSummaryFromOutput(statusOutput, "");
       await this.clearInheritedStartPointUpstream(location, summary);
       return summary;
     } catch (error) {
@@ -314,7 +326,7 @@ export class GitStatusService {
       location,
       [
         { cwd, args: ["rev-parse", "--is-inside-work-tree"] },
-        { cwd, args: ["status", "--porcelain=v2", "-b"] },
+        { cwd, args: GIT_STATUS_ARGS },
         { cwd, args: ["remote", "-v"] },
         { cwd, args: ["diff", "--cached", "--numstat"] },
         { cwd, args: ["diff", "--numstat"] },
@@ -349,7 +361,7 @@ export class GitStatusService {
     for (const cwd of worktreePaths) {
       bridgeCommands.push(
         { cwd, args: ["rev-parse", "--is-inside-work-tree"] },
-        { cwd, args: ["status", "--porcelain=v2", "-b"] },
+        { cwd, args: GIT_STATUS_ARGS },
         { cwd, args: ["remote", "-v"] },
         { cwd, args: ["diff", "--cached", "--numstat"] },
         { cwd, args: ["diff", "--numstat"] },
@@ -403,10 +415,7 @@ export class GitStatusService {
     const PER_WORKTREE_CMDS = 2;
     const bridgeCommands: { cwd: string; args: string[] }[] = [];
     for (const cwd of worktreePaths) {
-      bridgeCommands.push(
-        { cwd, args: ["status", "--porcelain=v2", "-b"] },
-        { cwd, args: LS_FILES_UNTRACKED_ARGS },
-      );
+      bridgeCommands.push({ cwd, args: GIT_STATUS_ARGS }, { cwd, args: LS_FILES_UNTRACKED_ARGS });
     }
     const results = await execGitBatchWslBridge(location, bridgeCommands, GIT_STATUS_TIMEOUT);
 
@@ -606,18 +615,21 @@ export class GitStatusService {
   private async replaceUntrackedEntries(
     location: ProjectLocation,
     parsed: ParsedPorcelainStatus,
+    expanded = false,
   ): Promise<void> {
     if (!parsed.unstaged.some((file) => file.status === "?")) return;
 
-    const lsFilesOutput = await execGit(location, LS_FILES_UNTRACKED_ARGS, {
-      timeout: GIT_STATUS_TIMEOUT,
-    }).catch((error) => {
-      console.warn("[git] ls-files untracked failed:", error);
-      return "";
-    });
-    // Share the row-shaping with the summary path so the two never disagree on
-    // untracked-entry shape (the key the renderer's count backfill matches on).
-    expandUntrackedEntries(parsed, lsFilesOutput);
+    if (!expanded) {
+      const lsFilesOutput = await execGit(location, LS_FILES_UNTRACKED_ARGS, {
+        timeout: GIT_STATUS_TIMEOUT,
+      }).catch((error) => {
+        console.warn("[git] ls-files untracked failed:", error);
+        return "";
+      });
+      // Share the row-shaping with the summary path so the two never disagree on
+      // untracked-entry shape (the key the renderer's count backfill matches on).
+      expandUntrackedEntries(parsed, lsFilesOutput);
+    }
 
     // The full path additionally counts insertions per untracked file; the
     // expanded rows arrive with counts at 0, so fill them in here.

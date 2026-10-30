@@ -32,6 +32,7 @@ import {
 } from "./exec";
 import { copyIgnoredFilesIntoWorktree } from "./copyIgnoredFiles";
 import { parseStatusPorcelainV2 } from "./statusParsing";
+import { repositoryNetworkKey } from "./networkGate";
 
 const WORKTREE_OWNER_REFLOG_PREFIX = "poracode experiment owner ";
 const EXPERIMENT_WORKTREE_CREATE_CONCURRENCY = 2;
@@ -148,6 +149,22 @@ export function parseWorktreeListOutput(
 }
 
 export class GitWorktreeService {
+  private readonly networkTails = new Map<string, Promise<void>>();
+
+  private async withNetwork<T>(key: string, operation: () => Promise<T>): Promise<T> {
+    const previous = this.networkTails.get(key) ?? Promise.resolve();
+    const pending = previous.catch(() => undefined).then(operation);
+    const tail = pending.then(
+      () => undefined,
+      () => undefined,
+    );
+    this.networkTails.set(key, tail);
+    try {
+      return await pending;
+    } finally {
+      if (this.networkTails.get(key) === tail) this.networkTails.delete(key);
+    }
+  }
   private readonly inFlightFetches = new Map<string, Promise<void>>();
 
   async listBranches(
@@ -160,10 +177,13 @@ export class GitWorktreeService {
   }
 
   async fetch(location: ProjectLocation, remote: string, prune: boolean): Promise<void> {
-    const key = JSON.stringify([location, remote, prune]);
+    const repository = await repositoryNetworkKey(location);
+    const key = JSON.stringify([repository, remote, prune]);
     const existing = this.inFlightFetches.get(key);
     if (existing) return existing;
-    const pending = this.performFetch(location, remote, prune).finally(() => {
+    const pending = this.withNetwork(repository, () =>
+      this.performFetch(location, remote, prune),
+    ).finally(() => {
       if (this.inFlightFetches.get(key) === pending) this.inFlightFetches.delete(key);
     });
     this.inFlightFetches.set(key, pending);
@@ -218,9 +238,11 @@ export class GitWorktreeService {
   }
 
   private async runPull(location: ProjectLocation, remote: string, rebase: boolean): Promise<void> {
-    await execGit(location, ["pull", rebase ? "--rebase" : "--no-rebase", remote], {
-      timeout: GIT_NETWORK_TIMEOUT,
-    });
+    await this.withNetwork(await repositoryNetworkKey(location), () =>
+      execGit(location, ["pull", rebase ? "--rebase" : "--no-rebase", remote], {
+        timeout: GIT_NETWORK_TIMEOUT,
+      }),
+    );
   }
 
   private async pullWithStash(
