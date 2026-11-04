@@ -1,6 +1,30 @@
 {
   "releases": [
     {
+      "version": "1.9.5",
+      "tagline": "Quieter Git",
+      "date": "2026-11-04",
+      "title": "Even fewer background git and GitHub commands",
+      "summary": "Sending a message, staging in the main checkout and running a fetch no longer refresh every sidebar row, and GitHub is no longer queried on every agent status update.",
+      "changes": [
+        {
+          "kind": "improved",
+          "label": "Git",
+          "text": "Checkpoints created when you send a message no longer refresh every sidebar row, and staging in the main checkout refreshes only that checkout."
+        },
+        {
+          "kind": "improved",
+          "label": "Git",
+          "text": "A periodic fetch refreshes sidebar rows once instead of twice."
+        },
+        {
+          "kind": "improved",
+          "label": "GitHub",
+          "text": "Pull request status is no longer queried on every agent status update. It refreshes when visible rows change, on each fetch, and when you open the Git panel or branch selector, so a pull request changed outside Poracode can take a few minutes to show."
+        }
+      ]
+    },
+    {
       "version": "1.9.4",
       "tagline": "Quiet Git",
       "date": "2026-10-30",
