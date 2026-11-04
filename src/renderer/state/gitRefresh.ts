@@ -78,6 +78,7 @@ const branchPrPrefetchLastRun = new Map<string, number>();
 const branchPrPrefetchInFlight = new Set<string>();
 const branchPrPrefetchCache = new Map<string, Record<string, PrData>>();
 const branchPrChecked = new Map<string, Set<string>>();
+const branchPrVisibleRows = new Map<string, string>();
 const branchPrFallbackTimes = new Map<string, Map<string, number>>();
 
 function shouldApplyPrefetchedPr(
@@ -158,6 +159,15 @@ function applyPrefetchedPrData(
   }
 }
 
+function canStartBranchPrPrefetch(projectId: string): boolean {
+  if (branchPrPrefetchInFlight.has(projectId)) return false;
+  const last = branchPrPrefetchLastRun.get(projectId) ?? 0;
+  if (Date.now() - last < BRANCH_PR_PREFETCH_THROTTLE_MS) return false;
+  const state = useGitStore.getState();
+  if (!state.ghAvailable[projectId]) return false;
+  return mightBeGitHubRemote(state.statuses[projectId]?.remoteInfo?.platform);
+}
+
 /**
  * Bulk-fetch PR status for every branch of a project in one `gh pr list` call and
  * cache it under branch-name keys (see {@link buildBranchNamePrKey}) so the branch
@@ -174,12 +184,7 @@ export async function prefetchBranchPrData(project: {
   const cachedPrs = branchPrPrefetchCache.get(project.id);
   if (cachedPrs) applyPrefetchedPrData(project.id, cachedPrs, true);
 
-  if (branchPrPrefetchInFlight.has(project.id)) return;
-  const last = branchPrPrefetchLastRun.get(project.id) ?? 0;
-  if (Date.now() - last < BRANCH_PR_PREFETCH_THROTTLE_MS) return;
-  const state = useGitStore.getState();
-  if (!state.ghAvailable[project.id]) return;
-  if (!mightBeGitHubRemote(state.statuses[project.id]?.remoteInfo?.platform)) return;
+  if (!canStartBranchPrPrefetch(project.id)) return;
 
   branchPrPrefetchInFlight.add(project.id);
   branchPrPrefetchLastRun.set(project.id, Date.now());
@@ -250,6 +255,30 @@ export async function prefetchBranchPrData(project: {
   } finally {
     branchPrPrefetchInFlight.delete(project.id);
   }
+}
+
+/**
+ * `threads` is replaced on every agent status update, so a change there says nothing
+ * about PRs. Query only when the visible rows change; the fetch cycle keeps the rest
+ * current. A change that cannot start a query yet stays unconsumed for the next call.
+ */
+export function prefetchBranchPrDataForVisibleRows(
+  project: { id: string; location: ProjectLocation },
+  visiblePaths: readonly string[],
+): void {
+  const visible = new Set(visiblePaths);
+  const rows = useAppStore
+    .getState()
+    .threads.filter(
+      (thread) =>
+        thread.projectId === project.id && thread.worktreePath && visible.has(thread.worktreePath),
+    )
+    .map((thread) => [thread.worktreePath, thread.worktreeBranch, thread.prNumber].join("\0"))
+    .sort()
+    .join("\n");
+  if (branchPrVisibleRows.get(project.id) === rows) return;
+  if (canStartBranchPrPrefetch(project.id)) branchPrVisibleRows.set(project.id, rows);
+  void prefetchBranchPrData(project);
 }
 
 /** Refresh PR data only while Git is visibly scoped to this real project/worktree. */
@@ -829,6 +858,7 @@ export function cleanupGitRefreshProjects(activeProjectIds: ReadonlySet<string>)
     branchPrPrefetchInFlight.delete(projectId);
     branchPrChecked.delete(projectId);
     branchPrFallbackTimes.delete(projectId);
+    branchPrVisibleRows.delete(projectId);
   }
   for (const [key, entry] of postPushPrRefreshEntries) {
     if (activeProjectIds.has(entry.target.projectId)) continue;
