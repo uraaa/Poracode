@@ -2,7 +2,7 @@ import { watch, type FSWatcher } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, join, posix, win32 } from "node:path";
 import type { ProjectLocation } from "@/shared/contracts";
-import { getProjectFsPath, toWslUncPath } from "@/shared/wsl";
+import { getProjectFsPath, getProjectPosixPath, toWslUncPath } from "@/shared/wsl";
 import type { WslBridgeClient, WslLocation } from "./wsl/bridge/client";
 
 const DEBOUNCE_MS = 300;
@@ -22,6 +22,7 @@ type WslSchedule = {
 };
 
 interface WatcherEntry {
+  projectStatusOnly: boolean;
   gitMetadataPaths: Map<string, Promise<string | undefined>>;
   gitWatcher: FSWatcher | null;
   workTreeWatcher: FSWatcher | null;
@@ -82,6 +83,7 @@ function isKnownGitNoisePath(value: string): boolean {
   return (
     value === "FETCH_HEAD" ||
     value === "index.lock" ||
+    /^(?:worktrees\/[^/]+\/)?index\.poracode-[^/]+$/.test(value) ||
     /^worktrees\/[^/]+$/.test(value) ||
     /^worktrees\/[^/]+\/index\.lock$/.test(value) ||
     /^\.watchman-cookie-/.test(value) ||
@@ -217,6 +219,7 @@ export class ProjectWatcher {
     void this.unwatch(projectId);
 
     const entry: WatcherEntry = {
+      projectStatusOnly: true,
       gitMetadataPaths: new Map(),
       gitWatcher: null,
       workTreeWatcher: null,
@@ -227,9 +230,10 @@ export class ProjectWatcher {
       location,
     };
 
+    const projectRoot = getProjectPosixPath(location);
     const scheduleGitNotify = (worktreePath?: string) => {
       if (this.watchers.get(projectId) !== entry) return;
-      if (worktreePath) {
+      if (worktreePath && worktreePath !== projectRoot) {
         const worktree = this.worktreeWatchers.get(worktreePath);
         if (worktree?.projectId !== projectId || worktree.gitDebounceTimer) return;
         worktree.gitDebounceTimer = setTimeout(() => {
@@ -238,18 +242,24 @@ export class ProjectWatcher {
         }, DEBOUNCE_MS);
         return;
       }
+      // A ref/config event in the same burst upgrades a main-status notification.
+      entry.projectStatusOnly &&= worktreePath === projectRoot;
       if (entry.gitDebounceTimer) return;
       entry.gitDebounceTimer = setTimeout(() => {
         entry.gitDebounceTimer = null;
-        this.callbacks.onGitChanged(projectId);
+        const statusOnly = entry.projectStatusOnly;
+        entry.projectStatusOnly = true;
+        if (statusOnly) this.callbacks.onGitChanged(projectId, projectRoot);
+        else this.callbacks.onGitChanged(projectId);
       }, DEBOUNCE_MS);
     };
     const routeGitMetadata = (name: string) => {
       if (name === "worktrees") entry.gitMetadataPaths.clear();
       const topology = /^worktrees\/([^/]+)(?:\/gitdir)?$/.exec(name);
       if (topology) entry.gitMetadataPaths.delete(topology[1]!);
-      if (!isKnownGitNoisePath(name))
-        notifyGitMetadata(location, name, scheduleGitNotify, entry.gitMetadataPaths);
+      if (isKnownGitNoisePath(name)) return;
+      if (/^(?:index|HEAD|ORIG_HEAD|MERGE_HEAD)$/.test(name)) scheduleGitNotify(projectRoot);
+      else notifyGitMetadata(location, name, scheduleGitNotify, entry.gitMetadataPaths);
     };
     const scheduleTreeNotify = () => {
       if (entry.treeDebounceTimer) return;

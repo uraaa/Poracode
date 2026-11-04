@@ -391,6 +391,46 @@ describe("ProjectWatcher WSL worktrees", () => {
     expect(onGitChanged).toHaveBeenCalledWith("project-1");
     await watcher.dispose();
   });
+
+  it("drops checkpoint indexes and scopes main metadata while preserving ref notifications in WSL", async () => {
+    vi.useFakeTimers();
+    const { watch, waitForSubscription } = createWatchHarness();
+    const onGitChanged = vi.fn<(projectId: string, worktreePath?: string) => void>();
+    const watcher = new ProjectWatcher({
+      onGitChanged,
+      onTreeChanged: vi.fn<(id: string) => void>(),
+    });
+    watcher.setWslClient({
+      readFile: vi.fn<WslBridgeClient["readFile"]>(async () => {
+        throw new Error("missing");
+      }),
+      stat: vi.fn<WslBridgeClient["stat"]>(async () => ({
+        stats: [{ path: "/repo/.git", exists: true, isDirectory: true, isFile: false }],
+      })),
+      watch,
+    } as unknown as WslBridgeClient);
+    watcher.watch("p", makeLocation("/repo"));
+    await waitForSubscription(1);
+    const emit = (paths: string[]) =>
+      watch.mock.calls[0]![2]({ subscriptionId: "sub", scope: "git", paths });
+    emit([
+      "index.poracode-uuid",
+      "index.poracode-uuid.lock",
+      "worktrees/wt/index.poracode-uuid",
+      "worktrees/wt/index.poracode-uuid.lock",
+    ]);
+    await vi.advanceTimersByTimeAsync(300);
+    expect(onGitChanged).not.toHaveBeenCalled();
+    for (const name of ["index", "HEAD", "ORIG_HEAD", "MERGE_HEAD"]) {
+      emit([name]);
+      await vi.advanceTimersByTimeAsync(300);
+      expect(onGitChanged).toHaveBeenLastCalledWith("p", "/repo");
+    }
+    emit(["refs/remotes/origin/main", "packed-refs", "config"]);
+    await vi.advanceTimersByTimeAsync(300);
+    expect(onGitChanged).toHaveBeenLastCalledWith("p");
+    await watcher.dispose();
+  });
 });
 
 describe("ProjectWatcher.hasWslProjects", () => {
