@@ -22,6 +22,7 @@ import {
   getProjectActiveWorktreePaths,
   getWatcherRefreshMode,
   prefetchBranchPrData,
+  prefetchBranchPrDataForVisibleRows,
   prefetchVisibleGitPanelPrData,
   PR_PENDING_REFRESH_INTERVAL_MS,
   PR_POST_PUSH_STATUS_POLL_MS,
@@ -278,6 +279,57 @@ describe("pending PR refresh", () => {
     expect(ghListPrsMock).toHaveBeenCalledOnce();
     expect(useGitStore.getState().prData["/repo-hidden"]).toEqual(hiddenPr);
     expect(useGitStore.getState().prData["/repo-visible"]?.state).toBe("merged");
+  });
+
+  it("queries PRs for visible rows only when the rows change, retrying after the throttle", async () => {
+    const rowsProject = { ...project, id: "visible-rows-project" };
+    const row = {
+      ...worktreeThread,
+      id: "rows-a",
+      projectId: rowsProject.id,
+      worktreePath: "/rows-a",
+      worktreeBranch: "feature/a",
+    };
+    const added = { ...row, id: "rows-b", worktreePath: "/rows-b", worktreeBranch: "feature/b" };
+    useAppStore.setState({ projects: [rowsProject], threads: [row] });
+    useGitStore.setState({
+      statuses: { [rowsProject.id]: { ...status, branch: "main" } },
+      ghAvailable: { [rowsProject.id]: true },
+      prData: {},
+    });
+    ghListPrsMock.mockResolvedValue({ prs: {} });
+    ghGetPrForBranchMock.mockResolvedValue(null);
+
+    prefetchBranchPrDataForVisibleRows(rowsProject, ["/rows-a"]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ghListPrsMock).toHaveBeenCalledTimes(1);
+
+    // A status update replaces the thread object; the visible rows are the same.
+    await vi.advanceTimersByTimeAsync(15_000);
+    useAppStore.setState({ threads: [{ ...row, updatedAt: "changed" }] });
+    prefetchBranchPrDataForVisibleRows(rowsProject, ["/rows-a"]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ghListPrsMock).toHaveBeenCalledTimes(1);
+
+    // A hidden row does not count as a change.
+    useAppStore.setState({ threads: [row, added] });
+    prefetchBranchPrDataForVisibleRows(rowsProject, ["/rows-a"]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ghListPrsMock).toHaveBeenCalledTimes(1);
+
+    prefetchBranchPrDataForVisibleRows(rowsProject, ["/rows-a", "/rows-b"]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ghListPrsMock).toHaveBeenCalledTimes(2);
+
+    // Inside the throttle the change stays unconsumed, so the next call picks it up.
+    useAppStore.setState({ threads: [row, { ...added, worktreeBranch: "feature/renamed" }] });
+    prefetchBranchPrDataForVisibleRows(rowsProject, ["/rows-a", "/rows-b"]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ghListPrsMock).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(10_001);
+    prefetchBranchPrDataForVisibleRows(rowsProject, ["/rows-a", "/rows-b"]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ghListPrsMock).toHaveBeenCalledTimes(3);
   });
 
   it("prefetches for a matching visible Git panel only when gh and GitHub are available", async () => {

@@ -340,6 +340,34 @@ it("measures 40 sidebar worktrees, 2 open panes, watcher bursts and real periodi
   expect(useGitStore.getState().worktreeSourceInfo["/wt/39"]?.commitsAhead).toBe(6);
   expect(messagesAndMainIndexPerMinute.git).toBeLessThan(30);
   expect(fetchWithRefWrites.git).toBeLessThanOrEqual(190);
+  // Agents replace `threads` on every status update. That alone must not query GitHub.
+  for (let i = 0; i < 31; i++) await act(() => vi.advanceTimersByTimeAsync(1000));
+  // The hook's first call ran before gh availability was known, so one catch-up query is due.
+  useAppStore.setState({ threads: [...useAppStore.getState().threads] });
+  await act(() => vi.advanceTimersByTimeAsync(1000));
+  expect(probes.gh.mock.calls.length).toBeGreaterThan(0);
+  probes.gh.mockClear();
+  for (let second = 0; second < 60; second++) {
+    useAppStore.setState({
+      threads: useAppStore
+        .getState()
+        .threads.map((t) => (t.id === "volume-0" ? { ...t, updatedAt: String(second) } : t)),
+    });
+    await act(() => vi.advanceTimersByTimeAsync(1000));
+  }
+  const threadChurnPerMinute = { gh: probes.gh.mock.calls.length };
+  console.log("THREAD_CHURN_VOLUME", JSON.stringify(threadChurnPerMinute));
+  expect(threadChurnPerMinute.gh).toBe(0);
+  // A row that just became visible still gets its PR badge without waiting for the next fetch.
+  useAppStore.setState({
+    threads: [
+      ...useAppStore.getState().threads,
+      { ...threads[0]!, id: "volume-new", worktreePath: "/wt/new", worktreeBranch: "feature/new" },
+    ],
+  });
+  await act(() => vi.advanceTimersByTimeAsync(1000));
+  // The bulk list, plus one lookup for the new row that the bulk list did not contain.
+  expect(probes.gh.mock.calls.length).toBe(2);
   unmount();
   await watcher.dispose();
 });

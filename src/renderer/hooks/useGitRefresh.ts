@@ -16,7 +16,7 @@ import {
   cleanupGitRefreshProjects,
   getProjectWorktreeTargets,
   getWatcherRefreshMode,
-  prefetchBranchPrData,
+  prefetchBranchPrDataForVisibleRows,
   refreshGitProject,
   refreshGitWorktreePaths,
   refreshProjectStatusOnly,
@@ -180,7 +180,7 @@ export function useGitRefresh(storeHydrated: boolean) {
       // plain thread switches must not spawn Git work while the panel is hidden.
       for (const project of activeProjects) {
         if (!shouldPollProject(project)) continue;
-        void prefetchBranchPrData(project);
+        prefetchBranchPrDataForVisibleRows(project, watchedByProject.get(project.id) ?? []);
       }
     }
 
