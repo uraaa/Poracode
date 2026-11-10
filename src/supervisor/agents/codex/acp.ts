@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { CodexBackgroundTasks } from "./backgroundTasks";
 import type {
   ConnectThreadVoicePayload,
   ConnectThreadVoiceResult,
@@ -217,6 +218,7 @@ export class CodexStructuredSession implements StructuredSessionHandle {
   // arrives first, on the next user turn, or on dispose.
   private pendingSystemErrorFallback: ReturnType<typeof setTimeout> | undefined;
   private mapperState: CodexMapperState | undefined;
+  private backgroundTasks: CodexBackgroundTasks | undefined;
   private subAgentRouter: CodexSubAgentRouter | undefined;
   private forkNotificationBuffer:
     | Array<{
@@ -271,6 +273,28 @@ export class CodexStructuredSession implements StructuredSessionHandle {
   private ensureSubAgentRouter(): CodexSubAgentRouter {
     this.subAgentRouter ??= new CodexSubAgentRouter(this.threadId, this.wslDistro);
     return this.subAgentRouter;
+  }
+
+  private ensureBackgroundTasks(): CodexBackgroundTasks {
+    this.backgroundTasks ??= new CodexBackgroundTasks(
+      this.threadId,
+      (threadId, cursor) =>
+        this.rpc.request(
+          "thread/backgroundTerminals/list",
+          {
+            threadId,
+            ...(cursor ? { cursor } : {}),
+          },
+          3_000,
+        ),
+      (event) => this.emitRuntimeEvents([event]),
+    );
+    if (this.remoteThreadId) this.backgroundTasks.setThread(this.remoteThreadId);
+    return this.backgroundTasks;
+  }
+
+  getBackgroundTasks() {
+    return this.ensureBackgroundTasks().getTasks();
   }
 
   private emitRuntimeEvents(events: RuntimeEvent[]): void {
@@ -569,6 +593,7 @@ export class CodexStructuredSession implements StructuredSessionHandle {
 
     this.remoteThreadId = threadId;
     this.rpc.claimThread(threadId);
+    void this.ensureBackgroundTasks().refresh();
     this.ensureMapperState().usageScope = new CodexUsageScopeTracker(threadId, createdNewThread);
     this.launchOptions = { ...this.launchOptions, resumeThreadId: threadId };
     if (!createdNewThread) {
@@ -919,6 +944,7 @@ export class CodexStructuredSession implements StructuredSessionHandle {
   }
 
   forceCompleteTurn(): void {
+    this.backgroundTasks?.observe("turn/aborted", undefined);
     const state = this.mapperState;
     if (!state) return;
     const itemIds = new Set(state.itemIdMap.values());
@@ -1103,6 +1129,7 @@ export class CodexStructuredSession implements StructuredSessionHandle {
       return;
     }
     this.isDisposed = true;
+    this.backgroundTasks?.dispose();
     await this.liveVoice.disconnect();
 
     this.clearPendingSystemErrorFallback();
@@ -1161,12 +1188,14 @@ export class CodexStructuredSession implements StructuredSessionHandle {
       onNotification: (method, params) => this.handleNotification(method, params),
       onRuntimeEvents: (events) => this.emitRuntimeEvents(events),
       onClose: () => {
+        this.backgroundTasks?.dispose();
         void this.liveVoice.disconnect();
         if (!this.isDisposed) {
           this.listener?.onClose();
         }
       },
       onError: () => {
+        this.backgroundTasks?.dispose();
         void this.liveVoice.disconnect();
         if (!this.isDisposed) {
           this.listener?.onError("Codex app-server connection failed.");
@@ -1244,6 +1273,9 @@ export class CodexStructuredSession implements StructuredSessionHandle {
       params,
       mappedRuntimeEvents,
     );
+    if (!suppressResumeReplay && turnWillSettleThread) {
+      this.ensureBackgroundTasks().observe(method, params);
+    }
     if (runtimeEvents.length > 0) this.emitRuntimeEvents(runtimeEvents);
 
     if (method === "thread/started" && params && "thread" in params) {

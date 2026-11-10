@@ -209,6 +209,8 @@ const CODEX_LINK_TARGETS = [
   { name: "session_index.jsonl", kind: "file" as const },
   { name: "auth.json", kind: "file" as const },
   { name: "config.toml", kind: "file" as const },
+  { name: "AGENTS.md", kind: "file" as const },
+  { name: "AGENTS.override.md", kind: "file" as const },
 ];
 
 /**

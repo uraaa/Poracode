@@ -37,7 +37,7 @@ export const skillTools: ToolDomain = {
     {
       name: "read_skill",
       description:
-        "Read the SKILL.md content of one enabled, valid skill by id from list_skills. Pass projectId for project-scoped skills. Read-only.",
+        "Read the SKILL.md content of one enabled, valid skill by id from list_skills or by its unique name. If names are ambiguous, use an id from list_skills. Pass projectId for project-scoped skills. Read-only.",
       inputSchema: {
         type: "object",
         additionalProperties: false,
@@ -87,7 +87,14 @@ export const skillTools: ToolDomain = {
       const { skillId, projectId } = readArgsSchema.parse(args);
       const scope = projectId ? projectScope(ctx, projectId) : {};
       const result = await ctx.supervisor.scanSkills(scope);
-      const skill = result.skills.find((entry) => entry.id === skillId);
+      const exact = result.skills.find((entry) => entry.id === skillId);
+      const named = exact
+        ? []
+        : result.skills.filter((entry) => entry.name.toLowerCase() === skillId.toLowerCase());
+      if (named.length > 1) {
+        throw new Error(`Multiple skills named ${skillId}; use an id from list_skills.`);
+      }
+      const skill = exact ?? named[0];
       if (!skill) throw new Error(`Unknown skill id: ${skillId}`);
       if (!skill.enabled) throw new Error(`Skill is disabled: ${skillId}`);
       if (!skill.valid) throw new Error(`Skill is invalid: ${skillId}`);

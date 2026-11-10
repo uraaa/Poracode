@@ -1753,6 +1753,35 @@ describe("CodexStructuredSession", () => {
     });
   });
 
+  it("reports waits through the shared dock and keeps them across a sibling turn completion", () => {
+    const session = makeStructuredSession([]);
+    const events: RuntimeEvent[] = [];
+    (session as unknown as Record<string, unknown>)["listener"] = {
+      onRuntimeEvent: (event: RuntimeEvent) => events.push(event),
+      onUpdate: () => {},
+    };
+    const notify = (method: string, params: Record<string, unknown>) =>
+      dispatchNotification(session, {
+        jsonrpc: "2.0",
+        method,
+        params: { threadId: "provider-thread", ...params },
+      });
+    notify("turn/started", { turn: { id: "first" } });
+    notify("turn/started", { turn: { id: "second" } });
+    notify("item/started", { item: { id: "wait", type: "sleep", durationMs: 5000 } });
+    expect(session.getBackgroundTasks()).toHaveLength(1);
+    expect(events).toContainEqual({
+      type: "background_tasks.changed",
+      threadId: "local-thread",
+      tasks: [{ taskId: "codex:sleep:wait", kind: "other", description: "clock.sleep (5000 ms)" }],
+    });
+    expect(events.some((event) => event.type === "item.started")).toBe(false);
+    notify("turn/completed", { turn: { id: "first", status: "completed" } });
+    expect(session.getBackgroundTasks()).toHaveLength(1);
+    notify("item/completed", { item: { id: "wait", type: "sleep", durationMs: 5000 } });
+    expect(session.getBackgroundTasks()).toEqual([]);
+  });
+
   it("passes the approvals reviewer override to Codex app-server threads and turns", async () => {
     const requests: Array<{ method: string; params: Record<string, unknown> }> = [];
     const structuredSession = makeStructuredSession(requests);
@@ -1776,7 +1805,7 @@ describe("CodexStructuredSession", () => {
     });
     expect(requests[0]?.params).not.toHaveProperty("persistExtendedHistory");
     expect(requests[0]?.params).not.toHaveProperty("experimentalRawEvents");
-    expect(requests[1]).toMatchObject({
+    expect(requests.find((request) => request.method === "turn/start")).toMatchObject({
       method: "turn/start",
       params: {
         approvalPolicy: "on-request",
@@ -2339,8 +2368,9 @@ describe("CodexStructuredSession", () => {
       },
     );
 
-    expect(requests.slice(0, 2)).toEqual([
+    expect(requests.slice(0, 3)).toEqual([
       expect.objectContaining({ method: "thread/resume" }),
+      expect.objectContaining({ method: "thread/backgroundTerminals/list" }),
       {
         method: "thread/goal/get",
         params: { threadId: "provider-thread" },
@@ -2436,13 +2466,17 @@ describe("CodexStructuredSession", () => {
 
     await structuredSession.openThread({ model: "gpt-5.5" });
 
-    expect(requests).toEqual([expect.objectContaining({ method: "thread/start" })]);
+    expect(requests).toEqual([
+      expect.objectContaining({ method: "thread/start" }),
+      expect.objectContaining({ method: "thread/backgroundTerminals/list" }),
+    ]);
 
     await structuredSession.startTurn("hello", { model: "gpt-5.5" });
     await structuredSession.startTurn("continue", { model: "gpt-5.5" });
 
     expect(requests).toEqual([
       expect.objectContaining({ method: "thread/start" }),
+      expect.objectContaining({ method: "thread/backgroundTerminals/list" }),
       expect.objectContaining({ method: "turn/start" }),
       expect.objectContaining({ method: "turn/start" }),
     ]);
@@ -3026,7 +3060,10 @@ describe("CodexStructuredSession", () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(requests.map((request) => request.method)).toEqual(["turn/start"]);
+    expect(requests.map((request) => request.method)).toEqual([
+      "turn/start",
+      "thread/backgroundTerminals/list",
+    ]);
     expect(runtimeEvents).toContainEqual({
       type: "turn.completed",
       threadId: "local-thread",
