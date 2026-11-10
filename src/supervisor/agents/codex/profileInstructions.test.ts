@@ -1,7 +1,7 @@
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { inheritCodexProfileInstructions } from "./profileInstructions";
 import { seedNativeCodexHome } from "./plugin/install";
 
@@ -16,10 +16,19 @@ function fixture() {
   return { source, profile };
 }
 afterEach(() => {
+  vi.unstubAllEnvs();
   for (const path of directories.splice(0)) rmSync(path, { recursive: true, force: true });
 });
 
 describe("Codex profile instructions", () => {
+  it("inherits instructions from the configured global CODEX_HOME", () => {
+    const { source, profile } = fixture();
+    writeFileSync(join(source, "AGENTS.md"), "Rules from custom home");
+    vi.stubEnv("CODEX_HOME", source);
+    inheritCodexProfileInstructions(profile);
+    expect(readFileSync(join(profile, "AGENTS.md"), "utf8")).toBe("Rules from custom home");
+  });
+
   it("adds inherited rules to a previously installed private hook home", () => {
     const { source, profile } = fixture();
     const overlay = join(profile, "old-overlay");

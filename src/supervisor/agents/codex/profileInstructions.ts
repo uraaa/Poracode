@@ -6,7 +6,7 @@ import { ensureNativeStateLink } from "../plugin/installerBase";
 /** Accounts isolate credentials, while an uncustomized profile inherits user preferences. */
 export function inheritCodexProfileInstructions(
   profileHome: string,
-  userHome = join(homedir(), ".codex"),
+  userHome = process.env.CODEX_HOME?.trim() || join(homedir(), ".codex"),
 ): void {
   const files = ["AGENTS.override.md", "AGENTS.md"];
   if (files.some((file) => existsSync(join(profileHome, file)))) return;

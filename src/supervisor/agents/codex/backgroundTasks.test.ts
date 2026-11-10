@@ -24,6 +24,33 @@ function fixture() {
 afterEach(() => vi.useRealTimers());
 
 describe("Codex background work", () => {
+  it("discovers the first silent process during a turn before command completion", async () => {
+    vi.useFakeTimers();
+    const { tracker, read } = fixture();
+    await tracker.refresh();
+    tracker.observe("item/started", {
+      item: { type: "commandExecution", id: "running", status: "inProgress" },
+    });
+    // The command starts in the foreground; the server inventories it only after yielding.
+    await vi.advanceTimersByTimeAsync(1_000);
+    read.mockResolvedValue({
+      data: [{ itemId: "running", processId: "42", command: "silent process" }],
+      nextCursor: null,
+    });
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(tracker.getTasks()).toEqual([
+      { taskId: "codex:process:42", kind: "command", description: "silent process" },
+    ]);
+    read.mockResolvedValue({ data: [], nextCursor: null });
+    tracker.observe("item/completed", {
+      item: { type: "commandExecution", id: "running", status: "completed" },
+    });
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(tracker.getTasks()).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+    tracker.dispose();
+  });
+
   it("restores live terminals, follows pagination, and drains exited processes", async () => {
     vi.useFakeTimers();
     const { tracker, read, events } = fixture();

@@ -17,6 +17,7 @@ export class CodexBackgroundTasks {
   private disposed = false;
   private supported = true;
   private terminals: readonly Terminal[] = [];
+  private commands = new Set<string>();
   private waits = new Map<string, BackgroundTask>();
   private pending: Promise<void> | undefined;
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -34,6 +35,7 @@ export class CodexBackgroundTasks {
     this.threadId = threadId;
     this.pending = undefined;
     this.terminals = [];
+    this.commands.clear();
     this.waits.clear();
     this.stopTimer();
     this.publish();
@@ -67,7 +69,18 @@ export class CodexBackgroundTasks {
       this.publish();
       return;
     }
+    if (
+      method === "item/started" &&
+      item?.type === "commandExecution" &&
+      typeof item.id === "string"
+    ) {
+      this.commands.add(item.id);
+      this.revision++;
+      // The first inventory can precede the process yielding into the background.
+      void this.refresh();
+    }
     if (method === "item/completed" && item?.type === "commandExecution") {
+      if (typeof item.id === "string") this.commands.delete(item.id);
       // A snapshot requested before this bookend must not restore an exited process.
       this.revision++;
       this.terminals = this.terminals.filter((terminal) => terminal.itemId !== item.id);
@@ -75,6 +88,7 @@ export class CodexBackgroundTasks {
       void this.refresh();
     }
     if (method === "turn/completed" || method === "turn/aborted") {
+      this.commands.clear();
       this.waits.clear();
       this.publish();
       void this.refresh();
@@ -117,8 +131,8 @@ export class CodexBackgroundTasks {
       if (this.disposed || generation !== this.generation) return;
       if (revision !== this.revision) {
         void this.refresh();
-      } else if (this.terminals.length > 0 && this.supported) {
-        // Silent processes may exit without another model turn or output delta.
+      } else if ((this.terminals.length > 0 || this.commands.size > 0) && this.supported) {
+        // Discover silent commands after yielding and drain them after exit.
         this.timer = setTimeout(() => {
           void this.refresh();
         }, 1_000);
@@ -134,6 +148,7 @@ export class CodexBackgroundTasks {
     this.generation++;
     this.stopTimer();
     this.terminals = [];
+    this.commands.clear();
     this.waits.clear();
     this.publish();
   }
