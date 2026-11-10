@@ -23,6 +23,8 @@ import type {
   ThreadGoalSetResponse,
   ThreadReadParams,
   ThreadReadResponse,
+  ThreadBackgroundTerminalsListParams,
+  ThreadBackgroundTerminalsListResponse,
   ThreadResumeParams,
   ThreadResumeResponse,
   ThreadRollbackParams,
@@ -97,6 +99,10 @@ export interface CodexClientRequestMap {
   "thread/start": { params: ThreadStartParams; result: ThreadStartResponse };
   "thread/resume": { params: ThreadResumeParams; result: ThreadResumeResponse };
   "thread/read": { params: ThreadReadParams; result: ThreadReadResponse };
+  "thread/backgroundTerminals/list": {
+    params: ThreadBackgroundTerminalsListParams;
+    result: ThreadBackgroundTerminalsListResponse;
+  };
   "thread/fork": { params: ThreadForkParams; result: ThreadForkResponse };
   "thread/unsubscribe": { params: ThreadUnsubscribeParams; result: ThreadUnsubscribeResponse };
   "thread/rollback": { params: ThreadRollbackParams; result: ThreadRollbackResponse };

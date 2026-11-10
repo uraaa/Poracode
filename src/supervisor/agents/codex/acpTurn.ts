@@ -5,15 +5,6 @@ import type { CodexClientRequestMap } from "./protocol";
 
 type TurnStartParams = CodexClientRequestMap["turn/start"]["params"];
 
-// Codex's `turn/start` requires a non-empty `developer_instructions` string
-// inside `collaborationMode.settings`. We send these on every turn so that
-// switching between Plan and Default mode mid-session takes effect.
-const PLAN_MODE_DEVELOPER_INSTRUCTIONS =
-  "You are operating in plan mode. Produce a clear, step-by-step plan for the user's request. Do not edit files, run shell commands, or call mutating tools — gather context with read-only tools as needed, then present the plan and wait for the user to approve before executing any changes.";
-
-const DEFAULT_MODE_DEVELOPER_INSTRUCTIONS =
-  "You are operating in default mode. Any prior plan-mode instructions no longer apply: you may edit files, run commands, and use mutating tools as appropriate to fulfill the user's request.";
-
 // Codex `/goal` is a Codex CLI feature (experimental, gated by --enable goals).
 // We mirror the TUI's sub-commands inline so the user can type them in the
 // composer; the actual state lives in the Codex app-server.
@@ -100,10 +91,9 @@ export function buildCodexCollaborationMode(
     settings: {
       model: config.model,
       reasoning_effort: config.effort ?? "medium",
-      developer_instructions:
-        config.mode === "plan"
-          ? PLAN_MODE_DEVELOPER_INSTRUCTIONS
-          : DEFAULT_MODE_DEVELOPER_INSTRUCTIONS,
+      // null selects the CLI's built-in mode instructions, including its
+      // current planning, tool-use, and task-continuation guidance.
+      developer_instructions: null,
     },
   };
 }

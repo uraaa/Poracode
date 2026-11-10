@@ -1,4 +1,5 @@
 import { mkdirSync } from "node:fs";
+import { inheritCodexProfileInstructions } from "./profileInstructions";
 import { join } from "node:path";
 import type { AgentCapability, AgentInstanceConfig, ProjectLocation } from "@/shared/contracts";
 import { codexProfileKind, parseCodexProfileInstanceConfig } from "@/shared/contracts";
@@ -164,6 +165,7 @@ export function createCodexAdapter(options: CodexAdapterOptions = {}): AgentAdap
     if (location.kind !== "wsl") {
       try {
         mkdirSync(home, { recursive: true });
+        inheritCodexProfileInstructions(home);
       } catch {
         // Best-effort; Codex reports the missing directory itself.
       }
